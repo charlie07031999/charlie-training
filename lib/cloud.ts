@@ -1,7 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const url =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??
+  "https://yjepvpflamlncpgncsun.supabase.co";
+
+const anonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  "sb_publishable_m9I76Yiymq9k7ZA43FvLDg_Z0mpnZBO";
 
 export const isCloudConfigured = Boolean(url && anonKey);
 
