@@ -52,16 +52,53 @@ export async function syncWorkoutSession(item: {
   return error ? { ok:false, reason:error.message } : { ok:true };
 }
 
-export async function syncSleepEvent(type: "bed"|"wake", at: string) {
+export async function syncSleepEvent(
+  type: "bed"|"wake",
+  at: string,
+  options?: { plannedWakeAt?: string | null; targetMinutes?: number | null }
+) {
   if (!supabase) return { ok:false, reason:"not_configured" as const };
   const user = await ensureUser();
   if (!user) return { ok:false, reason:"auth_failed" as const };
 
-  const { error } = await supabase.from("sleep_events").insert({
+  const payload: Record<string, unknown> = {
     user_id: user.id,
     event_type: type,
     event_at: at
-  });
+  };
+
+  if(type==="bed"){
+    payload.planned_wake_at = options?.plannedWakeAt ?? null;
+    payload.target_minutes = options?.targetMinutes ?? null;
+  }
+
+  const { error } = await supabase.from("sleep_events").insert(payload);
+  return error ? { ok:false, reason:error.message } : { ok:true };
+}
+
+export async function updateLatestBedPlan(plannedWakeAt:string,targetMinutes:number) {
+  if (!supabase) return { ok:false, reason:"not_configured" as const };
+  const user = await ensureUser();
+  if (!user) return { ok:false, reason:"auth_failed" as const };
+
+  const { data: latest, error: readError } = await supabase
+    .from("sleep_events")
+    .select("id")
+    .eq("user_id",user.id)
+    .eq("event_type","bed")
+    .order("event_at",{ascending:false})
+    .limit(1)
+    .maybeSingle();
+
+  if(readError || !latest) return { ok:false, reason:readError?.message ?? "no_bed_event" };
+
+  const { error } = await supabase
+    .from("sleep_events")
+    .update({
+      planned_wake_at: plannedWakeAt,
+      target_minutes: targetMinutes
+    })
+    .eq("id",latest.id);
 
   return error ? { ok:false, reason:error.message } : { ok:true };
 }
