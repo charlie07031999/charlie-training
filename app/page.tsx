@@ -32,6 +32,21 @@ function formatTimer(s:number){
   return `${m}:${sec}`;
 }
 
+function sleepWindowMinutes(sleepTime:string,wakeTime:string){
+  const [sh,sm]=sleepTime.split(":").map(Number);
+  const [wh,wm]=wakeTime.split(":").map(Number);
+  const start=sh*60+sm;
+  const end=wh*60+wm;
+  const diff=end-start;
+  return diff>0?diff:diff+24*60;
+}
+
+function durationLabel(minutes:number){
+  const h=Math.floor(minutes/60);
+  const m=minutes%60;
+  return m?`${h}h${String(m).padStart(2,"0")}`:`${h}h`;
+}
+
 function workoutForToday(){
   const day = new Date().getDay();
   if(day===1) return "push";
@@ -225,6 +240,10 @@ export default function Home(){
 
   const bedtimeLabel=lastBedtime?new Date(lastBedtime).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"";
   const bedtimeDateLabel=lastBedtime?new Date(lastBedtime).toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"short"}):"";
+  const targetSleepMinutes=sleepWindowMinutes(sleepTarget,wakeTarget);
+  const targetSleepLabel=durationLabel(targetSleepMinutes);
+  const suggestedWakeAt=lastBedtime?new Date(new Date(lastBedtime).getTime()+targetSleepMinutes*60_000):null;
+  const suggestedWakeLabel=suggestedWakeAt?suggestedWakeAt.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"";
 
   const currentHistory=currentExercise?history.find(h=>h.exerciseId===currentExercise.id):null;
   const elapsed=session?Math.max(0,Math.floor((now-session.startedAt)/1000)):0;
@@ -365,6 +384,14 @@ export default function Home(){
           : <button className="primary bedtime-button wake" onClick={markWake}>Je suis réveillé</button>
         }
       </div>
+
+      {lastBedtime&&suggestedWakeLabel&&<div className="wake-recommendation">
+        <div>
+          <span>RÉVEIL CONSEILLÉ</span>
+          <strong>{suggestedWakeLabel}</strong>
+        </div>
+        <p>Tu t’es couché à {bedtimeLabel}. Pour conserver ta cible actuelle de <b>{targetSleepLabel}</b>, décale ton réveil à {suggestedWakeLabel} si ton planning le permet.</p>
+      </div>}
 
       <div className="section-title"><h3>Routine sommeil</h3><span>Enregistrée sur cet appareil</span></div>
       <div className="recovery-grid">
