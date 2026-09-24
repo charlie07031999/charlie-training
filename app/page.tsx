@@ -400,7 +400,7 @@ export default function Home(){
         }
       </div>
 
-      {lastBedtime&&suggestedWakeLabel&&<div className="sleep-plan">
+      {lastBedtime&&suggestedWakeLabel&&<div>
         <div className="wake-recommendation">
           <div>
             <span>RÉVEIL CONSEILLÉ</span>
@@ -409,24 +409,17 @@ export default function Home(){
           <p>Avec un coucher à {bedtimeLabel}, cette heure conserve ta cible de <b>{targetSleepLabel}</b>.</p>
         </div>
 
-        <div className="planned-wake-card">
-          <div>
-            <span>TON RÉVEIL PRÉVU</span>
-            <div className="planned-wake-row">
-              <input type="time" value={plannedWakeTime} onChange={e=>setPlannedWakeTime(e.target.value)}/>
-              <button onClick={()=>setPlannedWakeTime(suggestedWakeLabel)}>Prendre le conseillé</button>
-            </div>
-          </div>
-          <div className={`sleep-balance ${sleepGapMinutes<0?"short":"good"}`}>
-            <strong>{plannedSleepLabel}</strong>
-            <small>{sleepGapMinutes<0
-              ? `${Math.abs(sleepGapMinutes)} min sous la cible`
-              : sleepGapMinutes>0
-                ? `+${sleepGapMinutes} min au-dessus`
-                : "pile sur la cible"}</small>
-          </div>
-        </div>
-        <div className="sleep-plan-note">Durée entre l’heure de coucher enregistrée et le réveil prévu, pas une mesure du sommeil réel.</div>
+        <label className="time-card" style={{marginTop:8}}>
+          <span>TON RÉVEIL PRÉVU</span>
+          <input type="time" value={plannedWakeTime} onChange={e=>setPlannedWakeTime(e.target.value)}/>
+          <small>{plannedSleepLabel} entre coucher et réveil · {sleepGapMinutes<0
+            ? `${Math.abs(sleepGapMinutes)} min sous la cible`
+            : sleepGapMinutes>0
+              ? `+${sleepGapMinutes} min au-dessus de la cible`
+              : "pile sur la cible"}</small>
+          <button type="button" className="secondary" style={{marginTop:10}} onClick={()=>setPlannedWakeTime(suggestedWakeLabel)}>Prendre le réveil conseillé</button>
+        </label>
+        <div className="note">La durée affichée correspond au temps entre l’heure de coucher enregistrée et le réveil prévu, pas au sommeil réellement mesuré.</div>
       </div>}
 
       <div className="section-title"><h3>Routine sommeil</h3><span>Enregistrée sur cet appareil</span></div>
