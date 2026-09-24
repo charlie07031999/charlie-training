@@ -66,6 +66,7 @@ export default function Home(){
   const [prepTarget,setPrepTarget]=useState("22:15");
   const [wakeTarget,setWakeTarget]=useState("07:00");
   const [lastSleepHours,setLastSleepHours]=useState("");
+  const [lastBedtime,setLastBedtime]=useState("");
 
   const selectedWorkout=useMemo(()=>workouts.find(w=>w.id===selectedWorkoutId)??workouts[0],[selectedWorkoutId]);
   const currentWorkout=session?(workouts.find(w=>w.id===session.workoutId)??selectedWorkout):selectedWorkout;
@@ -93,6 +94,7 @@ export default function Home(){
       if(recovery.prepTarget) setPrepTarget(recovery.prepTarget);
       if(recovery.wakeTarget) setWakeTarget(recovery.wakeTarget);
       if(recovery.lastSleepHours) setLastSleepHours(String(recovery.lastSleepHours));
+      if(recovery.lastBedtime) setLastBedtime(String(recovery.lastBedtime));
     }catch{}
   },[]);
 
@@ -107,8 +109,8 @@ export default function Home(){
   },[session]);
 
   useEffect(()=>{
-    localStorage.setItem("charlie-training-recovery",JSON.stringify({sleepTarget,prepTarget,wakeTarget,lastSleepHours}));
-  },[sleepTarget,prepTarget,wakeTarget,lastSleepHours]);
+    localStorage.setItem("charlie-training-recovery",JSON.stringify({sleepTarget,prepTarget,wakeTarget,lastSleepHours,lastBedtime}));
+  },[sleepTarget,prepTarget,wakeTarget,lastSleepHours,lastBedtime]);
 
   useEffect(()=>{
     if(rest<=0) return;
@@ -198,6 +200,13 @@ export default function Home(){
     setSession({...session,deferredIds,exerciseIndex:nextIdx,setIndex:(session.logs[nextId]??[]).length});
     setRest(0);
   }
+
+  function markBedtime(){
+    setLastBedtime(new Date().toISOString());
+  }
+
+  const bedtimeLabel=lastBedtime?new Date(lastBedtime).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"";
+  const bedtimeDateLabel=lastBedtime?new Date(lastBedtime).toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"short"}):"";
 
   const currentHistory=currentExercise?history.find(h=>h.exerciseId===currentExercise.id):null;
   const elapsed=session?Math.max(0,Math.floor((now-session.startedAt)/1000)):0;
@@ -325,6 +334,15 @@ export default function Home(){
           <span>Cible</span>
           <strong>{sleepTarget}</strong>
         </div>
+      </div>
+
+      <div className="bedtime-action">
+        <div>
+          <span className="eyebrow">AU MOMENT OÙ TU POSES LA TÉLÉCOMMANDE</span>
+          <strong>{lastBedtime?`Coucher enregistré à ${bedtimeLabel}`:"Prêt à dormir ?"}</strong>
+          <small>{lastBedtime?`${bedtimeDateLabel} · heure réelle enregistrée`:"Appuie juste avant de fermer les yeux. L'heure réelle sera enregistrée."}</small>
+        </div>
+        <button className="primary bedtime-button" onClick={markBedtime}>{lastBedtime?"Mettre à jour":"Je me couche"}</button>
       </div>
 
       <div className="section-title"><h3>Routine sommeil</h3><span>Enregistrée sur cet appareil</span></div>
