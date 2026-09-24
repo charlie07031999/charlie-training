@@ -83,6 +83,7 @@ export default function Home(){
   const [wakeTarget,setWakeTarget]=useState("07:00");
   const [lastSleepHours,setLastSleepHours]=useState("");
   const [lastBedtime,setLastBedtime]=useState("");
+  const [plannedWakeTime,setPlannedWakeTime]=useState("08:30");
   const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error">("idle");
 
   const selectedWorkout=useMemo(()=>workouts.find(w=>w.id===selectedWorkoutId)??workouts[0],[selectedWorkoutId]);
@@ -112,6 +113,7 @@ export default function Home(){
       if(recovery.wakeTarget) setWakeTarget(recovery.wakeTarget);
       if(recovery.lastSleepHours) setLastSleepHours(String(recovery.lastSleepHours));
       if(recovery.lastBedtime) setLastBedtime(String(recovery.lastBedtime));
+      if(recovery.plannedWakeTime) setPlannedWakeTime(String(recovery.plannedWakeTime));
     }catch{}
   },[]);
 
@@ -126,8 +128,8 @@ export default function Home(){
   },[session]);
 
   useEffect(()=>{
-    localStorage.setItem("charlie-training-recovery",JSON.stringify({sleepTarget,prepTarget,wakeTarget,lastSleepHours,lastBedtime}));
-  },[sleepTarget,prepTarget,wakeTarget,lastSleepHours,lastBedtime]);
+    localStorage.setItem("charlie-training-recovery",JSON.stringify({sleepTarget,prepTarget,wakeTarget,lastSleepHours,lastBedtime,plannedWakeTime}));
+  },[sleepTarget,prepTarget,wakeTarget,lastSleepHours,lastBedtime,plannedWakeTime]);
 
   useEffect(()=>{
     if(rest<=0) return;
@@ -244,6 +246,19 @@ export default function Home(){
   const targetSleepLabel=durationLabel(targetSleepMinutes);
   const suggestedWakeAt=lastBedtime?new Date(new Date(lastBedtime).getTime()+targetSleepMinutes*60_000):null;
   const suggestedWakeLabel=suggestedWakeAt?suggestedWakeAt.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"";
+  const plannedWakeAt=lastBedtime?(()=>{
+    const start=new Date(lastBedtime);
+    const [h,m]=plannedWakeTime.split(":").map(Number);
+    const d=new Date(start);
+    d.setHours(h,m,0,0);
+    if(d.getTime()<=start.getTime()) d.setDate(d.getDate()+1);
+    return d;
+  })():null;
+  const plannedSleepMinutes=lastBedtime&&plannedWakeAt
+    ? Math.max(0,Math.round((plannedWakeAt.getTime()-new Date(lastBedtime).getTime())/60000))
+    : 0;
+  const plannedSleepLabel=plannedSleepMinutes?durationLabel(plannedSleepMinutes):"";
+  const sleepGapMinutes=plannedSleepMinutes-targetSleepMinutes;
 
   const currentHistory=currentExercise?history.find(h=>h.exerciseId===currentExercise.id):null;
   const elapsed=session?Math.max(0,Math.floor((now-session.startedAt)/1000)):0;
@@ -385,12 +400,33 @@ export default function Home(){
         }
       </div>
 
-      {lastBedtime&&suggestedWakeLabel&&<div className="wake-recommendation">
-        <div>
-          <span>RÉVEIL CONSEILLÉ</span>
-          <strong>{suggestedWakeLabel}</strong>
+      {lastBedtime&&suggestedWakeLabel&&<div className="sleep-plan">
+        <div className="wake-recommendation">
+          <div>
+            <span>RÉVEIL CONSEILLÉ</span>
+            <strong>{suggestedWakeLabel}</strong>
+          </div>
+          <p>Avec un coucher à {bedtimeLabel}, cette heure conserve ta cible de <b>{targetSleepLabel}</b>.</p>
         </div>
-        <p>Tu t’es couché à {bedtimeLabel}. Pour conserver ta cible actuelle de <b>{targetSleepLabel}</b>, décale ton réveil à {suggestedWakeLabel} si ton planning le permet.</p>
+
+        <div className="planned-wake-card">
+          <div>
+            <span>TON RÉVEIL PRÉVU</span>
+            <div className="planned-wake-row">
+              <input type="time" value={plannedWakeTime} onChange={e=>setPlannedWakeTime(e.target.value)}/>
+              <button onClick={()=>setPlannedWakeTime(suggestedWakeLabel)}>Prendre le conseillé</button>
+            </div>
+          </div>
+          <div className={`sleep-balance ${sleepGapMinutes<0?"short":"good"}`}>
+            <strong>{plannedSleepLabel}</strong>
+            <small>{sleepGapMinutes<0
+              ? `${Math.abs(sleepGapMinutes)} min sous la cible`
+              : sleepGapMinutes>0
+                ? `+${sleepGapMinutes} min au-dessus`
+                : "pile sur la cible"}</small>
+          </div>
+        </div>
+        <div className="sleep-plan-note">Durée entre l’heure de coucher enregistrée et le réveil prévu, pas une mesure du sommeil réel.</div>
       </div>}
 
       <div className="section-title"><h3>Routine sommeil</h3><span>Enregistrée sur cet appareil</span></div>
@@ -445,6 +481,6 @@ export default function Home(){
       </div>
     </section>}
 
-    <footer><span>Progression &gt; ego.</span><span>V3 · Cloud ready</span></footer>
+    <footer><span>Progression &gt; ego.</span><span>V3.2 · Sleep plan</span></footer>
   </main>
 }
