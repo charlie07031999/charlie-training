@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { history, weekPlan, workouts } from "../lib/workouts";
 import type { SetLog, Workout } from "../lib/types";
+import { isCloudConfigured, syncSleepEvent, syncWorkoutSession } from "../lib/cloud";
 
 type SessionState = {
   workoutId:string;
@@ -67,6 +68,7 @@ export default function Home(){
   const [wakeTarget,setWakeTarget]=useState("07:00");
   const [lastSleepHours,setLastSleepHours]=useState("");
   const [lastBedtime,setLastBedtime]=useState("");
+  const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error">("idle");
 
   const selectedWorkout=useMemo(()=>workouts.find(w=>w.id===selectedWorkoutId)??workouts[0],[selectedWorkoutId]);
   const currentWorkout=session?(workouts.find(w=>w.id===session.workoutId)??selectedWorkout):selectedWorkout;
@@ -156,6 +158,8 @@ export default function Home(){
     const next=[...completedSessions,item];
     localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
     setCompletedSessions(next);
+    setCloudStatus("syncing");
+    void syncWorkoutSession(item).then(result=>setCloudStatus(result.ok?"ok":"error"));
     setSession(null);
     setRest(0);
     setTab("history");
@@ -202,7 +206,21 @@ export default function Home(){
   }
 
   function markBedtime(){
-    setLastBedtime(new Date().toISOString());
+    const at=new Date().toISOString();
+    setLastBedtime(at);
+    setCloudStatus("syncing");
+    void syncSleepEvent("bed",at).then(result=>setCloudStatus(result.ok?"ok":"error"));
+  }
+
+  function markWake(){
+    const at=new Date().toISOString();
+    if(lastBedtime){
+      const hours=(Date.now()-new Date(lastBedtime).getTime())/3600000;
+      if(hours>0 && hours<24) setLastSleepHours(hours.toFixed(1));
+    }
+    setCloudStatus("syncing");
+    void syncSleepEvent("wake",at).then(result=>setCloudStatus(result.ok?"ok":"error"));
+    setLastBedtime("");
   }
 
   const bedtimeLabel=lastBedtime?new Date(lastBedtime).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"";
@@ -342,7 +360,10 @@ export default function Home(){
           <strong>{lastBedtime?`Coucher enregistré à ${bedtimeLabel}`:"Prêt à dormir ?"}</strong>
           <small>{lastBedtime?`${bedtimeDateLabel} · heure réelle enregistrée`:"Appuie juste avant de fermer les yeux. L'heure réelle sera enregistrée."}</small>
         </div>
-        <button className="primary bedtime-button" onClick={markBedtime}>{lastBedtime?"Mettre à jour":"Je me couche"}</button>
+        {!lastBedtime
+          ? <button className="primary bedtime-button" onClick={markBedtime}>Je me couche</button>
+          : <button className="primary bedtime-button wake" onClick={markWake}>Je suis réveillé</button>
+        }
       </div>
 
       <div className="section-title"><h3>Routine sommeil</h3><span>Enregistrée sur cet appareil</span></div>
@@ -359,6 +380,18 @@ export default function Home(){
         {lastSleepHours && Number(lastSleepHours)<7 && <span className="warning">Nuit courte saisie : évite de sacrifier encore du sommeil pour t'entraîner plus tôt.</span>}
       </div>
 
+      <div className={`integration-card ${isCloudConfigured?"connected":""}`}>
+        <div>
+          <strong>Cloud privé</strong>
+          <span>{isCloudConfigured
+            ? cloudStatus==="syncing" ? "Synchronisation…"
+            : cloudStatus==="ok" ? "Dernière donnée synchronisée."
+            : cloudStatus==="error" ? "Connexion configurée, mais la dernière synchro a échoué."
+            : "Supabase configuré. Les prochaines séances et nuits seront synchronisées."
+            : "Code prêt. Il reste à relier le projet Supabase à Vercel."}</span>
+        </div>
+        <b>{isCloudConfigured?"Actif":"À connecter"}</b>
+      </div>
       <div className="integration-card">
         <div><strong>Notifications iPhone</strong><span>Possible avec la PWA installée sur l'écran d'accueil.</span></div>
         <b>Étape suivante</b>
@@ -385,6 +418,6 @@ export default function Home(){
       </div>
     </section>}
 
-    <footer><span>Progression &gt; ego.</span><span>V2 · PWA</span></footer>
+    <footer><span>Progression &gt; ego.</span><span>V3 · Cloud ready</span></footer>
   </main>
 }
