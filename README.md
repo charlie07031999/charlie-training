@@ -32,3 +32,20 @@ Puis ouvre http://localhost:3000
 - poids / tour de taille / photos
 - planning dynamique
 - intégration Health via import ou app native
+
+
+## V3 cloud sync (Supabase)
+
+The app contains optional private cloud sync.
+
+1. Create or connect a Supabase project.
+2. Enable Anonymous Sign-Ins in Supabase Auth.
+3. Run `supabase/schema.sql` in the Supabase SQL Editor.
+4. Add these variables to Vercel:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+5. Redeploy.
+
+With those variables present, new workout sessions and bed/wake events are stored in Supabase under Row Level Security.
+
+Without Supabase configured, Charlie Training continues to work locally on the device.
