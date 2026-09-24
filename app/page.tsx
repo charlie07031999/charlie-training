@@ -51,7 +51,7 @@ function progressionHint(ex:any, logs:SetLog[]){
 }
 
 export default function Home(){
-  const [tab,setTab]=useState<"today"|"week"|"history"|"coach">("today");
+  const [tab,setTab]=useState<"today"|"week"|"history"|"recovery"|"coach">("today");
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
   const [session,setSession]=useState<SessionState|null>(null);
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
@@ -62,6 +62,10 @@ export default function Home(){
   const [failed,setFailed]=useState(false);
   const [coachMode,setCoachMode]=useState<CoachMode>("normal");
   const [now,setNow]=useState(Date.now());
+  const [sleepTarget,setSleepTarget]=useState("23:00");
+  const [prepTarget,setPrepTarget]=useState("22:15");
+  const [wakeTarget,setWakeTarget]=useState("07:00");
+  const [lastSleepHours,setLastSleepHours]=useState("");
 
   const selectedWorkout=useMemo(()=>workouts.find(w=>w.id===selectedWorkoutId)??workouts[0],[selectedWorkoutId]);
   const currentWorkout=session?(workouts.find(w=>w.id===session.workoutId)??selectedWorkout):selectedWorkout;
@@ -83,6 +87,13 @@ export default function Home(){
     try{
       setCompletedSessions(JSON.parse(localStorage.getItem(STORAGE_KEY)??"[]"));
     }catch{}
+    try{
+      const recovery=JSON.parse(localStorage.getItem("charlie-training-recovery")??"{}");
+      if(recovery.sleepTarget) setSleepTarget(recovery.sleepTarget);
+      if(recovery.prepTarget) setPrepTarget(recovery.prepTarget);
+      if(recovery.wakeTarget) setWakeTarget(recovery.wakeTarget);
+      if(recovery.lastSleepHours) setLastSleepHours(String(recovery.lastSleepHours));
+    }catch{}
   },[]);
 
   useEffect(()=>{
@@ -94,6 +105,10 @@ export default function Home(){
     if(session) localStorage.setItem(SESSION_KEY,JSON.stringify(session));
     else localStorage.removeItem(SESSION_KEY);
   },[session]);
+
+  useEffect(()=>{
+    localStorage.setItem("charlie-training-recovery",JSON.stringify({sleepTarget,prepTarget,wakeTarget,lastSleepHours}));
+  },[sleepTarget,prepTarget,wakeTarget,lastSleepHours]);
 
   useEffect(()=>{
     if(rest<=0) return;
@@ -196,7 +211,7 @@ export default function Home(){
     </header>
 
     <nav className="tabs">
-      {([['today','Séance'],['week','Semaine'],['history','Historique'],['coach','Nolan']] as const).map(([id,label])=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}>{label}</button>)}
+      {([['today','Séance'],['week','Semaine'],['history','Historique'],['recovery','Récup'],['coach','Nolan']] as const).map(([id,label])=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}>{label}</button>)}
     </nav>
 
     {tab==='today'&&<section>
@@ -296,6 +311,44 @@ export default function Home(){
       <div className="section-title"><h3>Références</h3><span>Base actuelle</span></div>
       <div className="history-list">{history.map(h=><div className="history-item" key={h.exerciseId}><strong>{h.label}</strong><span>{h.reference}</span></div>)}</div>
       <div className="note">V2 : historique local enrichi + reprise de séance. La synchro iPhone/Mac viendra avec Supabase.</div>
+    </section>}
+
+
+    {tab==='recovery'&&<section>
+      <div className="recovery-hero">
+        <div>
+          <div className="eyebrow">RÉCUPÉRATION</div>
+          <h2>Le sommeil fait partie du programme.</h2>
+          <p>Objectif : préparer le coucher avant que la soirée de travail déborde sur ta récupération.</p>
+        </div>
+        <div className="sleep-score">
+          <span>Cible</span>
+          <strong>{sleepTarget}</strong>
+        </div>
+      </div>
+
+      <div className="section-title"><h3>Routine sommeil</h3><span>Enregistrée sur cet appareil</span></div>
+      <div className="recovery-grid">
+        <label className="time-card"><span>Préparation coucher</span><input type="time" value={prepTarget} onChange={e=>setPrepTarget(e.target.value)}/><small>Stop boulot, lumière basse, routine.</small></label>
+        <label className="time-card"><span>Sommeil cible</span><input type="time" value={sleepTarget} onChange={e=>setSleepTarget(e.target.value)}/><small>Heure à laquelle tu veux réellement dormir.</small></label>
+        <label className="time-card"><span>Réveil cible</span><input type="time" value={wakeTarget} onChange={e=>setWakeTarget(e.target.value)}/><small>À ajuster si tu t'es couché tard : priorité au sommeil.</small></label>
+        <label className="time-card"><span>Dernière nuit</span><div className="hours-input"><input inputMode="decimal" placeholder="7.5" value={lastSleepHours} onChange={e=>setLastSleepHours(e.target.value.replace(",", "."))}/><b>h</b></div><small>Temporaire, jusqu'à la synchro Apple Santé.</small></label>
+      </div>
+
+      <div className="sleep-guidance">
+        <strong>Routine actuelle</strong>
+        <p>À {prepTarget} : fin du travail et préparation. À {sleepTarget} : objectif sommeil. Réveil cible {wakeTarget}.</p>
+        {lastSleepHours && Number(lastSleepHours)<7 && <span className="warning">Nuit courte saisie : évite de sacrifier encore du sommeil pour t'entraîner plus tôt.</span>}
+      </div>
+
+      <div className="integration-card">
+        <div><strong>Notifications iPhone</strong><span>Possible avec la PWA installée sur l'écran d'accueil.</span></div>
+        <b>Étape suivante</b>
+      </div>
+      <div className="integration-card">
+        <div><strong>Apple Santé / HealthKit</strong><span>Sommeil, pas, fréquence cardiaque et entraînements nécessitent une app iOS native pour une vraie synchro directe.</span></div>
+        <b>V3 native</b>
+      </div>
     </section>}
 
     {tab==='coach'&&<section>
