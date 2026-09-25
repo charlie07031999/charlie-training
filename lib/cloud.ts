@@ -228,6 +228,7 @@ export async function loadLatestLiveWorkout(){
     .from("live_workout_sessions")
     .select("id,client_session_id,workout_id,started_at,current_exercise_id,current_exercise_name,current_exercise_index,current_set_index,completed_ids,deferred_ids,logs,coach_mode,last_set,last_action,updated_at")
     .eq("user_id",user.id)
+    .gte("updated_at",new Date(Date.now()-12*60*60*1000).toISOString())
     .order("updated_at",{ascending:false})
     .limit(1)
     .maybeSingle();
