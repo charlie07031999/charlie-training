@@ -330,6 +330,20 @@ export default function NousPage(){
     }
   }
 
+  async function shareInvite(){
+    if(!space?.inviteCode) return;
+    const url=`${window.location.origin}/nous`;
+    const text=`Rejoins notre espace NOUS. Code : ${space.inviteCode}`;
+    try{
+      if(navigator.share){
+        await navigator.share({title:"NOUS",text,url});
+      }else{
+        await navigator.clipboard?.writeText(`${text}\n${url}`);
+        setOnboardingMessage("Invitation copiée.");
+      }
+    }catch{}
+  }
+
   async function joinSpace(){
     if(!displayName.trim()||!inviteCode.trim()) return;
     setOnboardingMessage("Connexion à votre espace…");
@@ -426,8 +440,8 @@ export default function NousPage(){
           <strong>{space.householdName}</strong>
           <span>Connecté en tant que {space.memberName}</span>
         </div>
-        {space.inviteCode&&<button onClick={()=>navigator.clipboard?.writeText(space.inviteCode??"")}>
-          Code {space.inviteCode}
+        {space.inviteCode&&<button onClick={shareInvite}>
+          {space.members.length<2?`Inviter · ${space.inviteCode}`:"2/2 connectés"}
         </button>}
       </div>}
 
