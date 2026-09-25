@@ -3,7 +3,7 @@ create extension if not exists pgcrypto;
 create table if not exists public.households (
   id uuid primary key default gen_random_uuid(),
   name text not null default 'Nous',
-  invite_code text not null unique default upper(substr(replace(gen_random_uuid()::text,'-',''),1,8)),
+  invite_code text not null unique default upper(substr(replace(gen_random_uuid()::text,'-',''),1,12)),
   created_by uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now()
 );
