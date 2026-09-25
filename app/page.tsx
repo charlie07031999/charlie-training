@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { history, workouts } from "../lib/workouts";
 import type { CardioLog, Exercise, SetLog, Workout } from "../lib/types";
 import {
+  clearLiveWorkout,
   finishSleepSession,
   isCloudConfigured,
   loadCloudState,
+  loadLatestLiveWorkout,
   saveBodyMetric,
   savePreferences,
   savePushSubscription,
@@ -15,6 +17,7 @@ import {
   setLightsOut,
   setSleepQuality,
   startSleepSession,
+  syncLiveWorkout,
   syncWorkoutSession,
   updateSleepPlan,
   VAPID_PUBLIC_KEY
@@ -265,6 +268,7 @@ export default function Home(){
   }
 
   useEffect(()=>{
+    let restoredLocal:SessionState|null=null;
     try{
       const cached=JSON.parse(localStorage.getItem(STORAGE_KEY)??"[]");
       if(Array.isArray(cached)) setCompletedSessions(cached);
@@ -273,15 +277,38 @@ export default function Home(){
       const raw=localStorage.getItem(SESSION_KEY);
       if(raw){
         const parsed=JSON.parse(raw);
-        setSession({
+        restoredLocal={
           ...parsed,
           completedIds:parsed.completedIds??[],
           deferredIds:parsed.deferredIds??[],
           clientSessionId:parsed.clientSessionId??`legacy-${parsed.startedAt}`,
           coachMode:parsed.coachMode??"normal"
-        });
+        };
+        setSession(restoredLocal);
+        pushLiveSession(restoredLocal,"session_restored");
       }
     }catch{}
+
+    if(!restoredLocal){
+      void loadLatestLiveWorkout().then(live=>{
+        if(!live) return;
+        const restored:SessionState={
+          clientSessionId:live.client_session_id,
+          workoutId:live.workout_id,
+          exerciseIndex:live.current_exercise_index??0,
+          setIndex:live.current_set_index??0,
+          logs:(live.logs??{}) as Record<string,SetLog[]>,
+          startedAt:new Date(live.started_at).getTime(),
+          completedIds:Array.isArray(live.completed_ids)?live.completed_ids:[],
+          deferredIds:Array.isArray(live.deferred_ids)?live.deferred_ids:[],
+          coachMode:(["normal","tired","short","crowded"] as CoachMode[]).includes(live.coach_mode as CoachMode)
+            ? live.coach_mode as CoachMode
+            : "normal"
+        };
+        setSession(restored);
+      });
+    }
+
     if("serviceWorker" in navigator){
       void navigator.serviceWorker.register("/sw.js").then(async reg=>{
         try{
@@ -443,10 +470,51 @@ export default function Home(){
     return {sets:ex.sets,repMin:ex.repMin,repMax:ex.repMax};
   }
 
+  function pushLiveSession(
+    liveSession:SessionState,
+    action:string,
+    lastSet?:Record<string,unknown>|null
+  ){
+    const workout=workouts.find(w=>w.id===liveSession.workoutId);
+    const exercise=workout?.id==="cardio"
+      ? null
+      : workout?.exercises[liveSession.exerciseIndex]??null;
+
+    setCloudStatus("syncing");
+    void syncLiveWorkout({
+      clientSessionId:liveSession.clientSessionId,
+      workoutId:liveSession.workoutId,
+      startedAt:liveSession.startedAt,
+      currentExerciseId:exercise?.id??(workout?.id==="cardio"?"cardio":null),
+      currentExerciseName:exercise?.name??(workout?.id==="cardio"?"Cardio":null),
+      currentExerciseIndex:liveSession.exerciseIndex,
+      currentSetIndex:liveSession.setIndex,
+      completedIds:liveSession.completedIds,
+      deferredIds:liveSession.deferredIds,
+      logs:liveSession.logs,
+      coachMode:liveSession.coachMode,
+      lastSet:lastSet??null,
+      lastAction:action
+    }).then(result=>setCloudStatus(result.ok?"ok":"error"));
+  }
+
+  function lastSetPayload(exercise:Exercise,log:SetLog,setNumber:number){
+    return {
+      exercise_id:exercise.id,
+      exercise_name:exercise.name,
+      set_number:setNumber,
+      reps:log.reps,
+      weight:log.weight??null,
+      unit:exercise.unit,
+      rir:log.rir??null,
+      failed:Boolean(log.failed),
+      logged_at:log.loggedAt?new Date(log.loggedAt).toISOString():new Date().toISOString()
+    };
+  }
+
   function startWorkout(w:Workout){
     const mode=coachMode==="normal"?autoCoachMode:coachMode;
-    setCoachMode(mode);
-    setSession({
+    const nextSession:SessionState={
       clientSessionId:crypto.randomUUID(),
       workoutId:w.id,
       exerciseIndex:0,
@@ -456,7 +524,10 @@ export default function Home(){
       completedIds:[],
       deferredIds:[],
       coachMode:mode
-    });
+    };
+    setCoachMode(mode);
+    setSession(nextSession);
+    pushLiveSession(nextSession,"session_started");
     setTab("today");
   }
 
@@ -471,8 +542,13 @@ export default function Home(){
     return -1;
   }
 
-  function finishWorkout(logs:Record<string,SetLog[]>,cardio?:CardioLog|null){
+  function finishWorkout(
+    logs:Record<string,SetLog[]>,
+    cardio?:CardioLog|null,
+    finalLastSet?:Record<string,unknown>|null
+  ){
     if(!session) return;
+    const finalLive:SessionState={...session,logs};
     const item:CompletedSession={
       clientSessionId:session.clientSessionId,
       workoutId:session.workoutId,
@@ -488,18 +564,42 @@ export default function Home(){
     setSession(null);
     setRest(0);
     setCloudStatus("syncing");
-    void syncWorkoutSession({
-      clientSessionId:item.clientSessionId,
-      workoutId:item.workoutId,
-      startedAt:item.startedAt,
-      finishedAt:item.finishedAt,
-      logs:item.logs,
-      cardio:item.cardio as Record<string,unknown>|null,
-      coachMode:item.coachMode
-    }).then(async r=>{
-      setCloudStatus(r.ok?"ok":"error");
-      if(r.ok) await refreshCloud();
-    });
+
+    void (async()=>{
+      await syncLiveWorkout({
+        clientSessionId:finalLive.clientSessionId,
+        workoutId:finalLive.workoutId,
+        startedAt:finalLive.startedAt,
+        currentExerciseId:currentExercise?.id??(finalLive.workoutId==="cardio"?"cardio":null),
+        currentExerciseName:currentExercise?.name??(finalLive.workoutId==="cardio"?"Cardio":null),
+        currentExerciseIndex:finalLive.exerciseIndex,
+        currentSetIndex:finalLive.setIndex,
+        completedIds:finalLive.completedIds,
+        deferredIds:finalLive.deferredIds,
+        logs:finalLive.logs,
+        coachMode:finalLive.coachMode,
+        lastSet:finalLastSet??null,
+        lastAction:"session_finishing"
+      });
+
+      const result=await syncWorkoutSession({
+        clientSessionId:item.clientSessionId,
+        workoutId:item.workoutId,
+        startedAt:item.startedAt,
+        finishedAt:item.finishedAt,
+        logs:item.logs,
+        cardio:item.cardio as Record<string,unknown>|null,
+        coachMode:item.coachMode
+      });
+
+      if(result.ok){
+        await clearLiveWorkout(item.clientSessionId);
+        setCloudStatus("ok");
+        await refreshCloud();
+      }else{
+        setCloudStatus("error");
+      }
+    })();
   }
 
   function logSet(){
@@ -515,6 +615,7 @@ export default function Home(){
     const nextLogs={...session.logs,[key]:[...(session.logs[key]??[]),log]};
     const target=effectiveTarget();
     const nextSet=session.setIndex+1;
+    const lastSet=lastSetPayload(currentExercise,log,nextLogs[key].length);
 
     if(currentExercise.restSeconds>0){
       setRest(currentExercise.restSeconds);
@@ -527,20 +628,24 @@ export default function Home(){
       const deferredIds=session.deferredIds.filter(id=>id!==key);
       const nextIdx=nextExerciseIndex(session,completedIds,deferredIds);
       if(nextIdx===-1){
-        finishWorkout(nextLogs);
+        finishWorkout(nextLogs,null,lastSet);
         return;
       }
       const nextId=currentWorkout.exercises[nextIdx].id;
-      setSession({
+      const nextSession:SessionState={
         ...session,
         logs:nextLogs,
         completedIds,
         deferredIds,
         exerciseIndex:nextIdx,
         setIndex:(nextLogs[nextId]??[]).length
-      });
+      };
+      setSession(nextSession);
+      pushLiveSession(nextSession,"set_logged",lastSet);
     }else{
-      setSession({...session,logs:nextLogs,setIndex:nextSet});
+      const nextSession:SessionState={...session,logs:nextLogs,setIndex:nextSet};
+      setSession(nextSession);
+      pushLiveSession(nextSession,"set_logged",lastSet);
     }
   }
 
@@ -549,7 +654,14 @@ export default function Home(){
     const arr=[...(session.logs[exerciseId]??[])];
     if(!arr[index]) return;
     arr[index]={...arr[index],reps:Math.max(0,arr[index].reps+delta)};
-    setSession({...session,logs:{...session.logs,[exerciseId]:arr}});
+    const nextSession:SessionState={...session,logs:{...session.logs,[exerciseId]:arr}};
+    setSession(nextSession);
+    const exercise=currentWorkout.exercises.find(ex=>ex.id===exerciseId);
+    pushLiveSession(
+      nextSession,
+      "set_edited",
+      exercise?lastSetPayload(exercise,arr[index],index+1):null
+    );
   }
 
   function deleteSet(exerciseId:string,index:number){
@@ -557,13 +669,15 @@ export default function Home(){
     const arr=[...(session.logs[exerciseId]??[])];
     arr.splice(index,1);
     const exIndex=currentWorkout.exercises.findIndex(ex=>ex.id===exerciseId);
-    setSession({
+    const nextSession:SessionState={
       ...session,
       logs:{...session.logs,[exerciseId]:arr},
       exerciseIndex:exIndex>=0?exIndex:session.exerciseIndex,
       setIndex:arr.length,
       completedIds:session.completedIds.filter(id=>id!==exerciseId)
-    });
+    };
+    setSession(nextSession);
+    pushLiveSession(nextSession,"set_deleted");
   }
 
   function undoLastSet(){
@@ -591,13 +705,23 @@ export default function Home(){
     const nextIdx=nextExerciseIndex(session,session.completedIds,deferredIds);
     if(nextIdx===-1) return;
     const nextId=currentWorkout.exercises[nextIdx].id;
-    setSession({
+    const nextSession:SessionState={
       ...session,
       deferredIds,
       exerciseIndex:nextIdx,
       setIndex:(session.logs[nextId]??[]).length
-    });
+    };
+    setSession(nextSession);
+    pushLiveSession(nextSession,"exercise_deferred");
     setRest(0);
+  }
+
+  function abandonWorkout(){
+    if(!session) return;
+    const id=session.clientSessionId;
+    setSession(null);
+    setRest(0);
+    void clearLiveWorkout(id).then(result=>setCloudStatus(result.ok?"ok":"error"));
   }
 
   function saveCardio(){
@@ -909,7 +1033,7 @@ export default function Home(){
           <label>FC moyenne<input inputMode="numeric" placeholder="150" value={cardioHr} onChange={e=>setCardioHr(e.target.value)}/></label>
           <label>RPE /10<input inputMode="numeric" value={cardioRpe} onChange={e=>setCardioRpe(e.target.value)}/></label>
           <button className="primary big" onClick={saveCardio}>Enregistrer le cardio</button>
-          <button className="ghost danger" onClick={()=>confirm("Annuler cette séance ?")&&setSession(null)}>Annuler</button>
+          <button className="ghost danger" onClick={()=>confirm("Annuler cette séance ?")&&abandonWorkout()}>Annuler</button>
         </div>
       </>:<>
         <div className="session-head">
@@ -926,6 +1050,7 @@ export default function Home(){
           <div><span>Finis</span><strong>{session.completedIds.length}</strong></div>
           <div><span>En attente</span><strong>{session.deferredIds.length}</strong></div>
         </div>
+        <div className="live-cloud-note">LIVE · chaque série validée est envoyée à Supabase pour Nolan.</div>
 
         {currentExercise&&<div className="target-card">
           <div className="target-grid">
@@ -975,7 +1100,7 @@ export default function Home(){
           <button className="primary big" onClick={logSet}>Valider la série</button>
           <button className="secondary" onClick={skipMachine}>Machine prise → plus tard</button>
           <button className="ghost" onClick={undoLastSet}>Annuler ma dernière validation</button>
-          <button className="ghost danger" onClick={()=>confirm("Terminer sans enregistrer ?")&&setSession(null)}>Abandonner la séance</button>
+          <button className="ghost danger" onClick={()=>confirm("Terminer sans enregistrer ?")&&abandonWorkout()}>Abandonner la séance</button>
         </div>
       </>}
     </section>}
