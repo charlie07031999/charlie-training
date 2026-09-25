@@ -54,6 +54,8 @@ export type CloudPreferences = {
   wake_target:string;
   prep_target:string;
   notifications_enabled:boolean;
+  workout_reminder_time:string;
+  creatine_reminder_time:string;
 };
 
 async function ensureUser():Promise<User|null> {
@@ -93,7 +95,7 @@ export async function loadCloudState() {
       .limit(120),
     supabase
       .from("user_preferences")
-      .select("sleep_target,wake_target,prep_target,notifications_enabled")
+      .select("sleep_target,wake_target,prep_target,notifications_enabled,workout_reminder_time,creatine_reminder_time")
       .eq("user_id",user.id)
       .maybeSingle()
   ]);
