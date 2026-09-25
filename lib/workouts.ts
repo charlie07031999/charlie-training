@@ -30,7 +30,7 @@ export const workouts: Workout[] = [
     exercises:[{id:"easy-run",name:"Footing facile",target:"Cardio",unit:"PDC",sets:1,repMin:25,repMax:35,restSeconds:0,cue:"25–35 min. Conversation facile. Run/walk si nécessaire.",priority:true}]
   },
   {
-    id:"legs", day:"Vendredi", title:"LEGS", subtitle:"Force · chaîne postérieure · entretien quadri", accent:"#f7c948",
+    id:"legs", day:"Jeudi", title:"LEGS", subtitle:"Force · chaîne postérieure · entretien quadri", accent:"#f7c948",
     exercises:[
       {id:"smith-squat",name:"Smith Squat",target:"Quadriceps · fessiers",unit:"kg",suggestedWeight:51.3,sets:3,repMin:8,repMax:8,restSeconds:150,cue:"Genoux dans l’axe. Amplitude stable.",priority:true},
       {id:"rdl",name:"RDL Smith",target:"Ischios · fessiers",unit:"kg",suggestedWeight:61.3,sets:3,repMin:8,repMax:8,restSeconds:150,cue:"Hanches en arrière, dos neutre.",priority:true},
