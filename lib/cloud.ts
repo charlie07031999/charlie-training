@@ -10,6 +10,7 @@ const publishableKey =
   "sb_publishable_m9I76Yiymq9k7ZA43FvLDg_Z0mpnZBO";
 
 export const isCloudConfigured = Boolean(url && publishableKey);
+export const VAPID_PUBLIC_KEY = "BI7VvAirYWnr9SWTpmiQURZfLNyAvBEbYrEWJ9k4Yrsv81szoU3oHkUO5amfrbhlXRlBLiOnKxwmcma9fbhc-cA";
 
 export const supabase = isCloudConfigured
   ? createClient(url as string, publishableKey as string, {
@@ -328,6 +329,29 @@ export async function sendMagicLink(email:string){
       emailRedirectTo:redirectTo
     }
   });
+
+  return error?{ok:false,reason:error.message}:{ok:true};
+}
+
+
+export async function savePushSubscription(input:{
+  endpoint:string;
+  p256dh:string;
+  auth:string;
+}){
+  if(!supabase) return {ok:false,reason:"not_configured" as const};
+  const user=await ensureUser();
+  if(!user) return {ok:false,reason:"auth_failed" as const};
+
+  const {error}=await supabase
+    .from("push_subscriptions")
+    .upsert({
+      user_id:user.id,
+      endpoint:input.endpoint,
+      p256dh:input.p256dh,
+      auth:input.auth,
+      updated_at:new Date().toISOString()
+    },{onConflict:"endpoint"});
 
   return error?{ok:false,reason:error.message}:{ok:true};
 }
