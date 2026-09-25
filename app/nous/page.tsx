@@ -350,6 +350,14 @@ export default function NousPage(){
   const next14=upcoming.filter(e=>new Date(e.starts_at).getTime()<now+14*86400000);
   const freeIdeaCount=ideas.length;
 
+  function assigneeLabel(assignee:NousAssignee){
+    if(assignee==="both") return "Nous deux";
+    if(!space) return assignee==="owner"?"Moi":"Partenaire";
+    const member=space.members.find(m=>m.role===assignee);
+    if(assignee===space.role) return "Moi";
+    return member?.displayName??"Partenaire";
+  }
+
   return <main className="nous-app">
     <header className="nous-topbar">
       <div>
@@ -476,7 +484,7 @@ export default function NousPage(){
             <button className="round-check" onClick={()=>toggleItem(item)}>{item.done?"✓":""}</button>
             <div>
               <strong>{item.title}</strong>
-              <span>{item.assignee==="both"?"Nous deux":item.assignee==="me"?"Moi":"Elle"}{item.due_at?` · ${dayLabel(item.due_at)}`:""}</span>
+              <span>{assigneeLabel(item.assignee)}{item.due_at?` · ${dayLabel(item.due_at)}`:""}</span>
             </div>
             <button className="item-more" onClick={()=>removeItem(item)}>×</button>
           </article>)}
@@ -591,8 +599,8 @@ export default function NousPage(){
           <textarea placeholder="Détails (optionnel)" value={draftDetails} onChange={e=>setDraftDetails(e.target.value)}/>
 
           <div className="assignee-row">
-            {(["both","me","partner"] as NousAssignee[]).map(a=><button key={a} className={draftAssignee===a?"active":""} onClick={()=>setDraftAssignee(a)}>
-              {a==="both"?"Nous deux":a==="me"?"Moi":"Elle"}
+            {(["both","owner","member"] as NousAssignee[]).map(a=><button key={a} className={draftAssignee===a?"active":""} onClick={()=>setDraftAssignee(a)}>
+              {assigneeLabel(a)}
             </button>)}
           </div>
 
