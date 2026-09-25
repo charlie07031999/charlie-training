@@ -277,15 +277,16 @@ export default function Home(){
       const raw=localStorage.getItem(SESSION_KEY);
       if(raw){
         const parsed=JSON.parse(raw);
-        restoredLocal={
+        const restored:SessionState={
           ...parsed,
           completedIds:parsed.completedIds??[],
           deferredIds:parsed.deferredIds??[],
           clientSessionId:parsed.clientSessionId??`legacy-${parsed.startedAt}`,
           coachMode:parsed.coachMode??"normal"
         };
-        setSession(restoredLocal);
-        pushLiveSession(restoredLocal,"session_restored");
+        restoredLocal=restored;
+        setSession(restored);
+        pushLiveSession(restored,"session_restored");
       }
     }catch{}
 
