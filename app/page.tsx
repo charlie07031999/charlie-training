@@ -9,13 +9,15 @@ import {
   loadCloudState,
   saveBodyMetric,
   savePreferences,
+  savePushSubscription,
   secureAnonymousAccount,
   sendMagicLink,
   setLightsOut,
   setSleepQuality,
   startSleepSession,
   syncWorkoutSession,
-  updateSleepPlan
+  updateSleepPlan,
+  VAPID_PUBLIC_KEY
 } from "../lib/cloud";
 
 type CoachMode = "normal"|"tired"|"short"|"crowded";
@@ -118,6 +120,13 @@ function dateKey(ms:number){
   return new Date(ms).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"});
 }
 
+function urlBase64ToUint8Array(base64String:string){
+  const padding="=".repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
+  const rawData=window.atob(base64);
+  return Uint8Array.from([...rawData].map(ch=>ch.charCodeAt(0)));
+}
+
 function incrementFor(ex:Exercise){
   if(ex.unit==="kg/bras") return 2;
   if(ex.unit==="+kg") return 2.5;
@@ -179,6 +188,7 @@ export default function Home(){
   const [wakeTarget,setWakeTarget]=useState("07:00");
   const [plannedWakeTime,setPlannedWakeTime]=useState("07:00");
   const [notificationsEnabled,setNotificationsEnabled]=useState(false);
+  const [pushReady,setPushReady]=useState(false);
   const [workoutReminderTime,setWorkoutReminderTime]=useState("08:00");
   const [creatineReminderTime,setCreatineReminderTime]=useState("12:00");
   const [prefsLoaded,setPrefsLoaded]=useState(false);
@@ -273,7 +283,12 @@ export default function Home(){
       }
     }catch{}
     if("serviceWorker" in navigator){
-      void navigator.serviceWorker.register("/sw.js");
+      void navigator.serviceWorker.register("/sw.js").then(async reg=>{
+        try{
+          const existing=await reg.pushManager.getSubscription();
+          setPushReady(Boolean(existing));
+        }catch{}
+      });
     }
     void refreshCloud();
   },[]);
@@ -328,22 +343,6 @@ export default function Home(){
       void notify("Repos terminé","Prochaine série. Repars proprement.");
     }
   },[rest,restNotificationArmed]);
-
-  useEffect(()=>{
-    if(!notificationsEnabled) return;
-    const timers:number[]=[];
-    const scheduleLocal=(time:string,title:string,body:string)=>{
-      const [h,m]=time.split(":").map(Number);
-      const target=new Date();
-      target.setHours(h,m,0,0);
-      if(target.getTime()<=Date.now()) target.setDate(target.getDate()+1);
-      timers.push(window.setTimeout(()=>void notify(title,body),target.getTime()-Date.now()));
-    };
-    scheduleLocal(prepTarget,"Routine sommeil","Fin du boulot. Prépare le coucher.");
-    scheduleLocal(workoutReminderTime,"Charlie Training","Regarde la séance prévue aujourd’hui.");
-    scheduleLocal(creatineReminderTime,"Créatine","Pense à ta prise quotidienne si ce n’est pas déjà fait.");
-    return()=>timers.forEach(clearTimeout);
-  },[notificationsEnabled,prepTarget,workoutReminderTime,creatineReminderTime]);
 
   const weekStart=useMemo(()=>mondayStart(new Date()).getTime(),[now]);
   const weekEnd=weekStart+7*86400000;
@@ -689,17 +688,54 @@ export default function Home(){
   }
 
   async function enableNotifications(){
-    if(typeof window==="undefined"||!("Notification" in window)){
+    if(typeof window==="undefined"||!("Notification" in window)||!("serviceWorker" in navigator)){
       setAccountMessage("Notifications non prises en charge sur ce navigateur.");
       return;
     }
-    if("serviceWorker" in navigator) await navigator.serviceWorker.register("/sw.js");
+
     const permission=await Notification.requestPermission();
-    const enabled=permission==="granted";
-    setNotificationsEnabled(enabled);
-    if(enabled){
+    if(permission!=="granted"){
+      setNotificationsEnabled(false);
+      setAccountMessage("Autorisation de notification refusée.");
+      return;
+    }
+
+    try{
+      const registration=await navigator.serviceWorker.register("/sw.js");
+      const ready=await navigator.serviceWorker.ready;
+      let subscription=await ready.pushManager.getSubscription();
+
+      if(!subscription){
+        subscription=await ready.pushManager.subscribe({
+          userVisibleOnly:true,
+          applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+      }
+
+      const json=subscription.toJSON();
+      const p256dh=json.keys?.p256dh;
+      const auth=json.keys?.auth;
+      if(!json.endpoint||!p256dh||!auth) throw new Error("subscription_incomplete");
+
+      const saved=await savePushSubscription({
+        endpoint:json.endpoint,
+        p256dh,
+        auth
+      });
+      if(!saved.ok) throw new Error(saved.reason);
+
+      setNotificationsEnabled(true);
+      setPushReady(true);
       setPrefsLoaded(true);
-      await notify("Charlie Training","Notifications activées.");
+      setAccountMessage("Web Push activé sur cet appareil.");
+      await registration.showNotification("Charlie Training",{
+        body:"Web Push activé. Les rappels peuvent arriver même quand l’app est fermée.",
+        icon:"/icon.svg",
+        badge:"/icon.svg"
+      });
+    }catch(error:any){
+      setPushReady(false);
+      setAccountMessage(`Activation Web Push impossible : ${error?.message??"erreur inconnue"}`);
     }
   }
 
@@ -1068,8 +1104,8 @@ export default function Home(){
 
       <div className="section-title"><h3>Notifications</h3><span>PWA</span></div>
       <div className="integration-card connected">
-        <div><strong>Rappels locaux</strong><span>Repos, routine coucher, séance et créatine. Ils sont fiables quand la PWA reste active ; le service worker est prêt pour le Web Push serveur.</span></div>
-        <b>{notificationsEnabled?"Actif":"Off"}</b>
+        <div><strong>Web Push</strong><span>Repos local + rappels serveur pour coucher, séance et créatine. Les rappels serveur fonctionnent même lorsque la PWA est fermée.</span></div>
+        <b>{pushReady?"Cet appareil":notificationsEnabled?"Autre appareil":"Off"}</b>
       </div>
       {!notificationsEnabled&&<button className="primary big" onClick={enableNotifications}>Activer les notifications</button>}
       <div className="recovery-grid">
