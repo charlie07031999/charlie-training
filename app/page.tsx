@@ -222,10 +222,8 @@ export default function Home(){
       notes:s.notes
     })).sort((a,b)=>a.finishedAt-b.finishedAt);
 
-    if(mapped.length){
-      setCompletedSessions(mapped);
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(mapped));
-    }
+    setCompletedSessions(mapped);
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(mapped));
 
     setSleepSessions(state.sleep.map(s=>({
       id:s.id,
@@ -996,7 +994,7 @@ export default function Home(){
             <div><strong>{w?.title??s.workoutId}</strong><span>{dateKey(s.finishedAt)}</span></div>
             <div className="session-stats"><b>{s.cardio?`${s.cardio.durationMinutes}m`:sets}</b><small>{s.cardio?"cardio":"séries"}</small></div>
             <div className="session-stats"><b>{duration?formatTimer(duration):"—"}</b><small>durée</small></div>
-            <div className="session-stats"><b>{s.cardio?.distanceKm??volume||"—"}</b><small>{s.cardio?.distanceKm?"km":"kg·reps"}</small></div>
+            <div className="session-stats"><b>{(s.cardio?.distanceKm ?? volume)||"—"}</b><small>{s.cardio?.distanceKm?"km":"kg·reps"}</small></div>
           </div>;
         })}
       </div>
