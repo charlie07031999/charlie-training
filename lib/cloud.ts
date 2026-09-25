@@ -34,6 +34,24 @@ export type CloudWorkoutSession = {
   notes?:string|null;
 };
 
+export type CloudLiveWorkout = {
+  id:string;
+  client_session_id:string;
+  workout_id:string;
+  started_at:string;
+  current_exercise_id?:string|null;
+  current_exercise_name?:string|null;
+  current_exercise_index:number;
+  current_set_index:number;
+  completed_ids:string[];
+  deferred_ids:string[];
+  logs:Record<string, any[]>;
+  coach_mode?:string|null;
+  last_set?:Record<string, any>|null;
+  last_action?:string|null;
+  updated_at:string;
+};
+
 export type CloudSleepSession = {
   id:string;
   bed_at:string;
@@ -151,6 +169,85 @@ export async function syncWorkoutSession(item:{
   return response.error
     ? {ok:false,reason:response.error.message}
     : {ok:true,id:response.data?.id as string|undefined};
+}
+
+export async function syncLiveWorkout(input:{
+  clientSessionId:string;
+  workoutId:string;
+  startedAt:number;
+  currentExerciseId?:string|null;
+  currentExerciseName?:string|null;
+  currentExerciseIndex:number;
+  currentSetIndex:number;
+  completedIds:string[];
+  deferredIds:string[];
+  logs:Record<string,unknown>;
+  coachMode?:string|null;
+  lastSet?:Record<string,unknown>|null;
+  lastAction?:string|null;
+}){
+  if(!supabase) return {ok:false,reason:"not_configured" as const};
+  const user=await ensureUser();
+  if(!user) return {ok:false,reason:"auth_failed" as const};
+
+  const payload={
+    user_id:user.id,
+    client_session_id:input.clientSessionId,
+    workout_id:input.workoutId,
+    started_at:new Date(input.startedAt).toISOString(),
+    current_exercise_id:input.currentExerciseId ?? null,
+    current_exercise_name:input.currentExerciseName ?? null,
+    current_exercise_index:input.currentExerciseIndex,
+    current_set_index:input.currentSetIndex,
+    completed_ids:input.completedIds,
+    deferred_ids:input.deferredIds,
+    logs:input.logs,
+    coach_mode:input.coachMode ?? null,
+    last_set:input.lastSet ?? null,
+    last_action:input.lastAction ?? null,
+    updated_at:new Date().toISOString()
+  };
+
+  const {data,error}=await supabase
+    .from("live_workout_sessions")
+    .upsert(payload,{onConflict:"user_id,client_session_id"})
+    .select("id")
+    .single();
+
+  return error
+    ? {ok:false,reason:error.message}
+    : {ok:true,id:data?.id as string|undefined};
+}
+
+export async function loadLatestLiveWorkout(){
+  if(!supabase) return null;
+  const user=await ensureUser();
+  if(!user) return null;
+
+  const {data,error}=await supabase
+    .from("live_workout_sessions")
+    .select("id,client_session_id,workout_id,started_at,current_exercise_id,current_exercise_name,current_exercise_index,current_set_index,completed_ids,deferred_ids,logs,coach_mode,last_set,last_action,updated_at")
+    .eq("user_id",user.id)
+    .order("updated_at",{ascending:false})
+    .limit(1)
+    .maybeSingle();
+
+  if(error||!data) return null;
+  return data as CloudLiveWorkout;
+}
+
+export async function clearLiveWorkout(clientSessionId:string){
+  if(!supabase) return {ok:false,reason:"not_configured" as const};
+  const user=await ensureUser();
+  if(!user) return {ok:false,reason:"auth_failed" as const};
+
+  const {error}=await supabase
+    .from("live_workout_sessions")
+    .delete()
+    .eq("user_id",user.id)
+    .eq("client_session_id",clientSessionId);
+
+  return error?{ok:false,reason:error.message}:{ok:true};
 }
 
 export async function updateWorkoutLogs(
