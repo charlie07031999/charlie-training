@@ -138,6 +138,21 @@ export default function NousPage(){
       }
       const {data}=await nousSupabase.auth.getSession();
       setAuthEmail(data.session?.user?.email??null);
+
+      const {data:{subscription}}=nousSupabase.auth.onAuthStateChange((_event,session)=>{
+        setAuthEmail(session?.user?.email??null);
+        if(session?.user?.email){
+          window.setTimeout(async()=>{
+            const nextSpace=await loadNousSpace();
+            if(nextSpace){
+              setSpace(nextSpace);
+              setCloudReady(true);
+              await refreshCloud(nextSpace);
+            }
+          },0);
+        }
+      });
+
       const s=await loadNousSpace();
       if(s){
         setSpace(s);
@@ -150,7 +165,13 @@ export default function NousPage(){
 
   useEffect(()=>{
     if(!space||!cloudReady) return;
-    return subscribeNous(space.householdId,()=>void refreshCloud(space));
+    return subscribeNous(space.householdId,()=>{
+      void (async()=>{
+        const nextSpace=await loadNousSpace();
+        if(nextSpace) setSpace(nextSpace);
+        await refreshCloud(nextSpace??space);
+      })();
+    });
   },[space?.householdId,cloudReady]);
 
   useEffect(()=>{
