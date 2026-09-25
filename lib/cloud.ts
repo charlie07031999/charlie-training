@@ -214,6 +214,23 @@ export async function syncLiveWorkout(input:{
     .select("id")
     .single();
 
+  if(!error){
+    try{
+      await supabase.functions.invoke("nolan-live-feed",{
+        body:{
+          action:input.lastAction ?? "live_update",
+          workout_id:input.workoutId,
+          exercise_name:input.currentExerciseName ?? null,
+          current_set_index:input.currentSetIndex,
+          completed_count:input.completedIds.length,
+          deferred_count:input.deferredIds.length,
+          last_set:input.lastSet ?? null,
+          client_time:new Date().toISOString()
+        }
+      });
+    }catch{}
+  }
+
   return error
     ? {ok:false,reason:error.message}
     : {ok:true,id:data?.id as string|undefined};
