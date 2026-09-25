@@ -1,35 +1,88 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { history, weekPlan, workouts } from "../lib/workouts";
-import type { SetLog, Workout } from "../lib/types";
-import { isCloudConfigured, syncSleepEvent, syncWorkoutSession } from "../lib/cloud";
+import { history, workouts } from "../lib/workouts";
+import type { CardioLog, Exercise, SetLog, Workout } from "../lib/types";
+import {
+  finishSleepSession,
+  isCloudConfigured,
+  loadCloudState,
+  saveBodyMetric,
+  savePreferences,
+  secureAnonymousAccount,
+  sendMagicLink,
+  setLightsOut,
+  setSleepQuality,
+  startSleepSession,
+  syncWorkoutSession,
+  updateSleepPlan
+} from "../lib/cloud";
+
+type CoachMode = "normal"|"tired"|"short"|"crowded";
 
 type SessionState = {
+  clientSessionId:string;
   workoutId:string;
   exerciseIndex:number;
   setIndex:number;
-  logs:Record<string, SetLog[]>;
+  logs:Record<string,SetLog[]>;
   startedAt:number;
   completedIds:string[];
   deferredIds:string[];
+  coachMode:CoachMode;
 };
 
 type CompletedSession = {
+  id?:string;
+  clientSessionId:string;
   workoutId:string;
   finishedAt:number;
   startedAt?:number;
-  logs:Record<string, SetLog[]>;
+  logs:Record<string,SetLog[]>;
+  cardio?:CardioLog|null;
+  coachMode?:string|null;
+  notes?:string|null;
 };
 
-type CoachMode = "normal"|"tired"|"short"|"crowded";
-const STORAGE_KEY = "charlie-training-v1";
-const SESSION_KEY = "charlie-training-session-v1";
+type SleepSession = {
+  id:string;
+  bedAt:number;
+  lightsOutAt?:number|null;
+  plannedWakeAt?:number|null;
+  wakeAt?:number|null;
+  quality?:number|null;
+};
+
+type BodyMetric = {
+  id:string;
+  recordedAt:number;
+  weightKg?:number|null;
+  waistCm?:number|null;
+};
+
+const STORAGE_KEY="charlie-training-v4-cache";
+const SESSION_KEY="charlie-training-live-v4";
+
+const schedule=[
+  {label:"Lun",name:"Push",workoutId:"push"},
+  {label:"Mar",name:"Pull",workoutId:"pull"},
+  {label:"Mer",name:"Cardio",workoutId:"cardio"},
+  {label:"Jeu",name:"Legs",workoutId:"legs"},
+  {label:"Ven",name:"Récup",workoutId:null},
+  {label:"Sam",name:"Upper",workoutId:"upper"},
+  {label:"Dim",name:"Repos",workoutId:null}
+] as const;
 
 function formatTimer(s:number){
   const m=Math.floor(s/60).toString().padStart(2,"0");
   const sec=(s%60).toString().padStart(2,"0");
   return `${m}:${sec}`;
+}
+
+function durationLabel(minutes:number){
+  const h=Math.floor(minutes/60);
+  const m=minutes%60;
+  return m?`${h}h${String(m).padStart(2,"0")}`:`${h}h`;
 }
 
 function sleepWindowMinutes(sleepTime:string,wakeTime:string){
@@ -41,29 +94,59 @@ function sleepWindowMinutes(sleepTime:string,wakeTime:string){
   return diff>0?diff:diff+24*60;
 }
 
-function durationLabel(minutes:number){
-  const h=Math.floor(minutes/60);
-  const m=minutes%60;
-  return m?`${h}h${String(m).padStart(2,"0")}`:`${h}h`;
+function clock(dateOrMs:number|Date){
+  return new Date(dateOrMs).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
 }
 
-function workoutForToday(){
-  const day = new Date().getDay();
-  if(day===1) return "push";
-  if(day===2) return "pull";
-  if(day===3) return "cardio";
-  if(day===4 || day===5) return "legs";
-  if(day===6) return "upper";
-  return "push";
+function wakeDateForClock(startMs:number,time:string){
+  const d=new Date(startMs);
+  const [h,m]=time.split(":").map(Number);
+  d.setHours(h,m,0,0);
+  if(d.getTime()<=startMs) d.setDate(d.getDate()+1);
+  return d;
 }
 
-function progressionHint(ex:any, logs:SetLog[]){
-  if(!logs?.length) return "";
-  const hasFail = logs.some(s=>s.failed || s.reps < ex.repMin);
-  const allTop = logs.length >= ex.sets && logs.every(s=>s.reps >= ex.repMax && !s.failed);
-  if(allTop) return "Validé haut de fourchette → petite hausse de charge la prochaine fois.";
-  if(hasFail) return "Charge à consolider → garde-la la prochaine fois et cherche plus de reps propres.";
-  return "Progression en cours → garde la charge et monte progressivement les reps.";
+function mondayStart(date=new Date()){
+  const d=new Date(date);
+  const day=(d.getDay()+6)%7;
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate()-day);
+  return d;
+}
+
+function dateKey(ms:number){
+  return new Date(ms).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"});
+}
+
+function incrementFor(ex:Exercise){
+  if(ex.unit==="kg/bras") return 2;
+  if(ex.unit==="+kg") return 2.5;
+  if(ex.unit==="kg") return 2.5;
+  return 0;
+}
+
+function MiniChart({values,suffix=""}:{values:number[];suffix?:string}){
+  if(values.length===0) return <div className="chart-empty">Pas encore assez de données.</div>;
+  const width=320;
+  const height=112;
+  const min=Math.min(...values);
+  const max=Math.max(...values);
+  const spread=Math.max(1,max-min);
+  const points=values.map((v,i)=>{
+    const x=values.length===1?width/2:(i/(values.length-1))*width;
+    const y=height-12-((v-min)/spread)*(height-28);
+    return `${x},${y}`;
+  }).join(" ");
+  return <div className="mini-chart-wrap">
+    <svg viewBox={`0 0 ${width} ${height}`} className="mini-chart" role="img" aria-label="Évolution">
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+      {points.split(" ").map((p,i)=>{
+        const [cx,cy]=p.split(",");
+        return <circle key={i} cx={cx} cy={cy} r="4" fill="currentColor"/>;
+      })}
+    </svg>
+    <div className="chart-range"><span>{values[0]}{suffix}</span><strong>{values.at(-1)}{suffix}</strong></div>
+  </div>;
 }
 
 export default function Home(){
@@ -71,50 +154,130 @@ export default function Home(){
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
   const [session,setSession]=useState<SessionState|null>(null);
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
+  const [sleepSessions,setSleepSessions]=useState<SleepSession[]>([]);
+  const [bodyMetrics,setBodyMetrics]=useState<BodyMetric[]>([]);
+  const [authUser,setAuthUser]=useState<any>(null);
+  const [cloudLoading,setCloudLoading]=useState(true);
+  const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error">("idle");
+
   const [rest,setRest]=useState(0);
+  const [restNotificationArmed,setRestNotificationArmed]=useState(false);
   const [reps,setReps]=useState("8");
   const [weight,setWeight]=useState("");
   const [rir,setRir]=useState("2");
   const [failed,setFailed]=useState(false);
   const [coachMode,setCoachMode]=useState<CoachMode>("normal");
   const [now,setNow]=useState(Date.now());
+
+  const [cardioDuration,setCardioDuration]=useState("30");
+  const [cardioDistance,setCardioDistance]=useState("");
+  const [cardioHr,setCardioHr]=useState("");
+  const [cardioRpe,setCardioRpe]=useState("4");
+
   const [sleepTarget,setSleepTarget]=useState("23:00");
   const [prepTarget,setPrepTarget]=useState("22:15");
   const [wakeTarget,setWakeTarget]=useState("07:00");
-  const [lastSleepHours,setLastSleepHours]=useState("");
-  const [lastBedtime,setLastBedtime]=useState("");
-  const [plannedWakeTime,setPlannedWakeTime]=useState("08:30");
-  const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error">("idle");
+  const [plannedWakeTime,setPlannedWakeTime]=useState("07:00");
+  const [notificationsEnabled,setNotificationsEnabled]=useState(false);
+  const [workoutReminderTime,setWorkoutReminderTime]=useState("08:00");
+  const [creatineReminderTime,setCreatineReminderTime]=useState("12:00");
+  const [prefsLoaded,setPrefsLoaded]=useState(false);
 
-  const selectedWorkout=useMemo(()=>workouts.find(w=>w.id===selectedWorkoutId)??workouts[0],[selectedWorkoutId]);
-  const currentWorkout=session?(workouts.find(w=>w.id===session.workoutId)??selectedWorkout):selectedWorkout;
-  const currentExercise=session?currentWorkout.exercises[session.exerciseIndex]:null;
+  const [metricWeight,setMetricWeight]=useState("");
+  const [metricWaist,setMetricWaist]=useState("");
+  const [accountEmail,setAccountEmail]=useState("");
+  const [accountMessage,setAccountMessage]=useState("");
+  const [chartExerciseId,setChartExerciseId]=useState("incline-bench");
+
+  const selectedWorkout=useMemo(
+    ()=>workouts.find(w=>w.id===selectedWorkoutId)??workouts[0],
+    [selectedWorkoutId]
+  );
+  const currentWorkout=session
+    ? workouts.find(w=>w.id===session.workoutId)??selectedWorkout
+    : selectedWorkout;
+  const currentExercise=session&&currentWorkout.id!=="cardio"
+    ? currentWorkout.exercises[session.exerciseIndex]
+    : null;
+
+  async function refreshCloud(){
+    setCloudLoading(true);
+    const state=await loadCloudState();
+    if(!state){
+      setCloudStatus("error");
+      setCloudLoading(false);
+      return;
+    }
+
+    setAuthUser(state.user);
+    const mapped:CompletedSession[]=state.workouts.map(s=>({
+      id:s.id,
+      clientSessionId:s.client_session_id??s.id,
+      workoutId:s.workout_id,
+      startedAt:s.started_at?new Date(s.started_at).getTime():undefined,
+      finishedAt:new Date(s.finished_at).getTime(),
+      logs:(s.logs??{}) as Record<string,SetLog[]>,
+      cardio:(s.cardio??null) as CardioLog|null,
+      coachMode:s.coach_mode,
+      notes:s.notes
+    })).sort((a,b)=>a.finishedAt-b.finishedAt);
+
+    if(mapped.length){
+      setCompletedSessions(mapped);
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(mapped));
+    }
+
+    setSleepSessions(state.sleep.map(s=>({
+      id:s.id,
+      bedAt:new Date(s.bed_at).getTime(),
+      lightsOutAt:s.lights_out_at?new Date(s.lights_out_at).getTime():null,
+      plannedWakeAt:s.planned_wake_at?new Date(s.planned_wake_at).getTime():null,
+      wakeAt:s.wake_at?new Date(s.wake_at).getTime():null,
+      quality:s.quality??null
+    })));
+
+    setBodyMetrics(state.metrics.map(m=>({
+      id:m.id,
+      recordedAt:new Date(m.recorded_at).getTime(),
+      weightKg:m.weight_kg==null?null:Number(m.weight_kg),
+      waistCm:m.waist_cm==null?null:Number(m.waist_cm)
+    })));
+
+    if(state.preferences){
+      setSleepTarget(state.preferences.sleep_target.slice(0,5));
+      setWakeTarget(state.preferences.wake_target.slice(0,5));
+      setPrepTarget(state.preferences.prep_target.slice(0,5));
+      setNotificationsEnabled(Boolean(state.preferences.notifications_enabled));
+      setWorkoutReminderTime(state.preferences.workout_reminder_time.slice(0,5));
+      setCreatineReminderTime(state.preferences.creatine_reminder_time.slice(0,5));
+    }
+    setPrefsLoaded(true);
+    setCloudStatus(state.errors.length?"error":"ok");
+    setCloudLoading(false);
+  }
 
   useEffect(()=>{
-    setSelectedWorkoutId(workoutForToday());
-    const raw=localStorage.getItem(SESSION_KEY);
-    if(raw){
-      try{
+    try{
+      const cached=JSON.parse(localStorage.getItem(STORAGE_KEY)??"[]");
+      if(Array.isArray(cached)) setCompletedSessions(cached);
+    }catch{}
+    try{
+      const raw=localStorage.getItem(SESSION_KEY);
+      if(raw){
         const parsed=JSON.parse(raw);
         setSession({
           ...parsed,
-          completedIds: parsed.completedIds ?? [],
-          deferredIds: parsed.deferredIds ?? []
+          completedIds:parsed.completedIds??[],
+          deferredIds:parsed.deferredIds??[],
+          clientSessionId:parsed.clientSessionId??`legacy-${parsed.startedAt}`,
+          coachMode:parsed.coachMode??"normal"
         });
-      }catch{}
+      }
+    }catch{}
+    if("serviceWorker" in navigator){
+      void navigator.serviceWorker.register("/sw.js");
     }
-    try{
-      setCompletedSessions(JSON.parse(localStorage.getItem(STORAGE_KEY)??"[]"));
-    }catch{}
-    try{
-      const recovery=JSON.parse(localStorage.getItem("charlie-training-recovery")??"{}");
-      if(recovery.sleepTarget) setSleepTarget(recovery.sleepTarget);
-      if(recovery.prepTarget) setPrepTarget(recovery.prepTarget);
-      if(recovery.wakeTarget) setWakeTarget(recovery.wakeTarget);
-      if(recovery.lastSleepHours) setLastSleepHours(String(recovery.lastSleepHours));
-      if(recovery.lastBedtime) setLastBedtime(String(recovery.lastBedtime));
-      if(recovery.plannedWakeTime) setPlannedWakeTime(String(recovery.plannedWakeTime));
-    }catch{}
+    void refreshCloud();
   },[]);
 
   useEffect(()=>{
@@ -128,8 +291,23 @@ export default function Home(){
   },[session]);
 
   useEffect(()=>{
-    localStorage.setItem("charlie-training-recovery",JSON.stringify({sleepTarget,prepTarget,wakeTarget,lastSleepHours,lastBedtime,plannedWakeTime}));
-  },[sleepTarget,prepTarget,wakeTarget,lastSleepHours,lastBedtime,plannedWakeTime]);
+    if(!prefsLoaded) return;
+    const t=setTimeout(()=>{
+      setCloudStatus("syncing");
+      void savePreferences({
+        sleep_target:sleepTarget,
+        wake_target:wakeTarget,
+        prep_target:prepTarget,
+        notifications_enabled:notificationsEnabled,
+        workout_reminder_time:workoutReminderTime,
+        creatine_reminder_time:creatineReminderTime
+      }).then(r=>setCloudStatus(r.ok?"ok":"error"));
+    },500);
+    return()=>clearTimeout(t);
+  },[
+    prefsLoaded,sleepTarget,wakeTarget,prepTarget,notificationsEnabled,
+    workoutReminderTime,creatineReminderTime
+  ]);
 
   useEffect(()=>{
     if(rest<=0) return;
@@ -137,64 +315,214 @@ export default function Home(){
     return()=>clearInterval(t);
   },[rest]);
 
+  async function notify(title:string,body:string){
+    if(!notificationsEnabled || typeof window==="undefined" || !("Notification" in window)) return;
+    if(Notification.permission!=="granted") return;
+    try{
+      const reg=await navigator.serviceWorker.ready;
+      await reg.showNotification(title,{body,icon:"/icon.svg",badge:"/icon.svg"});
+    }catch{}
+  }
+
   useEffect(()=>{
-    if(currentExercise?.suggestedWeight!=null) setWeight(String(currentExercise.suggestedWeight));
-    else setWeight("");
-    setReps(String(currentExercise?.repMin??8));
+    if(rest===0&&restNotificationArmed){
+      setRestNotificationArmed(false);
+      void notify("Repos terminé","Prochaine série. Repars proprement.");
+    }
+  },[rest,restNotificationArmed]);
+
+  useEffect(()=>{
+    if(!notificationsEnabled) return;
+    const timers:number[]=[];
+    const scheduleLocal=(time:string,title:string,body:string)=>{
+      const [h,m]=time.split(":").map(Number);
+      const target=new Date();
+      target.setHours(h,m,0,0);
+      if(target.getTime()<=Date.now()) target.setDate(target.getDate()+1);
+      timers.push(window.setTimeout(()=>void notify(title,body),target.getTime()-Date.now()));
+    };
+    scheduleLocal(prepTarget,"Routine sommeil","Fin du boulot. Prépare le coucher.");
+    scheduleLocal(workoutReminderTime,"Charlie Training","Regarde la séance prévue aujourd’hui.");
+    scheduleLocal(creatineReminderTime,"Créatine","Pense à ta prise quotidienne si ce n’est pas déjà fait.");
+    return()=>timers.forEach(clearTimeout);
+  },[notificationsEnabled,prepTarget,workoutReminderTime,creatineReminderTime]);
+
+  const weekStart=useMemo(()=>mondayStart(new Date()).getTime(),[now]);
+  const weekEnd=weekStart+7*86400000;
+  const weekSessions=useMemo(
+    ()=>completedSessions.filter(s=>s.finishedAt>=weekStart&&s.finishedAt<weekEnd),
+    [completedSessions,weekStart,weekEnd]
+  );
+  const doneWorkoutIds=useMemo(()=>new Set(weekSessions.map(s=>s.workoutId)),[weekSessions]);
+  const todayIndex=(new Date().getDay()+6)%7;
+
+  const dueWorkoutId=useMemo(()=>{
+    const today=schedule[todayIndex];
+    if(today.workoutId&&!doneWorkoutIds.has(today.workoutId)) return today.workoutId;
+    const missed=schedule
+      .slice(0,todayIndex)
+      .filter(x=>x.workoutId&&!doneWorkoutIds.has(x.workoutId));
+    return missed.at(-1)?.workoutId??null;
+  },[todayIndex,doneWorkoutIds]);
+
+  useEffect(()=>{
+    if(!session&&dueWorkoutId) setSelectedWorkoutId(dueWorkoutId);
+  },[dueWorkoutId,session]);
+
+  const openSleep=useMemo(()=>sleepSessions.find(s=>!s.wakeAt)??null,[sleepSessions]);
+  const latestSleep=useMemo(()=>sleepSessions.find(s=>Boolean(s.wakeAt))??null,[sleepSessions]);
+  const latestSleepMinutes=latestSleep?.wakeAt
+    ? Math.round((latestSleep.wakeAt-(latestSleep.lightsOutAt??latestSleep.bedAt))/60000)
+    : 0;
+  const latestSleepHours=latestSleepMinutes/60;
+
+  useEffect(()=>{
+    if(openSleep?.plannedWakeAt) setPlannedWakeTime(clock(openSleep.plannedWakeAt));
+    else if(!openSleep) setPlannedWakeTime(wakeTarget);
+  },[openSleep?.id,wakeTarget]);
+
+  const autoCoachMode:CoachMode=latestSleepMinutes>0&&latestSleepHours<6.5?"tired":"normal";
+  const autoCoachText=latestSleepMinutes===0
+    ?"Pas encore assez de sommeil enregistré : plan normal par défaut."
+    : latestSleepHours<6.5
+      ? `Dernière nuit ${durationLabel(latestSleepMinutes)} : volume réduit, pas d’échec.`
+      : latestSleepHours<7.25
+        ? `Dernière nuit ${durationLabel(latestSleepMinutes)} : séance normale, garde 2 RIR sur les gros mouvements.`
+        : `Dernière nuit ${durationLabel(latestSleepMinutes)} : récupération compatible avec le plan normal.`;
+
+  function latestExerciseLogs(exerciseId:string){
+    const ordered=[...completedSessions].sort((a,b)=>b.finishedAt-a.finishedAt);
+    for(const s of ordered){
+      const logs=s.logs?.[exerciseId];
+      if(logs?.length) return {session:s,logs};
+    }
+    return null;
+  }
+
+  function recommendationFor(ex:Exercise){
+    const last=latestExerciseLogs(ex.id);
+    if(!last){
+      return {
+        weight:ex.suggestedWeight,
+        label:ex.suggestedWeight!=null?`Base actuelle : ${ex.suggestedWeight} ${ex.unit}`:"Démarre proprement et calibre la charge."
+      };
+    }
+    const logs=last.logs;
+    const lastWeight=[...logs].reverse().find(x=>x.weight!=null)?.weight;
+    const hasFail=logs.some(x=>x.failed||x.reps<ex.repMin);
+    const allTop=logs.length>=ex.sets&&logs.every(x=>x.reps>=ex.repMax&&!x.failed);
+    if(allTop&&lastWeight!=null&&incrementFor(ex)>0){
+      const next=Math.round((lastWeight+incrementFor(ex))*10)/10;
+      return {weight:next,label:`Haut de fourchette validé → tente ${next} ${ex.unit}.`};
+    }
+    if(hasFail){
+      return {
+        weight:lastWeight??ex.suggestedWeight,
+        label:"Consolide la charge : cherche plus de reps propres avant d’augmenter."
+      };
+    }
+    return {
+      weight:lastWeight??ex.suggestedWeight,
+      label:"Garde la charge et ajoute progressivement des reps."
+    };
+  }
+
+  useEffect(()=>{
+    if(!currentExercise) return;
+    const existing=session?.logs[currentExercise.id]?.at(-1);
+    const rec=recommendationFor(currentExercise);
+    if(existing?.weight!=null) setWeight(String(existing.weight));
+    else setWeight(rec.weight!=null?String(rec.weight):"");
+    setReps(String(currentExercise.repMin));
     setRir("2");
     setFailed(false);
   },[currentExercise?.id]);
 
   function effectiveTarget(ex=currentExercise){
     if(!ex) return {sets:0,repMin:0,repMax:0};
-    if(coachMode==="tired") return {sets:Math.max(2,ex.sets-1),repMin:ex.repMin,repMax:ex.repMax};
-    if(coachMode==="short") return {sets:Math.min(2,ex.sets),repMin:ex.repMin,repMax:ex.repMax};
+    const mode=session?.coachMode??coachMode;
+    if(mode==="tired") return {sets:Math.max(2,ex.sets-1),repMin:ex.repMin,repMax:ex.repMax};
+    if(mode==="short") return {sets:Math.min(2,ex.sets),repMin:ex.repMin,repMax:ex.repMax};
     return {sets:ex.sets,repMin:ex.repMin,repMax:ex.repMax};
   }
 
   function startWorkout(w:Workout){
-    setSelectedWorkoutId(w.id);
-    setSession({workoutId:w.id,exerciseIndex:0,setIndex:0,logs:{},startedAt:Date.now(),completedIds:[],deferredIds:[]});
+    const mode=coachMode==="normal"?autoCoachMode:coachMode;
+    setCoachMode(mode);
+    setSession({
+      clientSessionId:crypto.randomUUID(),
+      workoutId:w.id,
+      exerciseIndex:0,
+      setIndex:0,
+      logs:{},
+      startedAt:Date.now(),
+      completedIds:[],
+      deferredIds:[],
+      coachMode:mode
+    });
     setTab("today");
   }
 
-  function nextExerciseIndex(s:SessionState, completedIds:string[], deferredIds:string[]){
-    for(let offset=1; offset<=currentWorkout.exercises.length; offset++){
+  function nextExerciseIndex(s:SessionState,completedIds:string[],deferredIds:string[]){
+    for(let offset=1;offset<=currentWorkout.exercises.length;offset++){
       const idx=(s.exerciseIndex+offset)%currentWorkout.exercises.length;
       const id=currentWorkout.exercises[idx].id;
-      if(!completedIds.includes(id) && !deferredIds.includes(id)) return idx;
+      if(!completedIds.includes(id)&&!deferredIds.includes(id)) return idx;
     }
-    const deferred = deferredIds.find(id=>!completedIds.includes(id));
+    const deferred=deferredIds.find(id=>!completedIds.includes(id));
     if(deferred) return currentWorkout.exercises.findIndex(ex=>ex.id===deferred);
     return -1;
   }
 
-  function finishWorkout(logs:Record<string,SetLog[]>){
+  function finishWorkout(logs:Record<string,SetLog[]>,cardio?:CardioLog|null){
     if(!session) return;
-    const item:CompletedSession={workoutId:session.workoutId,startedAt:session.startedAt,finishedAt:Date.now(),logs};
-    const next=[...completedSessions,item];
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
+    const item:CompletedSession={
+      clientSessionId:session.clientSessionId,
+      workoutId:session.workoutId,
+      startedAt:session.startedAt,
+      finishedAt:Date.now(),
+      logs,
+      cardio:cardio??null,
+      coachMode:session.coachMode
+    };
+    const next=[...completedSessions,item].sort((a,b)=>a.finishedAt-b.finishedAt);
     setCompletedSessions(next);
-    setCloudStatus("syncing");
-    void syncWorkoutSession(item).then(result=>setCloudStatus(result.ok?"ok":"error"));
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
     setSession(null);
     setRest(0);
-    setTab("history");
+    setCloudStatus("syncing");
+    void syncWorkoutSession({
+      clientSessionId:item.clientSessionId,
+      workoutId:item.workoutId,
+      startedAt:item.startedAt,
+      finishedAt:item.finishedAt,
+      logs:item.logs,
+      cardio:item.cardio as Record<string,unknown>|null,
+      coachMode:item.coachMode
+    }).then(async r=>{
+      setCloudStatus(r.ok?"ok":"error");
+      if(r.ok) await refreshCloud();
+    });
   }
 
   function logSet(){
     if(!session||!currentExercise) return;
     const log:SetLog={
       reps:Number(reps||0),
-      weight:weight?Number(weight.replace(",",".")):undefined,
+      weight:currentExercise.unit==="PDC"?undefined:(weight?Number(weight.replace(",",".")):undefined),
       rir:Number(rir||0),
-      failed
+      failed,
+      loggedAt:Date.now()
     };
     const key=currentExercise.id;
     const nextLogs={...session.logs,[key]:[...(session.logs[key]??[]),log]};
     const target=effectiveTarget();
     const nextSet=session.setIndex+1;
-    setRest(currentExercise.restSeconds);
+
+    if(currentExercise.restSeconds>0){
+      setRest(currentExercise.restSeconds);
+      setRestNotificationArmed(true);
+    }
     setFailed(false);
 
     if(nextSet>=target.sets){
@@ -206,10 +534,58 @@ export default function Home(){
         return;
       }
       const nextId=currentWorkout.exercises[nextIdx].id;
-      setSession({...session,logs:nextLogs,completedIds,deferredIds,exerciseIndex:nextIdx,setIndex:(nextLogs[nextId]??[]).length});
+      setSession({
+        ...session,
+        logs:nextLogs,
+        completedIds,
+        deferredIds,
+        exerciseIndex:nextIdx,
+        setIndex:(nextLogs[nextId]??[]).length
+      });
     }else{
       setSession({...session,logs:nextLogs,setIndex:nextSet});
     }
+  }
+
+  function adjustSet(exerciseId:string,index:number,delta:number){
+    if(!session) return;
+    const arr=[...(session.logs[exerciseId]??[])];
+    if(!arr[index]) return;
+    arr[index]={...arr[index],reps:Math.max(0,arr[index].reps+delta)};
+    setSession({...session,logs:{...session.logs,[exerciseId]:arr}});
+  }
+
+  function deleteSet(exerciseId:string,index:number){
+    if(!session) return;
+    const arr=[...(session.logs[exerciseId]??[])];
+    arr.splice(index,1);
+    const exIndex=currentWorkout.exercises.findIndex(ex=>ex.id===exerciseId);
+    setSession({
+      ...session,
+      logs:{...session.logs,[exerciseId]:arr},
+      exerciseIndex:exIndex>=0?exIndex:session.exerciseIndex,
+      setIndex:arr.length,
+      completedIds:session.completedIds.filter(id=>id!==exerciseId)
+    });
+  }
+
+  function undoLastSet(){
+    if(!session) return;
+    let latest:{exId:string;index:number;time:number}|null=null;
+    Object.entries(session.logs).forEach(([exId,arr])=>{
+      arr.forEach((s,index)=>{
+        const t=s.loggedAt??0;
+        if(!latest||t>latest.time) latest={exId,index,time:t};
+      });
+    });
+    if(!latest){
+      const entries=Object.entries(session.logs).filter(([,arr])=>arr.length);
+      const last=entries.at(-1);
+      if(!last) return;
+      latest={exId:last[0],index:last[1].length-1,time:0};
+    }
+    deleteSet(latest.exId,latest.index);
+    setRest(0);
   }
 
   function skipMachine(){
@@ -218,262 +594,548 @@ export default function Home(){
     const nextIdx=nextExerciseIndex(session,session.completedIds,deferredIds);
     if(nextIdx===-1) return;
     const nextId=currentWorkout.exercises[nextIdx].id;
-    setSession({...session,deferredIds,exerciseIndex:nextIdx,setIndex:(session.logs[nextId]??[]).length});
+    setSession({
+      ...session,
+      deferredIds,
+      exerciseIndex:nextIdx,
+      setIndex:(session.logs[nextId]??[]).length
+    });
     setRest(0);
   }
 
-  function markBedtime(){
-    const at=new Date().toISOString();
-    setLastBedtime(at);
-    setCloudStatus("syncing");
-    void syncSleepEvent("bed",at).then(result=>setCloudStatus(result.ok?"ok":"error"));
+  function saveCardio(){
+    const duration=Number(cardioDuration);
+    if(!session||!Number.isFinite(duration)||duration<=0) return;
+    const cardio:CardioLog={
+      durationMinutes:duration,
+      distanceKm:cardioDistance?Number(cardioDistance.replace(",",".")):undefined,
+      avgHr:cardioHr?Number(cardioHr):undefined,
+      rpe:cardioRpe?Number(cardioRpe):undefined
+    };
+    finishWorkout({},cardio);
   }
 
-  function markWake(){
-    const at=new Date().toISOString();
-    if(lastBedtime){
-      const hours=(Date.now()-new Date(lastBedtime).getTime())/3600000;
-      if(hours>0 && hours<24) setLastSleepHours(hours.toFixed(1));
+  const targetSleepMinutes=sleepWindowMinutes(sleepTarget,wakeTarget);
+
+  async function beginSleep(lightsOut:boolean){
+    const at=Date.now();
+    let plannedWakeAt:number|null=null;
+    let lightsOutAt:number|null=null;
+    if(lightsOut){
+      lightsOutAt=at;
+      plannedWakeAt=at+targetSleepMinutes*60000;
+      setPlannedWakeTime(clock(plannedWakeAt));
     }
     setCloudStatus("syncing");
-    void syncSleepEvent("wake",at).then(result=>setCloudStatus(result.ok?"ok":"error"));
-    setLastBedtime("");
+    const res=await startSleepSession({
+      bedAt:new Date(at).toISOString(),
+      lightsOutAt:lightsOutAt?new Date(lightsOutAt).toISOString():null,
+      plannedWakeAt:plannedWakeAt?new Date(plannedWakeAt).toISOString():null
+    });
+    setCloudStatus(res.ok?"ok":"error");
+    if(res.ok) await refreshCloud();
   }
 
-  const bedtimeLabel=lastBedtime?new Date(lastBedtime).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"";
-  const bedtimeDateLabel=lastBedtime?new Date(lastBedtime).toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"short"}):"";
-  const targetSleepMinutes=sleepWindowMinutes(sleepTarget,wakeTarget);
-  const targetSleepLabel=durationLabel(targetSleepMinutes);
-  const suggestedWakeAt=lastBedtime?new Date(new Date(lastBedtime).getTime()+targetSleepMinutes*60_000):null;
-  const suggestedWakeLabel=suggestedWakeAt?suggestedWakeAt.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"";
-  const plannedWakeAt=lastBedtime?(()=>{
-    const start=new Date(lastBedtime);
-    const [h,m]=plannedWakeTime.split(":").map(Number);
-    const d=new Date(start);
-    d.setHours(h,m,0,0);
-    if(d.getTime()<=start.getTime()) d.setDate(d.getDate()+1);
-    return d;
-  })():null;
-  const plannedSleepMinutes=lastBedtime&&plannedWakeAt
-    ? Math.max(0,Math.round((plannedWakeAt.getTime()-new Date(lastBedtime).getTime())/60000))
-    : 0;
-  const plannedSleepLabel=plannedSleepMinutes?durationLabel(plannedSleepMinutes):"";
-  const sleepGapMinutes=plannedSleepMinutes-targetSleepMinutes;
+  async function lightsOutNow(){
+    if(!openSleep) return;
+    const at=Date.now();
+    const suggested=at+targetSleepMinutes*60000;
+    setPlannedWakeTime(clock(suggested));
+    setCloudStatus("syncing");
+    const res=await setLightsOut(
+      openSleep.id,
+      new Date(at).toISOString(),
+      new Date(suggested).toISOString()
+    );
+    setCloudStatus(res.ok?"ok":"error");
+    if(res.ok) await refreshCloud();
+  }
 
-  const currentHistory=currentExercise?history.find(h=>h.exerciseId===currentExercise.id):null;
+  async function wakeNow(){
+    if(!openSleep) return;
+    setCloudStatus("syncing");
+    const res=await finishSleepSession(openSleep.id,new Date().toISOString());
+    setCloudStatus(res.ok?"ok":"error");
+    if(res.ok) await refreshCloud();
+  }
+
+  async function changeWakePlan(time:string){
+    setPlannedWakeTime(time);
+    if(!openSleep) return;
+    const start=openSleep.lightsOutAt??openSleep.bedAt;
+    const planned=wakeDateForClock(start,time).getTime();
+    setCloudStatus("syncing");
+    const res=await updateSleepPlan(openSleep.id,new Date(planned).toISOString());
+    setCloudStatus(res.ok?"ok":"error");
+    if(res.ok) await refreshCloud();
+  }
+
+  async function rateSleep(q:number){
+    if(!latestSleep) return;
+    const res=await setSleepQuality(latestSleep.id,q);
+    if(res.ok) await refreshCloud();
+  }
+
+  async function addMetric(){
+    const weightKg=metricWeight?Number(metricWeight.replace(",",".")):null;
+    const waistCm=metricWaist?Number(metricWaist.replace(",",".")):null;
+    if(weightKg==null&&waistCm==null) return;
+    setCloudStatus("syncing");
+    const res=await saveBodyMetric({weightKg,waistCm});
+    setCloudStatus(res.ok?"ok":"error");
+    if(res.ok){
+      setMetricWeight("");
+      setMetricWaist("");
+      await refreshCloud();
+    }
+  }
+
+  async function enableNotifications(){
+    if(typeof window==="undefined"||!("Notification" in window)){
+      setAccountMessage("Notifications non prises en charge sur ce navigateur.");
+      return;
+    }
+    if("serviceWorker" in navigator) await navigator.serviceWorker.register("/sw.js");
+    const permission=await Notification.requestPermission();
+    const enabled=permission==="granted";
+    setNotificationsEnabled(enabled);
+    if(enabled){
+      setPrefsLoaded(true);
+      await notify("Charlie Training","Notifications activées.");
+    }
+  }
+
+  async function secureAccount(){
+    const email=accountEmail.trim();
+    if(!email) return;
+    setAccountMessage("Envoi…");
+    const res=await secureAnonymousAccount(email);
+    setAccountMessage(res.ok
+      ?"Vérifie ton email pour sécuriser ce compte."
+      : `Impossible pour l’instant : ${res.reason}`);
+    if(res.ok) await refreshCloud();
+  }
+
+  async function requestMagicLink(){
+    const email=accountEmail.trim();
+    if(!email) return;
+    setAccountMessage("Envoi…");
+    const res=await sendMagicLink(email);
+    setAccountMessage(res.ok
+      ?"Lien de connexion envoyé. Ouvre-le sur l’appareil à connecter."
+      : `Impossible : ${res.reason}`);
+  }
+
+  const currentSetLogs=currentExercise&&session?session.logs[currentExercise.id]??[]:[];
   const elapsed=session?Math.max(0,Math.floor((now-session.startedAt)/1000)):0;
 
-  const recent = completedSessions.slice(-5).reverse();
+  const todayWorkout=dueWorkoutId?workouts.find(w=>w.id===dueWorkoutId)??null:null;
+  const weekDoneCount=doneWorkoutIds.size;
+  const weekTrainingCount=schedule.filter(x=>x.workoutId).length;
+
+  const plannedWakeAt=openSleep
+    ? wakeDateForClock(openSleep.lightsOutAt??openSleep.bedAt,plannedWakeTime).getTime()
+    : null;
+  const plannedSleepMinutes=openSleep&&openSleep.lightsOutAt&&plannedWakeAt
+    ? Math.max(0,Math.round((plannedWakeAt-openSleep.lightsOutAt)/60000))
+    : 0;
+  const suggestedWakeAt=openSleep?.lightsOutAt
+    ? openSleep.lightsOutAt+targetSleepMinutes*60000
+    : null;
+
+  const chartExercise=workouts.flatMap(w=>w.exercises).find(ex=>ex.id===chartExerciseId);
+  const chartValues=completedSessions
+    .filter(s=>s.logs?.[chartExerciseId]?.some(x=>x.weight!=null))
+    .map(s=>Math.max(...s.logs[chartExerciseId].filter(x=>x.weight!=null).map(x=>Number(x.weight))))
+    .slice(-10);
+
+  const sixWeeks=Array.from({length:6},(_,i)=>{
+    const start=weekStart-(5-i)*7*86400000;
+    const end=start+7*86400000;
+    const ss=completedSessions.filter(s=>s.finishedAt>=start&&s.finishedAt<end);
+    const volume=Math.round(ss.reduce((sum,s)=>sum+
+      Object.values(s.logs).flat().reduce((n,x)=>n+(x.weight??0)*x.reps,0),0));
+    return {label:dateKey(start),count:ss.length,volume};
+  });
+  const maxWeekCount=Math.max(1,...sixWeeks.map(x=>x.count));
+
+  const weightSeries=[...bodyMetrics]
+    .filter(x=>x.weightKg!=null)
+    .sort((a,b)=>a.recordedAt-b.recordedAt)
+    .map(x=>Number(x.weightKg))
+    .slice(-12);
+  const waistSeries=[...bodyMetrics]
+    .filter(x=>x.waistCm!=null)
+    .sort((a,b)=>a.recordedAt-b.recordedAt)
+    .map(x=>Number(x.waistCm))
+    .slice(-12);
+
+  const recentSessions=[...completedSessions].sort((a,b)=>b.finishedAt-a.finishedAt).slice(0,8);
+  const authAnonymous=Boolean(authUser?.is_anonymous);
+  const cloudLabel=cloudLoading?"Chargement":cloudStatus==="ok"?"Synchronisé":cloudStatus==="syncing"?"Synchro…":"À vérifier";
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><div className="eyebrow">CHARLIE TRAINING</div><h1>Performance</h1></div>
-      <div className="avatar">CR</div>
+      <div>
+        <div className="eyebrow">CHARLIE TRAINING · V4</div>
+        <h1>Performance</h1>
+      </div>
+      <div className={`sync-pill ${cloudStatus}`}>{cloudLabel}</div>
     </header>
 
     <nav className="tabs">
-      {([['today','Séance'],['week','Semaine'],['history','Historique'],['recovery','Récup'],['coach','Nolan']] as const).map(([id,label])=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}>{label}</button>)}
+      {([
+        ["today","Aujourd’hui"],["week","Semaine"],["history","Historique"],
+        ["recovery","Récup"],["coach","Nolan"]
+      ] as const).map(([id,label])=>
+        <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>{label}</button>
+      )}
     </nav>
 
-    {tab==='today'&&<section>
+    {tab==="today"&&<section>
       {!session?<>
-        <div className="hero-card">
-          <div className="hero-kicker">PROCHAINE SÉANCE · V2</div>
-          <div className="hero-title-row">
-            <div><h2>{selectedWorkout.title}</h2><p>{selectedWorkout.subtitle}</p></div>
-            <span className="day-chip">{selectedWorkout.day}</span>
+        <div className="dashboard-hero">
+          <div>
+            <div className="eyebrow">PLAN DU JOUR</div>
+            <h2>{todayWorkout?todayWorkout.title:"Récupération"}</h2>
+            <p>{todayWorkout
+              ? todayWorkout.subtitle
+              : "Aucune séance obligatoire restante aujourd’hui."}</p>
           </div>
-          <div className="hero-actions">
-            <button className="primary" onClick={()=>startWorkout(selectedWorkout)}>Lancer la séance</button>
-            <select value={selectedWorkoutId} onChange={e=>setSelectedWorkoutId(e.target.value)}>
-              {workouts.map(w=><option key={w.id} value={w.id}>{w.day} · {w.title}</option>)}
-            </select>
+          <div className="day-score">
+            <span>Semaine</span>
+            <strong>{weekDoneCount}/{weekTrainingCount}</strong>
           </div>
         </div>
 
-        <div className="section-title"><h3>Aperçu</h3><span>{selectedWorkout.exercises.length} exercices</span></div>
-        <div className="exercise-list">
-          {selectedWorkout.exercises.map((ex,i)=><div className="exercise-row" key={ex.id}>
-            <div className="index">{String(i+1).padStart(2,'0')}</div>
-            <div className="grow">
-              <div className="row-top"><strong>{ex.name}</strong>{ex.priority&&<span className="priority">P1</span>}</div>
-              <div className="muted">{ex.sets}×{ex.repMin}{ex.repMax!==ex.repMin?`–${ex.repMax}`:''} · {ex.target}</div>
+        <div className="dashboard-grid">
+          <div className="dashboard-stat">
+            <span>Sommeil</span>
+            <strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong>
+            <small>{latestSleep?.quality?`Qualité ${latestSleep.quality}/5`:"Dernière nuit enregistrée"}</small>
+          </div>
+          <div className="dashboard-stat">
+            <span>Nolan</span>
+            <strong>{autoCoachMode==="tired"?"Allégé":"Normal"}</strong>
+            <small>{autoCoachMode==="tired"?"Volume réduit":"1–2 RIR"}</small>
+          </div>
+          <div className="dashboard-stat">
+            <span>Cloud</span>
+            <strong>{cloudStatus==="ok"?"OK":"…"}</strong>
+            <small>iPhone ↔ Supabase</small>
+          </div>
+        </div>
+
+        <div className="coach-inline">
+          <strong>Conseil du jour</strong>
+          <p>{autoCoachText}</p>
+        </div>
+
+        {todayWorkout&&<div className="hero-card compact-hero">
+          <div className="hero-title-row">
+            <div>
+              <div className="hero-kicker">{schedule[todayIndex].workoutId===todayWorkout.id?"SÉANCE PRÉVUE":"RATTRAPAGE INTELLIGENT"}</div>
+              <h2>{todayWorkout.title}</h2>
+              <p>{todayWorkout.exercises.length} exercices · mode {autoCoachMode==="tired"?"allégé":"normal"}</p>
             </div>
-            <div className="load">{ex.suggestedWeight!=null?`${ex.suggestedWeight} ${ex.unit}`:ex.unit}</div>
-          </div>)}
+            <span className="day-chip">{todayWorkout.day}</span>
+          </div>
+          <div className="hero-actions">
+            <button className="primary" onClick={()=>startWorkout(todayWorkout)}>Lancer</button>
+            <select value={selectedWorkoutId} onChange={e=>setSelectedWorkoutId(e.target.value)}>
+              {workouts.map(w=><option key={w.id} value={w.id}>{w.title}</option>)}
+            </select>
+            <button className="secondary" onClick={()=>startWorkout(selectedWorkout)}>Lancer la sélection</button>
+          </div>
+        </div>}
+
+        <div className="section-title"><h3>Prochaine cible</h3><span>basée sur tes données</span></div>
+        <div className="exercise-list">
+          {(todayWorkout??selectedWorkout).exercises.slice(0,4).map((ex,i)=>{
+            const rec=recommendationFor(ex);
+            return <div className="exercise-row" key={ex.id}>
+              <div className="index">{String(i+1).padStart(2,"0")}</div>
+              <div className="grow">
+                <div className="row-top"><strong>{ex.name}</strong>{ex.priority&&<span className="priority">P1</span>}</div>
+                <div className="muted">{rec.label}</div>
+              </div>
+              <div className="load">{rec.weight!=null?`${rec.weight} ${ex.unit}`:ex.unit}</div>
+            </div>;
+          })}
+        </div>
+      </>:currentWorkout.id==="cardio"?<>
+        <div className="session-head">
+          <div><div className="eyebrow">CARDIO FACILE</div><h2>Footing</h2><p>Conversation facile. Pas de chasse au chrono.</p></div>
+          <div className="session-progress">{formatTimer(elapsed)}</div>
+        </div>
+
+        <div className="cardio-card">
+          <label>Durée (min)<input inputMode="numeric" value={cardioDuration} onChange={e=>setCardioDuration(e.target.value)}/></label>
+          <label>Distance (km)<input inputMode="decimal" placeholder="3.7" value={cardioDistance} onChange={e=>setCardioDistance(e.target.value)}/></label>
+          <label>FC moyenne<input inputMode="numeric" placeholder="150" value={cardioHr} onChange={e=>setCardioHr(e.target.value)}/></label>
+          <label>RPE /10<input inputMode="numeric" value={cardioRpe} onChange={e=>setCardioRpe(e.target.value)}/></label>
+          <button className="primary big" onClick={saveCardio}>Enregistrer le cardio</button>
+          <button className="ghost danger" onClick={()=>confirm("Annuler cette séance ?")&&setSession(null)}>Annuler</button>
         </div>
       </>:<>
         <div className="session-head">
-          <div><div className="eyebrow">{currentWorkout.title}</div><h2>{currentExercise?.name}</h2><p>{currentExercise?.target}</p></div>
+          <div>
+            <div className="eyebrow">{currentWorkout.title} · {session.coachMode.toUpperCase()}</div>
+            <h2>{currentExercise?.name}</h2>
+            <p>{currentExercise?.target}</p>
+          </div>
           <div className="session-progress">{session.exerciseIndex+1}/{currentWorkout.exercises.length}</div>
         </div>
 
         <div className="live-strip">
-          <div><span>Temps séance</span><strong>{formatTimer(elapsed)}</strong></div>
-          <div><span>Exos finis</span><strong>{session.completedIds.length}</strong></div>
+          <div><span>Temps</span><strong>{formatTimer(elapsed)}</strong></div>
+          <div><span>Finis</span><strong>{session.completedIds.length}</strong></div>
           <div><span>En attente</span><strong>{session.deferredIds.length}</strong></div>
         </div>
 
-        <div className="target-card">
+        {currentExercise&&<div className="target-card">
           <div className="target-grid">
             <div><span>Série</span><strong>{session.setIndex+1}/{effectiveTarget().sets}</strong></div>
             <div><span>Objectif</span><strong>{effectiveTarget().repMin}–{effectiveTarget().repMax}</strong></div>
-            <div><span>Repos</span><strong>{Math.round(((currentExercise?.restSeconds??0)/60)*10)/10} min</strong></div>
+            <div><span>Repos</span><strong>{Math.round(currentExercise.restSeconds/6)/10} min</strong></div>
           </div>
-          <p>{currentExercise?.cue}</p>
-        </div>
+          <p>{currentExercise.cue}</p>
+        </div>}
 
-        {currentHistory&&<div className="history-banner"><span>Dernière réf.</span><strong>{currentHistory.reference}</strong></div>}
+        {currentExercise&&<div className="progression-banner">{recommendationFor(currentExercise).label}</div>}
 
-        {(session.logs[currentExercise?.id??""]?.length??0)>0&&currentExercise&&
-          <div className="progression-banner">{progressionHint(currentExercise,session.logs[currentExercise.id]??[])}</div>
-        }
+        {currentSetLogs.length>0&&<div className="set-history-card">
+          <div className="set-history-head"><strong>Séries validées</strong><button onClick={undoLastSet}>Annuler dernière</button></div>
+          {currentSetLogs.map((s,i)=><div className="set-row" key={i}>
+            <span>S{i+1}</span>
+            <strong>{s.weight!=null?`${s.weight} × `:""}{s.reps}</strong>
+            <small>RIR {s.rir??"—"}{s.failed?" · échec":""}</small>
+            <div>
+              <button onClick={()=>adjustSet(currentExercise!.id,i,-1)}>−1</button>
+              <button onClick={()=>adjustSet(currentExercise!.id,i,1)}>+1</button>
+              <button onClick={()=>deleteSet(currentExercise!.id,i)}>×</button>
+            </div>
+          </div>)}
+        </div>}
 
         <div className="rest-box">
-          <span>Chrono repos</span><strong className={rest>0?'running':''}>{formatTimer(rest)}</strong>
-          <div className="rest-actions"><button onClick={()=>setRest(currentExercise?.restSeconds??0)}>Relancer</button><button onClick={()=>setRest(0)}>Reset</button></div>
+          <span>Chrono repos</span>
+          <strong className={rest>0?"running":""}>{formatTimer(rest)}</strong>
+          <div className="rest-actions">
+            <button onClick={()=>{setRest(currentExercise?.restSeconds??0);setRestNotificationArmed(true)}}>Relancer</button>
+            <button onClick={()=>setRest(0)}>Reset</button>
+          </div>
         </div>
 
         <div className="log-card">
-          <div className="field"><label>Charge</label><div className="input-wrap"><input value={weight} onChange={e=>setWeight(e.target.value)} inputMode="decimal"/><span>{currentExercise?.unit}</span></div></div>
+          <div className="field">
+            <label>Charge</label>
+            <div className="input-wrap">
+              <input value={weight} onChange={e=>setWeight(e.target.value)} inputMode="decimal" disabled={currentExercise?.unit==="PDC"}/>
+              <span>{currentExercise?.unit}</span>
+            </div>
+          </div>
           <div className="field"><label>Reps</label><div className="stepper"><button onClick={()=>setReps(String(Math.max(0,Number(reps)-1)))}>−</button><strong>{reps}</strong><button onClick={()=>setReps(String(Number(reps)+1))}>+</button></div></div>
           <div className="field"><label>RIR</label><div className="stepper compact"><button onClick={()=>setRir(String(Math.max(0,Number(rir)-1)))}>−</button><strong>{rir}</strong><button onClick={()=>setRir(String(Math.min(5,Number(rir)+1)))}>+</button></div></div>
           <label className="fail-toggle"><input type="checkbox" checked={failed} onChange={e=>setFailed(e.target.checked)}/><span>Échec</span></label>
           <button className="primary big" onClick={logSet}>Valider la série</button>
-          <button className="secondary" onClick={skipMachine}>Machine prise → mettre en attente</button>
-          <button className="ghost danger" onClick={()=>confirm('Terminer la séance maintenant ?')&&setSession(null)}>Terminer sans enregistrer</button>
+          <button className="secondary" onClick={skipMachine}>Machine prise → plus tard</button>
+          <button className="ghost" onClick={undoLastSet}>Annuler ma dernière validation</button>
+          <button className="ghost danger" onClick={()=>confirm("Terminer sans enregistrer ?")&&setSession(null)}>Abandonner la séance</button>
         </div>
       </>}
     </section>}
 
-    {tab==='week'&&<section>
-      <div className="section-title"><h3>Semaine</h3><span>4 muscu + 1 cardio</span></div>
-      <div className="week-grid">{weekPlan.map(item=><div key={item.day} className={`week-card ${item.done?'done':''}`}><div className="week-day">{item.day}</div><strong>{item.title}</strong><span>{item.done?'✓ Fait':'À faire'}</span></div>)}</div>
-      <div className="metrics"><div><span>Pas / jour</span><strong>8 000+</strong></div><div><span>Protéines</span><strong>110–130 g</strong></div><div><span>Créatine</span><strong>3–5 g</strong></div><div><span>Sommeil</span><strong>~23h</strong></div></div>
+    {tab==="week"&&<section>
+      <div className="section-title"><h3>Semaine réelle</h3><span>{weekDoneCount}/{weekTrainingCount} séances</span></div>
+      <div className="week-grid">
+        {schedule.map((item,i)=>{
+          const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
+          const missed=Boolean(item.workoutId)&&i<todayIndex&&!done;
+          return <div key={item.label} className={`week-card ${done?"done":missed?"missed":""}`}>
+            <div className="week-day">{item.label}</div>
+            <strong>{item.name}</strong>
+            <span>{done?"✓ Fait":missed?"À rattraper":item.workoutId?"À faire":"Repos"}</span>
+          </div>;
+        })}
+      </div>
+
+      {dueWorkoutId&&schedule[todayIndex].workoutId!==dueWorkoutId&&
+        <div className="coach-inline"><strong>Rattrapage intelligent</strong><p>La séance {workouts.find(w=>w.id===dueWorkoutId)?.title} n’est pas encore faite cette semaine : elle devient prioritaire aujourd’hui.</p></div>
+      }
+
+      <div className="section-title"><h3>6 dernières semaines</h3><span>régularité</span></div>
+      <div className="bar-list">
+        {sixWeeks.map(w=><div className="bar-row" key={w.label}>
+          <span>{w.label}</span>
+          <div className="bar-track"><i style={{width:`${Math.max(5,(w.count/maxWeekCount)*100)}%`}}/></div>
+          <strong>{w.count}</strong>
+        </div>)}
+      </div>
     </section>}
 
-    {tab==='history'&&<section>
+    {tab==="history"&&<section>
+      <div className="section-title"><h3>Progression</h3><span>cloud</span></div>
+      <div className="chart-card">
+        <select value={chartExerciseId} onChange={e=>setChartExerciseId(e.target.value)}>
+          {workouts.flatMap(w=>w.exercises).filter(ex=>ex.unit!=="PDC").map(ex=><option key={ex.id} value={ex.id}>{ex.name}</option>)}
+        </select>
+        <MiniChart values={chartValues} suffix={chartExercise?.unit==="kg/bras"?" kg/bras":" kg"}/>
+        <small>{chartExercise?.name} · meilleure charge de chaque séance</small>
+      </div>
+
       <div className="section-title"><h3>Dernières séances</h3><span>{completedSessions.length} enregistrée(s)</span></div>
-      {recent.length===0?<div className="note">Ta première séance enregistrée apparaîtra ici avec durée, séries et volume.</div>:
-        <div className="session-history">{recent.map((s,i)=>{
-          const w=workouts.find(w=>w.id===s.workoutId);
+      <div className="session-history">
+        {recentSessions.length===0&&<div className="note">La prochaine séance terminée apparaîtra ici.</div>}
+        {recentSessions.map((s,i)=>{
+          const w=workouts.find(x=>x.id===s.workoutId);
           const sets=Object.values(s.logs).reduce((n,a)=>n+a.length,0);
           const volume=Math.round(Object.values(s.logs).flat().reduce((n,x)=>n+(x.weight??0)*x.reps,0));
           const duration=s.startedAt?Math.max(0,Math.floor((s.finishedAt-s.startedAt)/1000)):0;
-          return <div className="session-history-item" key={s.finishedAt+i}>
-            <div><strong>{w?.title??s.workoutId}</strong><span>{new Date(s.finishedAt).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}</span></div>
-            <div className="session-stats"><b>{sets}</b><small>séries</small></div>
+          return <div className="session-history-item" key={s.id??s.finishedAt+i}>
+            <div><strong>{w?.title??s.workoutId}</strong><span>{dateKey(s.finishedAt)}</span></div>
+            <div className="session-stats"><b>{s.cardio?`${s.cardio.durationMinutes}m`:sets}</b><small>{s.cardio?"cardio":"séries"}</small></div>
             <div className="session-stats"><b>{duration?formatTimer(duration):"—"}</b><small>durée</small></div>
-            <div className="session-stats"><b>{volume||"—"}</b><small>kg·reps</small></div>
-          </div>
-        })}</div>
-      }
+            <div className="session-stats"><b>{s.cardio?.distanceKm??volume||"—"}</b><small>{s.cardio?.distanceKm?"km":"kg·reps"}</small></div>
+          </div>;
+        })}
+      </div>
 
-      <div className="section-title"><h3>Références</h3><span>Base actuelle</span></div>
+      <div className="section-title"><h3>Références de départ</h3><span>avant V4</span></div>
       <div className="history-list">{history.map(h=><div className="history-item" key={h.exerciseId}><strong>{h.label}</strong><span>{h.reference}</span></div>)}</div>
-      <div className="note">V2 : historique local enrichi + reprise de séance. La synchro iPhone/Mac viendra avec Supabase.</div>
     </section>}
 
-
-    {tab==='recovery'&&<section>
+    {tab==="recovery"&&<section>
       <div className="recovery-hero">
         <div>
           <div className="eyebrow">RÉCUPÉRATION</div>
-          <h2>Le sommeil fait partie du programme.</h2>
-          <p>Objectif : préparer le coucher avant que la soirée de travail déborde sur ta récupération.</p>
+          <h2>{openSleep?"Nuit en cours":"Sommeil & corps"}</h2>
+          <p>{openSleep
+            ?"L’app suit cette nuit dans le cloud."
+            :"Tes données de récupération restent liées à ton compte Supabase."}</p>
         </div>
-        <div className="sleep-score">
-          <span>Cible</span>
-          <strong>{sleepTarget}</strong>
-        </div>
+        <div className="sleep-score"><span>Dernière nuit</span><strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong></div>
       </div>
 
-      <div className="bedtime-action">
-        <div>
-          <span className="eyebrow">AU MOMENT OÙ TU POSES LA TÉLÉCOMMANDE</span>
-          <strong>{lastBedtime?`Coucher enregistré à ${bedtimeLabel}`:"Prêt à dormir ?"}</strong>
-          <small>{lastBedtime?`${bedtimeDateLabel} · heure réelle enregistrée`:"Appuie juste avant de fermer les yeux. L'heure réelle sera enregistrée."}</small>
+      {!openSleep&&<div className="bedtime-action">
+        <div><span className="eyebrow">CE SOIR</span><strong>Deux façons de lancer la nuit</strong><small>“Au lit” enregistre l’arrivée au lit. “Je dors maintenant” enregistre directement l’extinction.</small></div>
+        <div className="sleep-action-stack">
+          <button className="secondary bedtime-button" onClick={()=>beginSleep(false)}>Je vais au lit</button>
+          <button className="primary bedtime-button" onClick={()=>beginSleep(true)}>Je dors maintenant</button>
         </div>
-        {!lastBedtime
-          ? <button className="primary bedtime-button" onClick={markBedtime}>Je me couche</button>
-          : <button className="primary bedtime-button wake" onClick={markWake}>Je suis réveillé</button>
-        }
-      </div>
-
-      {lastBedtime&&suggestedWakeLabel&&<div>
-        <div className="wake-recommendation">
-          <div>
-            <span>RÉVEIL CONSEILLÉ</span>
-            <strong>{suggestedWakeLabel}</strong>
-          </div>
-          <p>Avec un coucher à {bedtimeLabel}, cette heure conserve ta cible de <b>{targetSleepLabel}</b>.</p>
-        </div>
-
-        <label className="time-card" style={{marginTop:8}}>
-          <span>TON RÉVEIL PRÉVU</span>
-          <input type="time" value={plannedWakeTime} onChange={e=>setPlannedWakeTime(e.target.value)}/>
-          <small>{plannedSleepLabel} entre coucher et réveil · {sleepGapMinutes<0
-            ? `${Math.abs(sleepGapMinutes)} min sous la cible`
-            : sleepGapMinutes>0
-              ? `+${sleepGapMinutes} min au-dessus de la cible`
-              : "pile sur la cible"}</small>
-          <button type="button" className="secondary" style={{marginTop:10}} onClick={()=>setPlannedWakeTime(suggestedWakeLabel)}>Prendre le réveil conseillé</button>
-        </label>
-        <div className="note">La durée affichée correspond au temps entre l’heure de coucher enregistrée et le réveil prévu, pas au sommeil réellement mesuré.</div>
       </div>}
 
-      <div className="section-title"><h3>Routine sommeil</h3><span>Enregistrée sur cet appareil</span></div>
+      {openSleep&&!openSleep.lightsOutAt&&<div className="bedtime-action">
+        <div><span className="eyebrow">AU LIT DEPUIS {clock(openSleep.bedAt)}</span><strong>Quand tu poses la télécommande…</strong><small>Appuie au moment où tu arrêtes vraiment tout.</small></div>
+        <button className="primary bedtime-button" onClick={lightsOutNow}>Je dors maintenant</button>
+      </div>}
+
+      {openSleep&&openSleep.lightsOutAt&&<div className="sleep-plan">
+        <div className="wake-recommendation">
+          <div><span>RÉVEIL CONSEILLÉ</span><strong>{suggestedWakeAt?clock(suggestedWakeAt):"—"}</strong></div>
+          <p>Extinction à {clock(openSleep.lightsOutAt)}. Cette heure conserve ta cible de <b>{durationLabel(targetSleepMinutes)}</b>.</p>
+        </div>
+        <label className="time-card">
+          <span>TON RÉVEIL PRÉVU</span>
+          <input type="time" value={plannedWakeTime} onChange={e=>changeWakePlan(e.target.value)}/>
+          <small>{plannedSleepMinutes?durationLabel(plannedSleepMinutes):"—"} entre extinction et réveil prévu.</small>
+          {suggestedWakeAt&&<button className="secondary" type="button" onClick={()=>changeWakePlan(clock(suggestedWakeAt))}>Prendre le conseillé</button>}
+        </label>
+        <button className="primary big wake" onClick={wakeNow}>Je suis réveillé</button>
+      </div>}
+
+      {latestSleep?.wakeAt&&<div className="quality-card">
+        <div><strong>Comment tu te sens au réveil ?</strong><span>Une note rapide aide Nolan à contextualiser la séance.</span></div>
+        <div>{[1,2,3,4,5].map(q=><button key={q} className={latestSleep.quality===q?"active":""} onClick={()=>rateSleep(q)}>{q}</button>)}</div>
+      </div>}
+
+      <div className="section-title"><h3>Routine</h3><span>synchronisée</span></div>
       <div className="recovery-grid">
-        <label className="time-card"><span>Préparation coucher</span><input type="time" value={prepTarget} onChange={e=>setPrepTarget(e.target.value)}/><small>Stop boulot, lumière basse, routine.</small></label>
-        <label className="time-card"><span>Sommeil cible</span><input type="time" value={sleepTarget} onChange={e=>setSleepTarget(e.target.value)}/><small>Heure à laquelle tu veux réellement dormir.</small></label>
-        <label className="time-card"><span>Réveil cible</span><input type="time" value={wakeTarget} onChange={e=>setWakeTarget(e.target.value)}/><small>À ajuster si tu t'es couché tard : priorité au sommeil.</small></label>
-        <label className="time-card"><span>Dernière nuit</span><div className="hours-input"><input inputMode="decimal" placeholder="7.5" value={lastSleepHours} onChange={e=>setLastSleepHours(e.target.value.replace(",", "."))}/><b>h</b></div><small>Temporaire, jusqu'à la synchro Apple Santé.</small></label>
+        <label className="time-card"><span>Préparation coucher</span><input type="time" value={prepTarget} onChange={e=>setPrepTarget(e.target.value)}/><small>Fin boulot, lumière basse.</small></label>
+        <label className="time-card"><span>Sommeil cible</span><input type="time" value={sleepTarget} onChange={e=>setSleepTarget(e.target.value)}/><small>Heure idéale d’endormissement.</small></label>
+        <label className="time-card"><span>Réveil cible</span><input type="time" value={wakeTarget} onChange={e=>setWakeTarget(e.target.value)}/><small>Base utilisée pour calculer la durée cible.</small></label>
+        <label className="time-card"><span>Durée cible</span><div className="big-value">{durationLabel(targetSleepMinutes)}</div><small>Calculée automatiquement.</small></label>
       </div>
 
-      <div className="sleep-guidance">
-        <strong>Routine actuelle</strong>
-        <p>À {prepTarget} : fin du travail et préparation. À {sleepTarget} : objectif sommeil. Réveil cible {wakeTarget}.</p>
-        {lastSleepHours && Number(lastSleepHours)<7 && <span className="warning">Nuit courte saisie : évite de sacrifier encore du sommeil pour t'entraîner plus tôt.</span>}
+      <div className="section-title"><h3>Mensurations</h3><span>optionnel</span></div>
+      <div className="metric-entry">
+        <label>Poids<input inputMode="decimal" placeholder="69.0" value={metricWeight} onChange={e=>setMetricWeight(e.target.value)}/><span>kg</span></label>
+        <label>Tour de taille<input inputMode="decimal" placeholder="80.0" value={metricWaist} onChange={e=>setMetricWaist(e.target.value)}/><span>cm</span></label>
+        <button className="primary" onClick={addMetric}>Enregistrer</button>
+      </div>
+      <div className="metric-charts">
+        <div className="chart-card"><strong>Poids</strong><MiniChart values={weightSeries} suffix=" kg"/></div>
+        <div className="chart-card"><strong>Tour de taille</strong><MiniChart values={waistSeries} suffix=" cm"/></div>
+      </div>
+
+      <div className="section-title"><h3>Notifications</h3><span>PWA</span></div>
+      <div className="integration-card connected">
+        <div><strong>Rappels locaux</strong><span>Repos, routine coucher, séance et créatine. Ils sont fiables quand la PWA reste active ; le service worker est prêt pour le Web Push serveur.</span></div>
+        <b>{notificationsEnabled?"Actif":"Off"}</b>
+      </div>
+      {!notificationsEnabled&&<button className="primary big" onClick={enableNotifications}>Activer les notifications</button>}
+      <div className="recovery-grid">
+        <label className="time-card"><span>Rappel séance</span><input type="time" value={workoutReminderTime} onChange={e=>setWorkoutReminderTime(e.target.value)}/></label>
+        <label className="time-card"><span>Rappel créatine</span><input type="time" value={creatineReminderTime} onChange={e=>setCreatineReminderTime(e.target.value)}/></label>
+      </div>
+
+      <div className="section-title"><h3>Compte & sync</h3><span>{authAnonymous?"anonyme":"sécurisé"}</span></div>
+      <div className="account-card">
+        <strong>{authAnonymous?"Sécuriser tes données":"Compte sécurisé"}</strong>
+        <p>{authAnonymous
+          ?"Ajoute ton email pour retrouver tes données sur un nouvel iPhone ou ton Mac."
+          : `Connecté avec ${authUser?.email??"ton compte"}.`}</p>
+        <input type="email" placeholder="ton@email.fr" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/>
+        <div className="account-actions">
+          {authAnonymous&&<button className="primary" onClick={secureAccount}>Sécuriser ce compte</button>}
+          <button className="secondary" onClick={requestMagicLink}>Recevoir un lien de connexion</button>
+        </div>
+        {accountMessage&&<small>{accountMessage}</small>}
       </div>
 
       <div className={`integration-card ${isCloudConfigured?"connected":""}`}>
-        <div>
-          <strong>Cloud privé</strong>
-          <span>{isCloudConfigured
-            ? cloudStatus==="syncing" ? "Synchronisation…"
-            : cloudStatus==="ok" ? "Dernière donnée synchronisée."
-            : cloudStatus==="error" ? "Connexion configurée, mais la dernière synchro a échoué."
-            : "Supabase configuré. Les prochaines séances et nuits seront synchronisées."
-            : "Code prêt. Il reste à relier le projet Supabase à Vercel."}</span>
-        </div>
-        <b>{isCloudConfigured?"Actif":"À connecter"}</b>
-      </div>
-      <div className="integration-card">
-        <div><strong>Notifications iPhone</strong><span>Possible avec la PWA installée sur l'écran d'accueil.</span></div>
-        <b>Étape suivante</b>
-      </div>
-      <div className="integration-card">
-        <div><strong>Apple Santé / HealthKit</strong><span>Sommeil, pas, fréquence cardiaque et entraînements nécessitent une app iOS native pour une vraie synchro directe.</span></div>
-        <b>V3 native</b>
+        <div><strong>Cloud privé</strong><span>Les séances, nuits, mensurations et préférences sont chargées depuis Supabase à l’ouverture.</span></div>
+        <b>{cloudStatus==="ok"?"Actif":"…"}</b>
       </div>
     </section>}
 
-    {tab==='coach'&&<section>
+    {tab==="coach"&&<section>
       <div className="coach-card">
-        <div className="eyebrow">NOLAN MODE · V2</div><h2>Comment tu arrives aujourd’hui ?</h2><p>L’app adapte le volume sans changer ton cap.</p>
+        <div className="eyebrow">NOLAN · CONNECTÉ AUX DONNÉES</div>
+        <h2>{autoCoachMode==="tired"?"On allège aujourd’hui.":"Plan normal."}</h2>
+        <p>{autoCoachText}</p>
+
         <div className="coach-options">
-          {([['normal','Normal'],['tired','Mal dormi'],['short','40 min max'],['crowded','Salle blindée']] as const).map(([id,label])=><button key={id} className={coachMode===id?'selected':''} onClick={()=>setCoachMode(id)}>{label}</button>)}
+          {([
+            ["normal","Normal"],["tired","Mal dormi"],["short","40 min max"],["crowded","Salle blindée"]
+          ] as const).map(([id,label])=>
+            <button key={id} className={coachMode===id?"selected":""} onClick={()=>setCoachMode(id)}>{label}</button>
+          )}
         </div>
+
         <div className="coach-result">
-          {coachMode==='normal'&&<>Plan normal. 1–2 reps en réserve. Progression si haut de fourchette validé.</>}
-          {coachMode==='tired'&&<>Retire 1 série aux exercices principaux, zéro échec, garde les charges stables.</>}
-          {coachMode==='short'&&<>2 séries par exercice, priorités P1 d’abord, accessoires optionnels.</>}
-          {coachMode==='crowded'&&<>“Machine prise” met maintenant l’exercice en attente et te le repropose avant la fin.</>}
+          {coachMode==="normal"&&<>1–2 RIR. Progression si le haut de fourchette est validé proprement.</>}
+          {coachMode==="tired"&&<>Une série de moins sur les mouvements concernés, zéro échec forcé.</>}
+          {coachMode==="short"&&<>Deux séries par exercice, priorités P1 d’abord.</>}
+          {coachMode==="crowded"&&<>“Machine prise” reporte l’exercice et le repropose avant la fin.</>}
         </div>
-        <button className="primary big" onClick={()=>{setSelectedWorkoutId(workoutForToday());setTab('today')}}>Préparer la séance du jour</button>
+
+        {todayWorkout&&<>
+          <div className="section-title"><h3>{todayWorkout.title}</h3><span>cibles Nolan</span></div>
+          <div className="exercise-list">
+            {todayWorkout.exercises.slice(0,5).map(ex=>{
+              const rec=recommendationFor(ex);
+              return <div className="exercise-row" key={ex.id}>
+                <div className="grow"><strong>{ex.name}</strong><div className="muted">{rec.label}</div></div>
+                <div className="load">{rec.weight!=null?`${rec.weight} ${ex.unit}`:"—"}</div>
+              </div>;
+            })}
+          </div>
+          <button className="primary big" onClick={()=>{setSelectedWorkoutId(todayWorkout.id);startWorkout(todayWorkout)}}>Lancer avec ce plan</button>
+        </>}
       </div>
     </section>}
 
-    <footer><span>Progression &gt; ego.</span><span>V3.2 · Sleep plan</span></footer>
-  </main>
+    <footer><span>Cloud → données → décision.</span><span>V4</span></footer>
+  </main>;
 }
