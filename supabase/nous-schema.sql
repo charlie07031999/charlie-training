@@ -14,7 +14,8 @@ create table if not exists public.household_members (
   display_name text not null,
   role text not null default 'member' check (role in ('owner','member')),
   joined_at timestamptz not null default now(),
-  primary key (household_id,user_id)
+  primary key (household_id,user_id),
+  unique (user_id)
 );
 
 create table if not exists public.household_items (
@@ -24,7 +25,7 @@ create table if not exists public.household_items (
   title text not null,
   details text,
   due_at timestamptz,
-  assignee text not null default 'both' check (assignee in ('me','partner','both')),
+  assignee text not null default 'both' check (assignee in ('owner','member','both')),
   done boolean not null default false,
   pinned boolean not null default false,
   created_by uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -40,7 +41,7 @@ create table if not exists public.household_events (
   ends_at timestamptz,
   location text,
   details text,
-  assignee text not null default 'both' check (assignee in ('me','partner','both')),
+  assignee text not null default 'both' check (assignee in ('owner','member','both')),
   created_by uuid not null default auth.uid() references auth.users(id) on delete cascade,
   created_at timestamptz not null default now()
 );
@@ -153,5 +154,32 @@ revoke all on function public.join_household_by_code(text,text) from public,anon
 grant execute on function public.create_household(text,text) to authenticated;
 grant execute on function public.join_household_by_code(text,text) to authenticated;
 
-alter publication supabase_realtime add table public.household_items;
-alter publication supabase_realtime add table public.household_events;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname='supabase_realtime'
+      and schemaname='public'
+      and tablename='household_items'
+  ) then
+    alter publication supabase_realtime add table public.household_items;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname='supabase_realtime'
+      and schemaname='public'
+      and tablename='household_events'
+  ) then
+    alter publication supabase_realtime add table public.household_events;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname='supabase_realtime'
+      and schemaname='public'
+      and tablename='household_members'
+  ) then
+    alter publication supabase_realtime add table public.household_members;
+  end if;
+end $$;
