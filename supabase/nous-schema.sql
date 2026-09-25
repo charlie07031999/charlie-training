@@ -67,13 +67,13 @@ language sql
 stable
 security definer
 set search_path=public,private
-as $
+as $$
   select exists(
     select 1 from public.household_members hm
     where hm.household_id=household
       and hm.user_id=auth.uid()
   );
-$;
+$$;
 
 revoke all on function private.is_household_member(uuid) from public,anon;
 grant execute on function private.is_household_member(uuid) to authenticated;
