@@ -1,17 +1,37 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url=process.env.NEXT_PUBLIC_NOUS_SUPABASE_URL;
-const key=process.env.NEXT_PUBLIC_NOUS_SUPABASE_PUBLISHABLE_KEY;
+const url =
+  process.env.NEXT_PUBLIC_NOUS_SUPABASE_URL ??
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??
+  "https://yjepvpflamlncpgncsun.supabase.co";
+
+const key =
+  process.env.NEXT_PUBLIC_NOUS_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  "sb_publishable_m9I76Yiymq9k7ZA43FvLDg_Z0mpnZBO";
 
 export const isNousCloudConfigured=Boolean(url&&key);
+
 export const nousSupabase=isNousCloudConfigured
   ? createClient(url as string,key as string,{
-      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+      auth:{
+        persistSession:true,
+        autoRefreshToken:true,
+        detectSessionInUrl:true,
+        storageKey:"nous-couple-auth-v1"
+      }
     })
   : null;
 
 export type NousItemKind="shopping"|"task"|"idea"|"trip"|"note";
-export type NousAssignee="me"|"partner"|"both";
+export type NousAssignee="owner"|"member"|"both";
+
+export type NousMember={
+  userId:string;
+  displayName:string;
+  role:"owner"|"member";
+};
 
 export type NousItem={
   id:string;
@@ -43,7 +63,9 @@ export type NousSpace={
   householdId:string;
   householdName:string;
   memberName:string;
+  role:"owner"|"member";
   inviteCode?:string|null;
+  members:NousMember[];
 };
 
 export async function getNousUser(){
@@ -57,9 +79,17 @@ export async function sendNousMagicLink(email:string){
   const redirectTo=typeof window!=="undefined"?`${window.location.origin}/nous`:undefined;
   const {error}=await nousSupabase.auth.signInWithOtp({
     email,
-    options:{emailRedirectTo:redirectTo}
+    options:{
+      emailRedirectTo:redirectTo,
+      shouldCreateUser:true
+    }
   });
   return error?{ok:false,reason:error.message}:{ok:true};
+}
+
+export async function signOutNous(){
+  if(!nousSupabase) return;
+  await nousSupabase.auth.signOut();
 }
 
 export async function loadNousSpace():Promise<NousSpace|null>{
@@ -67,24 +97,41 @@ export async function loadNousSpace():Promise<NousSpace|null>{
   const user=await getNousUser();
   if(!user) return null;
 
-  const {data,error}=await nousSupabase
+  const {data:membership,error}=await nousSupabase
     .from("household_members")
-    .select("display_name,households!inner(id,name,invite_code)")
+    .select("household_id,display_name,role")
     .eq("user_id",user.id)
     .limit(1)
     .maybeSingle();
 
-  if(error||!data) return null;
-  const household=Array.isArray((data as any).households)
-    ? (data as any).households[0]
-    : (data as any).households;
+  if(error||!membership) return null;
+
+  const [{data:household},{data:members}]=await Promise.all([
+    nousSupabase
+      .from("households")
+      .select("id,name,invite_code")
+      .eq("id",membership.household_id)
+      .single(),
+    nousSupabase
+      .from("household_members")
+      .select("user_id,display_name,role")
+      .eq("household_id",membership.household_id)
+      .order("joined_at",{ascending:true})
+  ]);
 
   if(!household) return null;
+
   return {
     householdId:household.id,
     householdName:household.name,
-    memberName:(data as any).display_name,
-    inviteCode:household.invite_code
+    memberName:membership.display_name,
+    role:membership.role as "owner"|"member",
+    inviteCode:household.invite_code,
+    members:(members??[]).map(m=>({
+      userId:m.user_id,
+      displayName:m.display_name,
+      role:m.role as "owner"|"member"
+    }))
   };
 }
 
@@ -124,7 +171,10 @@ export async function loadNousData(householdId:string){
   };
 }
 
-export async function addNousItem(householdId:string,input:Omit<NousItem,"id"|"created_at"|"household_id">){
+export async function addNousItem(
+  householdId:string,
+  input:Omit<NousItem,"id"|"created_at"|"household_id">
+){
   if(!nousSupabase) return {ok:false,reason:"cloud_not_configured" as const};
   const {error}=await nousSupabase.from("household_items").insert({
     household_id:householdId,
@@ -135,7 +185,10 @@ export async function addNousItem(householdId:string,input:Omit<NousItem,"id"|"c
 
 export async function updateNousItem(id:string,patch:Partial<NousItem>){
   if(!nousSupabase) return {ok:false,reason:"cloud_not_configured" as const};
-  const {error}=await nousSupabase.from("household_items").update(patch).eq("id",id);
+  const {error}=await nousSupabase
+    .from("household_items")
+    .update({...patch,updated_at:new Date().toISOString()})
+    .eq("id",id);
   return error?{ok:false,reason:error.message}:{ok:true};
 }
 
@@ -145,7 +198,10 @@ export async function deleteNousItem(id:string){
   return error?{ok:false,reason:error.message}:{ok:true};
 }
 
-export async function addNousEvent(householdId:string,input:Omit<NousEvent,"id"|"created_at"|"household_id">){
+export async function addNousEvent(
+  householdId:string,
+  input:Omit<NousEvent,"id"|"created_at"|"household_id">
+){
   if(!nousSupabase) return {ok:false,reason:"cloud_not_configured" as const};
   const {error}=await nousSupabase.from("household_events").insert({
     household_id:householdId,
@@ -164,8 +220,24 @@ export function subscribeNous(householdId:string,onChange:()=>void){
   if(!nousSupabase) return ()=>{};
   const channel=nousSupabase
     .channel(`nous-${householdId}`)
-    .on("postgres_changes",{event:"*",schema:"public",table:"household_items",filter:`household_id=eq.${householdId}`},onChange)
-    .on("postgres_changes",{event:"*",schema:"public",table:"household_events",filter:`household_id=eq.${householdId}`},onChange)
+    .on("postgres_changes",{
+      event:"*",
+      schema:"public",
+      table:"household_items",
+      filter:`household_id=eq.${householdId}`
+    },onChange)
+    .on("postgres_changes",{
+      event:"*",
+      schema:"public",
+      table:"household_events",
+      filter:`household_id=eq.${householdId}`
+    },onChange)
+    .on("postgres_changes",{
+      event:"*",
+      schema:"public",
+      table:"household_members",
+      filter:`household_id=eq.${householdId}`
+    },onChange)
     .subscribe();
 
   return ()=>{void nousSupabase.removeChannel(channel);};
