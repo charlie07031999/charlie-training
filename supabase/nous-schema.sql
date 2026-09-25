@@ -57,44 +57,48 @@ alter table public.household_members enable row level security;
 alter table public.household_items enable row level security;
 alter table public.household_events enable row level security;
 
-create or replace function public.is_household_member(household uuid)
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to authenticated;
+
+create or replace function private.is_household_member(household uuid)
 returns boolean
 language sql
 stable
 security definer
-set search_path=public
-as $$
+set search_path=public,private
+as $
   select exists(
     select 1 from public.household_members hm
     where hm.household_id=household
       and hm.user_id=auth.uid()
   );
-$$;
+$;
 
-revoke all on function public.is_household_member(uuid) from public;
-grant execute on function public.is_household_member(uuid) to authenticated;
+revoke all on function private.is_household_member(uuid) from public,anon;
+grant execute on function private.is_household_member(uuid) to authenticated;
 
 drop policy if exists "members read households" on public.households;
 create policy "members read households"
 on public.households for select to authenticated
-using (public.is_household_member(id));
+using (private.is_household_member(id));
 
 drop policy if exists "members read members" on public.household_members;
 create policy "members read members"
 on public.household_members for select to authenticated
-using (public.is_household_member(household_id));
+using (private.is_household_member(household_id));
 
 drop policy if exists "members manage items" on public.household_items;
 create policy "members manage items"
 on public.household_items for all to authenticated
-using (public.is_household_member(household_id))
-with check (public.is_household_member(household_id));
+using (private.is_household_member(household_id))
+with check (private.is_household_member(household_id));
 
 drop policy if exists "members manage events" on public.household_events;
 create policy "members manage events"
 on public.household_events for all to authenticated
-using (public.is_household_member(household_id))
-with check (public.is_household_member(household_id));
+using (private.is_household_member(household_id))
+with check (private.is_household_member(household_id));
 
 create or replace function public.create_household(household_name text,display_name text)
 returns uuid
@@ -105,6 +109,16 @@ as $$
 declare new_id uuid;
 begin
   if auth.uid() is null then raise exception 'not authenticated'; end if;
+
+  if not exists (
+    select 1 from auth.users
+    where id=auth.uid()
+      and email is not null
+      and coalesce(is_anonymous,false)=false
+  ) then
+    raise exception 'email account required';
+  end if;
+
   if exists(select 1 from public.household_members where user_id=auth.uid()) then
     raise exception 'already in a household';
   end if;
@@ -129,6 +143,16 @@ as $$
 declare target_id uuid;
 begin
   if auth.uid() is null then raise exception 'not authenticated'; end if;
+
+  if not exists (
+    select 1 from auth.users
+    where id=auth.uid()
+      and email is not null
+      and coalesce(is_anonymous,false)=false
+  ) then
+    raise exception 'email account required';
+  end if;
+
   if exists(select 1 from public.household_members where user_id=auth.uid()) then
     raise exception 'already in a household';
   end if;
