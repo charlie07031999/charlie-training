@@ -1365,7 +1365,34 @@ export default function Home(){
           </div>
         </div>
 
-        <div className="log-card">
+        {currentExercise?.superset?.length?<div className="superset-log-card">
+          <div className="superset-round-head">
+            <div><span>SUPERSET</span><strong>Tour {session.setIndex+1}/{effectiveTarget().sets}</strong></div>
+            <small>Enchaîne les deux exercices puis prends ton repos.</small>
+          </div>
+
+          {currentExercise.superset.map((part,index)=>{
+            const draft=supersetDrafts[part.id]??{weight:"",reps:String(part.repMin),rir:"2",failed:false};
+            return <div className="superset-part-card" key={part.id}>
+              <div className="superset-part-head">
+                <span>{index===0?"A":"B"}</span>
+                <div><strong>{part.name}</strong><small>{part.target} · {part.repMin}–{part.repMax} reps</small></div>
+              </div>
+              <div className="superset-fields">
+                <label>Charge<div className="input-wrap"><input value={draft.weight} onChange={e=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,weight:e.target.value}}))} inputMode="decimal" disabled={part.unit==="PDC"}/><span>{part.unit}</span></div></label>
+                <label>Reps<div className="stepper"><button onClick={()=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,reps:String(Math.max(0,Number(draft.reps)-1))}}))}>−</button><strong>{draft.reps}</strong><button onClick={()=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,reps:String(Number(draft.reps)+1)}}))}>+</button></div></label>
+                <label>RIR<div className="stepper compact"><button onClick={()=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,rir:String(Math.max(0,Number(draft.rir)-1))}}))}>−</button><strong>{draft.rir}</strong><button onClick={()=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,rir:String(Math.min(5,Number(draft.rir)+1))}}))}>+</button></div></label>
+                <label className="fail-toggle"><input type="checkbox" checked={draft.failed} onChange={e=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,failed:e.target.checked}}))}/><span>Échec</span></label>
+              </div>
+              <p>{part.cue}</p>
+            </div>;
+          })}
+
+          <button className="primary big" onClick={logSupersetRound}>Valider les 2 exercices</button>
+          <button className="secondary" onClick={skipMachine}>Machine prise → plus tard</button>
+          <button className="ghost" onClick={undoLastSet}>Annuler mon dernier superset</button>
+          <button className="ghost danger" onClick={()=>confirm("Terminer sans enregistrer ?")&&abandonWorkout()}>Abandonner la séance</button>
+        </div>:<div className="log-card">
           <div className="field">
             <label>Charge</label>
             <div className="input-wrap">
@@ -1380,7 +1407,7 @@ export default function Home(){
           <button className="secondary" onClick={skipMachine}>Machine prise → plus tard</button>
           <button className="ghost" onClick={undoLastSet}>Annuler ma dernière validation</button>
           <button className="ghost danger" onClick={()=>confirm("Terminer sans enregistrer ?")&&abandonWorkout()}>Abandonner la séance</button>
-        </div>
+        </div>}
       </>}
     </section>}
 
