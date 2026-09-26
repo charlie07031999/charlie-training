@@ -13,6 +13,17 @@ export type CardioLog = {
   rpe?:number;
 };
 
+export type SupersetPart = {
+  id:string;
+  name:string;
+  target:string;
+  unit:"kg"|"kg/bras"|"PDC"|"+kg";
+  suggestedWeight?:number;
+  repMin:number;
+  repMax:number;
+  cue:string;
+};
+
 export type Exercise = {
   id:string;
   name:string;
@@ -25,6 +36,8 @@ export type Exercise = {
   restSeconds:number;
   cue:string;
   priority?:boolean;
+  superset?:SupersetPart[];
+  alternatives?:string[];
 };
 
 export type Workout = {
