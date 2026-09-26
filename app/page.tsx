@@ -705,30 +705,23 @@ export default function Home(){
     })();
   }
 
-  function logSet(){
+  function completeExerciseWithLogs(
+    nextLogs:Record<string,SetLog[]>,
+    lastSet:Record<string,unknown>|null
+  ){
     if(!session||!currentExercise) return;
-    const log:SetLog={
-      reps:Number(reps||0),
-      weight:currentExercise.unit==="PDC"?undefined:(weight?Number(weight.replace(",",".")):undefined),
-      rir:Number(rir||0),
-      failed,
-      loggedAt:Date.now()
-    };
-    const key=currentExercise.id;
-    const nextLogs={...session.logs,[key]:[...(session.logs[key]??[]),log]};
     const target=effectiveTarget();
     const nextSet=session.setIndex+1;
-    const lastSet=lastSetPayload(currentExercise,log,nextLogs[key].length);
+    const restTarget=session.restOverrides[currentExercise.id]??currentExercise.restSeconds;
 
-    if(currentExercise.restSeconds>0){
-      setRest(currentExercise.restSeconds);
+    if(restTarget>0){
+      setRest(restTarget);
       setRestNotificationArmed(true);
     }
-    setFailed(false);
 
     if(nextSet>=target.sets){
-      const completedIds=Array.from(new Set([...session.completedIds,key]));
-      const deferredIds=session.deferredIds.filter(id=>id!==key);
+      const completedIds=Array.from(new Set([...session.completedIds,currentExercise.id]));
+      const deferredIds=session.deferredIds.filter(id=>id!==currentExercise.id);
       const nextIdx=nextExerciseIndex(session,completedIds,deferredIds);
       if(nextIdx===-1){
         finishWorkout(nextLogs,null,lastSet);
@@ -750,6 +743,68 @@ export default function Home(){
       setSession(nextSession);
       pushLiveSession(nextSession,"set_logged",lastSet);
     }
+  }
+
+  function logSupersetRound(){
+    if(!session||!currentExercise?.superset?.length) return;
+    const loggedAt=Date.now();
+    const nextLogs={...session.logs};
+    const partsPayload:Record<string,unknown>[]=[];
+
+    currentExercise.superset.forEach(part=>{
+      const draft=supersetDrafts[part.id]??{
+        weight:"",
+        reps:String(part.repMin),
+        rir:"2",
+        failed:false
+      };
+      const log:SetLog={
+        reps:Number(draft.reps||0),
+        weight:part.unit==="PDC"?undefined:(draft.weight?Number(draft.weight.replace(",",".")):undefined),
+        rir:Number(draft.rir||0),
+        failed:draft.failed,
+        loggedAt
+      };
+      nextLogs[part.id]=[...(session.logs[part.id]??[]),log];
+      partsPayload.push(lastSetPayload(supersetPartAsExercise(part,currentExercise),log,nextLogs[part.id].length));
+    });
+
+    setSupersetDrafts(prev=>{
+      const next={...prev};
+      currentExercise.superset!.forEach(part=>{
+        const current=next[part.id]??{weight:"",reps:String(part.repMin),rir:"2",failed:false};
+        next[part.id]={...current,failed:false};
+      });
+      return next;
+    });
+
+    completeExerciseWithLogs(nextLogs,{
+      superset:true,
+      exercise_name:currentExercise.name,
+      round:session.setIndex+1,
+      parts:partsPayload
+    });
+  }
+
+  function logSet(){
+    if(!session||!currentExercise) return;
+    if(currentExercise.superset?.length){
+      logSupersetRound();
+      return;
+    }
+
+    const log:SetLog={
+      reps:Number(reps||0),
+      weight:currentExercise.unit==="PDC"?undefined:(weight?Number(weight.replace(",",".")):undefined),
+      rir:Number(rir||0),
+      failed,
+      loggedAt:Date.now()
+    };
+    const key=currentExercise.id;
+    const nextLogs={...session.logs,[key]:[...(session.logs[key]??[]),log]};
+    const lastSet=lastSetPayload(currentExercise,log,nextLogs[key].length);
+    setFailed(false);
+    completeExerciseWithLogs(nextLogs,lastSet);
   }
 
   function adjustSet(exerciseId:string,index:number,delta:number){
