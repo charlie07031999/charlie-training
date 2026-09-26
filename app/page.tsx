@@ -537,6 +537,24 @@ export default function Home(){
 
   useEffect(()=>{
     if(!currentExercise) return;
+
+    if(currentExercise.superset?.length){
+      const nextDrafts:Record<string,SupersetDraft>={};
+      currentExercise.superset.forEach(part=>{
+        const ex=supersetPartAsExercise(part,currentExercise);
+        const existing=session?.logs[part.id]?.at(-1);
+        const rec=recommendationFor(ex);
+        nextDrafts[part.id]={
+          weight:existing?.weight!=null?String(existing.weight):(rec.weight!=null?String(rec.weight):""),
+          reps:String(part.repMin),
+          rir:"2",
+          failed:false
+        };
+      });
+      setSupersetDrafts(nextDrafts);
+      return;
+    }
+
     const existing=session?.logs[currentExercise.id]?.at(-1);
     const rec=recommendationFor(currentExercise);
     if(existing?.weight!=null) setWeight(String(existing.weight));
