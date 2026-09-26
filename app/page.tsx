@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { history, workouts } from "../lib/workouts";
-import type { CardioLog, Exercise, SetLog, Workout } from "../lib/types";
+import type { CardioLog, Exercise, SetLog, SupersetPart, Workout } from "../lib/types";
 import {
   clearLiveWorkout,
   finishSleepSession,
@@ -25,6 +25,13 @@ import {
 
 type CoachMode = "normal"|"tired"|"short"|"crowded";
 
+type SupersetDraft = {
+  weight:string;
+  reps:string;
+  rir:string;
+  failed:boolean;
+};
+
 type SessionState = {
   clientSessionId:string;
   workoutId:string;
@@ -35,6 +42,7 @@ type SessionState = {
   completedIds:string[];
   deferredIds:string[];
   coachMode:CoachMode;
+  restOverrides:Record<string,number>;
 };
 
 type CompletedSession = {
@@ -178,6 +186,7 @@ export default function Home(){
   const [weight,setWeight]=useState("");
   const [rir,setRir]=useState("2");
   const [failed,setFailed]=useState(false);
+  const [supersetDrafts,setSupersetDrafts]=useState<Record<string,SupersetDraft>>({});
   const [coachMode,setCoachMode]=useState<CoachMode>("normal");
   const [now,setNow]=useState(Date.now());
 
