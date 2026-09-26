@@ -1296,7 +1296,7 @@ export default function Home(){
           <div className="target-grid">
             <div><span>Série</span><strong>{session.setIndex+1}/{effectiveTarget().sets}</strong></div>
             <div><span>Objectif</span><strong>{effectiveTarget().repMin}–{effectiveTarget().repMax}</strong></div>
-            <div><span>Repos</span><strong>{Math.round(currentExercise.restSeconds/6)/10} min</strong></div>
+            <div><span>Repos cible</span><strong>{formatTimer(currentRestTarget)}</strong></div>
           </div>
           <p>{currentExercise.cue}</p>
         </div>}
