@@ -426,41 +426,113 @@ export default function Home(){
         ? `Dernière nuit ${durationLabel(latestSleepMinutes)} : séance normale, garde 2 RIR sur les gros mouvements.`
         : `Dernière nuit ${durationLabel(latestSleepMinutes)} : récupération compatible avec le plan normal.`;
 
+  function recentExerciseLogs(exerciseId:string,limit=3){
+    return [...completedSessions]
+      .sort((a,b)=>b.finishedAt-a.finishedAt)
+      .map(session=>({session,logs:session.logs?.[exerciseId]??[]}))
+      .filter(x=>x.logs.length>0)
+      .slice(0,limit);
+  }
+
   function latestExerciseLogs(exerciseId:string){
-    const ordered=[...completedSessions].sort((a,b)=>b.finishedAt-a.finishedAt);
-    for(const s of ordered){
-      const logs=s.logs?.[exerciseId];
-      if(logs?.length) return {session:s,logs};
-    }
-    return null;
+    return recentExerciseLogs(exerciseId,1)[0]??null;
   }
 
   function recommendationFor(ex:Exercise){
-    const last=latestExerciseLogs(ex.id);
+    const recent=recentExerciseLogs(ex.id,3);
+    const last=recent[0];
     if(!last){
       return {
         weight:ex.suggestedWeight,
-        label:ex.suggestedWeight!=null?`Base actuelle : ${ex.suggestedWeight} ${ex.unit}`:"Démarre proprement et calibre la charge."
+        label:ex.suggestedWeight!=null
+          ? `Base actuelle : ${ex.suggestedWeight} ${ex.unit}`
+          :"Démarre proprement et calibre la charge."
       };
     }
+
     const logs=last.logs;
     const lastWeight=[...logs].reverse().find(x=>x.weight!=null)?.weight;
     const hasFail=logs.some(x=>x.failed||x.reps<ex.repMin);
-    const allTop=logs.length>=ex.sets&&logs.every(x=>x.reps>=ex.repMax&&!x.failed);
+    const allTop=logs.length>=ex.sets&&logs.every(x=>
+      x.reps>=ex.repMax&&!x.failed&&(x.rir==null||x.rir>=1)
+    );
+
+    const failureStreak=recent.slice(0,2).length===2&&recent.slice(0,2).every(entry=>
+      entry.logs.some(x=>x.failed||x.reps<ex.repMin)
+    );
+
+    if(failureStreak&&lastWeight!=null&&ex.unit!=="PDC"){
+      const reduced=Math.round(lastWeight*0.95*10)/10;
+      return {
+        weight:reduced,
+        label:`Deux séances difficiles → allège vers ${reduced} ${ex.unit} et reconstruis proprement.`
+      };
+    }
+
     if(allTop&&lastWeight!=null&&incrementFor(ex)>0){
       const next=Math.round((lastWeight+incrementFor(ex))*10)/10;
       return {weight:next,label:`Haut de fourchette validé → tente ${next} ${ex.unit}.`};
     }
+
+    if(recent.length>=3&&lastWeight!=null){
+      const sameLoad=recent.every(entry=>{
+        const w=[...entry.logs].reverse().find(x=>x.weight!=null)?.weight;
+        return w!=null&&Math.abs(w-lastWeight)<0.25;
+      });
+      const totals=recent.map(entry=>entry.logs.reduce((sum,x)=>sum+x.reps,0));
+      const stalled=sameLoad&&Math.max(...totals)-Math.min(...totals)<=1;
+      if(stalled){
+        const alternative=ex.alternatives?.[0];
+        return {
+          weight:lastWeight,
+          label:alternative
+            ? `Plateau sur 3 séances → garde la charge aujourd’hui. Si ça bloque encore, Nolan proposera ${alternative} au prochain cycle.`
+            :"Plateau sur 3 séances → garde la charge et change le stimulus au prochain cycle si ça ne repart pas."
+        };
+      }
+    }
+
     if(hasFail){
       return {
         weight:lastWeight??ex.suggestedWeight,
         label:"Consolide la charge : cherche plus de reps propres avant d’augmenter."
       };
     }
+
+    const previous=recent[1];
+    const previousTotal=previous?.logs.reduce((sum,x)=>sum+x.reps,0)??0;
+    const currentTotal=logs.reduce((sum,x)=>sum+x.reps,0);
     return {
       weight:lastWeight??ex.suggestedWeight,
-      label:"Garde la charge et ajoute progressivement des reps."
+      label:currentTotal>previousTotal&&previous
+        ? `Progression détectée (+${currentTotal-previousTotal} rep). Garde la charge et vise le haut de fourchette.`
+        :"Garde la charge et ajoute progressivement des reps."
     };
+  }
+
+  function supersetPartAsExercise(part:SupersetPart,parent:Exercise):Exercise{
+    return {
+      id:part.id,
+      name:part.name,
+      target:part.target,
+      unit:part.unit,
+      suggestedWeight:part.suggestedWeight,
+      sets:parent.sets,
+      repMin:part.repMin,
+      repMax:part.repMax,
+      restSeconds:parent.restSeconds,
+      cue:part.cue
+    };
+  }
+
+  function exerciseContextByLogId(logId:string){
+    for(let parentIndex=0;parentIndex<currentWorkout.exercises.length;parentIndex++){
+      const parent=currentWorkout.exercises[parentIndex];
+      if(parent.id===logId) return {exercise:parent,parent,parentIndex};
+      const part=parent.superset?.find(x=>x.id===logId);
+      if(part) return {exercise:supersetPartAsExercise(part,parent),parent,parentIndex};
+    }
+    return null;
   }
 
   useEffect(()=>{
