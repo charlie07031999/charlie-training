@@ -1257,6 +1257,20 @@ export default function Home(){
         <div className="section-title"><h3>Prochaine cible</h3><span>basée sur tes données</span></div>
         <div className="exercise-list">
           {(todayWorkout??selectedWorkout).exercises.slice(0,4).map((ex,i)=>{
+            if(ex.superset?.length){
+              const labels=ex.superset.map(part=>{
+                const rec=recommendationFor(supersetPartAsExercise(part,ex));
+                return part.name+" "+(rec.weight!=null?rec.weight+" "+part.unit:"à calibrer");
+              }).join(" · ");
+              return <div className="exercise-row" key={ex.id}>
+                <div className="index">{String(i+1).padStart(2,"0")}</div>
+                <div className="grow">
+                  <div className="row-top"><strong>{ex.name}</strong><span className="priority">SUPERSET</span></div>
+                  <div className="muted">{labels}</div>
+                </div>
+                <div className="load">2 charges</div>
+              </div>;
+            }
             const rec=recommendationFor(ex);
             return <div className="exercise-row" key={ex.id}>
               <div className="index">{String(i+1).padStart(2,"0")}</div>
