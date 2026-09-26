@@ -1343,34 +1343,38 @@ export default function Home(){
         })}
 
         {currentExercise?.superset?.length?<>
-          {session.setIndex>0&&<div className="set-history-card">
-            <div className="set-history-head"><strong>Supersets validés</strong><button onClick={undoLastSet}>Annuler dernier</button></div>
-            {Array.from({length:session.setIndex},(_,i)=><div className="superset-history-row" key={i}>
-              <span>Tour {i+1}</span>
-              <div>
-                {currentExercise.superset!.map(part=>{
-                  const s=session.logs[part.id]?.[i];
-                  return <small key={part.id}>
-                    <b>{part.name}</b> · {s?.weight!=null?`${s.weight} × `:""}{s?.reps??"—"} · RIR {s?.rir??"—"}{s?.failed?" · échec":""}
-                  </small>;
-                })}
-              </div>
-              <button onClick={()=>deleteSupersetRound(currentExercise,session.exerciseIndex,i)}>×</button>
-            </div>)}
-          </div>}
-        </>:currentSetLogs.length>0&&<div className="set-history-card">
-          <div className="set-history-head"><strong>Séries validées</strong><button onClick={undoLastSet}>Annuler dernière</button></div>
-          {currentSetLogs.map((s,i)=><div className="set-row" key={i}>
-            <span>S{i+1}</span>
-            <strong>{s.weight!=null?`${s.weight} × `:""}{s.reps}</strong>
-            <small>RIR {s.rir??"—"}{s.failed?" · échec":""}</small>
-            <div>
-              <button onClick={()=>adjustSet(currentExercise!.id,i,-1)}>−1</button>
-              <button onClick={()=>adjustSet(currentExercise!.id,i,1)}>+1</button>
-              <button onClick={()=>deleteSet(currentExercise!.id,i)}>×</button>
+          {session.setIndex>0&&<details className="session-details">
+            <summary>Derniers tours · {session.setIndex}</summary>
+            <div className="set-history-card v5-history">
+              {Array.from({length:session.setIndex},(_,i)=><div className="superset-history-row" key={i}>
+                <span>T{i+1}</span>
+                <div>
+                  {currentExercise.superset!.map(part=>{
+                    const s=session.logs[part.id]?.[i];
+                    return <small key={part.id}>
+                      <b>{part.name}</b> · {s?.weight!=null?`${s.weight} × `:""}{s?.reps??"—"} · RIR {s?.rir??"—"}{s?.failed?" · échec":""}
+                    </small>;
+                  })}
+                </div>
+                <button onClick={()=>deleteSupersetRound(currentExercise,session.exerciseIndex,i)}>×</button>
+              </div>)}
             </div>
-          </div>)}
-        </div>}
+          </details>}
+        </>:currentSetLogs.length>0&&<details className="session-details">
+          <summary>Séries validées · {currentSetLogs.length}</summary>
+          <div className="set-history-card v5-history">
+            {currentSetLogs.map((s,i)=><div className="set-row" key={i}>
+              <span>S{i+1}</span>
+              <strong>{s.weight!=null?`${s.weight} × `:""}{s.reps}</strong>
+              <small>RIR {s.rir??"—"}{s.failed?" · échec":""}</small>
+              <div>
+                <button onClick={()=>adjustSet(currentExercise!.id,i,-1)}>−1</button>
+                <button onClick={()=>adjustSet(currentExercise!.id,i,1)}>+1</button>
+                <button onClick={()=>deleteSet(currentExercise!.id,i)}>×</button>
+              </div>
+            </div>)}
+          </div>
+        </details>}
 
         <div className="rest-box">
           <span>Chrono repos</span>
