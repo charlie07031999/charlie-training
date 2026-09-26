@@ -535,6 +535,13 @@ export default function Home(){
     return null;
   }
 
+  function loggedRoundCount(exercise:Exercise,logs:Record<string,SetLog[]>){
+    if(exercise.superset?.length){
+      return Math.min(...exercise.superset.map(part=>(logs[part.id]??[]).length));
+    }
+    return (logs[exercise.id]??[]).length;
+  }
+
   useEffect(()=>{
     if(!currentExercise) return;
 
@@ -734,7 +741,7 @@ export default function Home(){
         completedIds,
         deferredIds,
         exerciseIndex:nextIdx,
-        setIndex:(nextLogs[nextId]??[]).length
+        setIndex:loggedRoundCount(currentWorkout.exercises[nextIdx],nextLogs)
       };
       setSession(nextSession);
       pushLiveSession(nextSession,"set_logged",lastSet);
@@ -901,7 +908,7 @@ export default function Home(){
       ...session,
       deferredIds,
       exerciseIndex:nextIdx,
-      setIndex:(session.logs[nextId]??[]).length
+      setIndex:loggedRoundCount(currentWorkout.exercises[nextIdx],session.logs)
     };
     setSession(nextSession);
     pushLiveSession(nextSession,"exercise_deferred");
