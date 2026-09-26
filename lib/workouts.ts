@@ -50,7 +50,10 @@ export const workouts: Workout[] = [
       {id:"shoulder-upper",name:"Shoulder Press",target:"Épaules",unit:"kg/bras",suggestedWeight:18,sets:2,repMin:8,repMax:10,restSeconds:120,cue:"1–2 reps en réserve."},
       {id:"lateral-upper",name:"Élévations latérales",target:"Deltoïdes latéraux",unit:"kg/bras",suggestedWeight:12,sets:3,repMin:12,repMax:15,restSeconds:75,cue:"Volume prioritaire pour élargir la silhouette.",priority:true},
       {id:"reverse-fly",name:"Reverse Fly",target:"Arrière d’épaule",unit:"kg",sets:2,repMin:12,repMax:15,restSeconds:75,cue:"Tempo lent, contrôle complet."},
-      {id:"arms-upper",name:"Biceps + Triceps",target:"Bras",unit:"kg",sets:2,repMin:8,repMax:12,restSeconds:60,cue:"Superset propre, pas d’échec forcé."},
+      {id:"arms-upper",name:"Biceps + Triceps",target:"Bras · superset",unit:"kg",sets:2,repMin:8,repMax:12,restSeconds:75,cue:"Enchaîne biceps puis triceps. Le repos démarre après les deux exercices.",superset:[
+        {id:"arms-upper-biceps",name:"Curl EZ poulie",target:"Biceps",unit:"kg",suggestedWeight:20.3,repMin:8,repMax:12,cue:"Coudes fixes, amplitude propre."},
+        {id:"arms-upper-triceps",name:"Extension triceps corde",target:"Triceps",unit:"kg",suggestedWeight:20.3,repMin:8,repMax:12,cue:"Coudes fixes, ouvre la corde en bas."}
+      ]},
       {id:"abs-upper",name:"Abdos",target:"Core",unit:"kg",sets:3,repMin:10,repMax:15,restSeconds:60,cue:"Crunch, relevés ou Pallof Press."}
     ]
   }
