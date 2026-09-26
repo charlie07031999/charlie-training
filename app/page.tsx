@@ -841,7 +841,7 @@ export default function Home(){
       ...session,
       logs:nextLogs,
       exerciseIndex:parentIndex,
-      setIndex:index,
+      setIndex:loggedRoundCount(parent,nextLogs),
       completedIds:session.completedIds.filter(id=>id!==parent.id)
     };
     setSession(nextSession);
