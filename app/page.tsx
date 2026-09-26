@@ -1301,7 +1301,30 @@ export default function Home(){
           <p>{currentExercise.cue}</p>
         </div>}
 
-        {currentExercise&&<div className="progression-banner">{recommendationFor(currentExercise).label}</div>}
+        {nextExercisePreview&&<div className="next-exercise-card">
+          <span>ENSUITE</span>
+          <div>
+            <strong>{nextExercisePreview.name}</strong>
+            <small>
+              {nextExercisePreview.superset?.length
+                ? nextExercisePreview.sets+" tours · "+nextExercisePreview.superset.map(p=>p.name).join(" + ")
+                : nextExercisePreview.sets+" × "+nextExercisePreview.repMin+"–"+nextExercisePreview.repMax}
+            </small>
+          </div>
+          <b>→</b>
+        </div>}
+
+        {currentExercise&&!currentExercise.superset?.length&&
+          <div className="progression-banner">{recommendationFor(currentExercise).label}</div>
+        }
+
+        {currentExercise?.superset?.map(part=>{
+          const ex=supersetPartAsExercise(part,currentExercise);
+          return <div className="progression-banner split" key={part.id}>
+            <strong>{part.name}</strong>
+            <span>{recommendationFor(ex).label}</span>
+          </div>;
+        })}
 
         {currentSetLogs.length>0&&<div className="set-history-card">
           <div className="set-history-head"><strong>Séries validées</strong><button onClick={undoLastSet}>Annuler dernière</button></div>
