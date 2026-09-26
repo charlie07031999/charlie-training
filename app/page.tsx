@@ -908,6 +908,29 @@ export default function Home(){
     setRest(0);
   }
 
+  function changeRestTarget(delta:number){
+    if(!session||!currentExercise) return;
+    const current=session.restOverrides[currentExercise.id]??currentExercise.restSeconds;
+    const next=Math.max(0,Math.min(600,current+delta));
+    const nextSession:SessionState={
+      ...session,
+      restOverrides:{...session.restOverrides,[currentExercise.id]:next}
+    };
+    setSession(nextSession);
+    if(rest>0) setRest(next);
+  }
+
+  function setExactRestTarget(seconds:number){
+    if(!session||!currentExercise||!Number.isFinite(seconds)) return;
+    const next=Math.max(0,Math.min(600,Math.round(seconds)));
+    const nextSession:SessionState={
+      ...session,
+      restOverrides:{...session.restOverrides,[currentExercise.id]:next}
+    };
+    setSession(nextSession);
+    if(rest>0) setRest(next);
+  }
+
   function abandonWorkout(){
     if(!session) return;
     const id=session.clientSessionId;
