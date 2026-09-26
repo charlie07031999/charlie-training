@@ -1343,8 +1343,24 @@ export default function Home(){
         <div className="rest-box">
           <span>Chrono repos</span>
           <strong className={rest>0?"running":""}>{formatTimer(rest)}</strong>
+          <div className="rest-target-editor">
+            <button onClick={()=>changeRestTarget(-15)}>−15s</button>
+            <label>
+              <span>Cible</span>
+              <input
+                type="number"
+                min="0"
+                max="600"
+                step="5"
+                value={currentRestTarget}
+                onChange={e=>setExactRestTarget(Number(e.target.value))}
+              />
+              <small>sec</small>
+            </label>
+            <button onClick={()=>changeRestTarget(15)}>+15s</button>
+          </div>
           <div className="rest-actions">
-            <button onClick={()=>{setRest(currentExercise?.restSeconds??0);setRestNotificationArmed(true)}}>Relancer</button>
+            <button onClick={()=>{setRest(currentRestTarget);setRestNotificationArmed(true)}}>Relancer</button>
             <button onClick={()=>setRest(0)}>Reset</button>
           </div>
         </div>
