@@ -4,11 +4,11 @@ export const workouts: Workout[] = [
   {
     id:"push", day:"Lundi", title:"PUSH", subtitle:"Haut de pecs · épaules · triceps", accent:"#ff6b2c",
     exercises:[
-      {id:"incline-bench",name:"Développé incliné barre",target:"Haut de pecs",unit:"kg",suggestedWeight:55,sets:3,repMin:8,repMax:10,restSeconds:150,cue:"Banc ~30°. Descente contrôlée. 1–2 reps en réserve.",priority:true},
-      {id:"supine",name:"Supine Press",target:"Pecs",unit:"kg/bras",suggestedWeight:40,sets:3,repMin:8,repMax:8,restSeconds:150,cue:"Omoplates stables. Pas d’échec avant la dernière série."},
-      {id:"pec-fly",name:"Pec Fly",target:"Pecs",unit:"kg",suggestedWeight:79,sets:3,repMin:10,repMax:10,restSeconds:105,cue:"Amplitude contrôlée, pas de claquement."},
-      {id:"lateral",name:"Élévations latérales",target:"Deltoïdes latéraux",unit:"kg/bras",suggestedWeight:14,sets:3,repMin:10,repMax:12,restSeconds:75,cue:"Zéro balancier. Monte avec les coudes.",priority:true},
-      {id:"shoulder-press",name:"Shoulder Press haltères",target:"Épaules",unit:"kg/bras",suggestedWeight:18,sets:3,repMin:8,repMax:10,restSeconds:120,cue:"Buste stable. Pas de sur-cambrure."},
+      {id:"incline-bench",name:"Développé incliné barre",target:"Haut de pecs",unit:"kg",suggestedWeight:55,sets:3,repMin:8,repMax:10,restSeconds:150,cue:"Banc ~30°. Descente contrôlée. 1–2 reps en réserve.",priority:true,alternatives:["Développé incliné haltères","Chest Press inclinée convergente"]},
+      {id:"supine",name:"Supine Press",target:"Pecs",unit:"kg/bras",suggestedWeight:40,sets:3,repMin:8,repMax:8,restSeconds:150,cue:"Omoplates stables. Pas d’échec avant la dernière série.",alternatives:["Chest Press convergente","Développé haltères"]},
+      {id:"pec-fly",name:"Pec Fly",target:"Pecs",unit:"kg",suggestedWeight:79,sets:3,repMin:10,repMax:10,restSeconds:105,cue:"Amplitude contrôlée, pas de claquement.",alternatives:["Écartés poulie","Pec Deck unilatéral"]},
+      {id:"lateral",name:"Élévations latérales",target:"Deltoïdes latéraux",unit:"kg/bras",suggestedWeight:14,sets:3,repMin:10,repMax:12,restSeconds:75,cue:"Zéro balancier. Monte avec les coudes.",priority:true,alternatives:["Élévations latérales poulie","Machine élévations latérales"]},
+      {id:"shoulder-press",name:"Shoulder Press haltères",target:"Épaules",unit:"kg/bras",suggestedWeight:18,sets:3,repMin:8,repMax:10,restSeconds:120,cue:"Buste stable. Pas de sur-cambrure.",alternatives:["Shoulder Press machine","Développé épaules guidé"]},
       {id:"triceps-rope",name:"Triceps corde",target:"Triceps",unit:"kg",suggestedWeight:20.3,sets:3,repMin:8,repMax:12,restSeconds:90,cue:"Coudes fixes, ouvre la corde en bas."},
       {id:"crunch",name:"Crunch machine",target:"Abdos",unit:"kg",suggestedWeight:50,sets:3,repMin:10,repMax:15,restSeconds:75,cue:"Enroule le buste et souffle sur la contraction."}
     ]
@@ -16,10 +16,10 @@ export const workouts: Workout[] = [
   {
     id:"pull", day:"Mardi", title:"PULL", subtitle:"Dorsaux · dos · biceps", accent:"#6cb7ff",
     exercises:[
-      {id:"pullups",name:"Tractions lestées",target:"Dorsaux",unit:"+kg",suggestedWeight:10,sets:3,repMin:6,repMax:8,restSeconds:150,cue:"Tire les coudes vers le bas. Gainage serré.",priority:true},
-      {id:"lat-pulldown",name:"Lat Pulldown",target:"Largeur du dos",unit:"kg",suggestedWeight:59,sets:3,repMin:10,repMax:10,restSeconds:105,cue:"Poitrine sortie, retour contrôlé.",priority:true},
-      {id:"row",name:"Rowing poulie",target:"Épaisseur du dos",unit:"kg",suggestedWeight:66,sets:3,repMin:8,repMax:10,restSeconds:120,cue:"Tire vers le nombril. Torse stable."},
-      {id:"straight-arm",name:"Straight-arm Pulldown",target:"Dorsaux",unit:"kg",suggestedWeight:29.3,sets:3,repMin:8,repMax:10,restSeconds:90,cue:"Bras quasi tendus. Ramène vers les cuisses."},
+      {id:"pullups",name:"Tractions lestées",target:"Dorsaux",unit:"+kg",suggestedWeight:10,sets:3,repMin:6,repMax:8,restSeconds:150,cue:"Tire les coudes vers le bas. Gainage serré.",priority:true,alternatives:["Lat Pulldown prise neutre","Tractions assistées"]},
+      {id:"lat-pulldown",name:"Lat Pulldown",target:"Largeur du dos",unit:"kg",suggestedWeight:59,sets:3,repMin:10,repMax:10,restSeconds:105,cue:"Poitrine sortie, retour contrôlé.",priority:true,alternatives:["Tirage vertical unilatéral","Tractions prise neutre"]},
+      {id:"row",name:"Rowing poulie",target:"Épaisseur du dos",unit:"kg",suggestedWeight:66,sets:3,repMin:8,repMax:10,restSeconds:120,cue:"Tire vers le nombril. Torse stable.",alternatives:["Rowing poitrine appuyée","Row machine convergente"]},
+      {id:"straight-arm",name:"Straight-arm Pulldown",target:"Dorsaux",unit:"kg",suggestedWeight:29.3,sets:3,repMin:8,repMax:10,restSeconds:90,cue:"Bras quasi tendus. Ramène vers les cuisses.",alternatives:["Pullover machine","Pullover poulie corde"]},
       {id:"face-pull",name:"Face Pull",target:"Arrière d’épaule",unit:"kg",suggestedWeight:27,sets:2,repMin:12,repMax:15,restSeconds:75,cue:"Tire vers le visage. Épaules basses."},
       {id:"ez-curl",name:"Curl EZ poulie",target:"Biceps",unit:"kg",suggestedWeight:20.3,sets:3,repMin:8,repMax:10,restSeconds:90,cue:"Coudes fixes. Pas de balancier."},
       {id:"incline-curl",name:"Curl incliné haltères",target:"Biceps",unit:"kg/bras",suggestedWeight:12,sets:2,repMin:8,repMax:10,restSeconds:90,cue:"Étirement complet, descente lente."}
@@ -32,9 +32,9 @@ export const workouts: Workout[] = [
   {
     id:"legs", day:"Jeudi", title:"LEGS", subtitle:"Force · chaîne postérieure · entretien quadri", accent:"#f7c948",
     exercises:[
-      {id:"smith-squat",name:"Smith Squat",target:"Quadriceps · fessiers",unit:"kg",suggestedWeight:51.3,sets:3,repMin:8,repMax:8,restSeconds:150,cue:"Genoux dans l’axe. Amplitude stable.",priority:true},
-      {id:"rdl",name:"RDL Smith",target:"Ischios · fessiers",unit:"kg",suggestedWeight:61.3,sets:3,repMin:8,repMax:8,restSeconds:150,cue:"Hanches en arrière, dos neutre.",priority:true},
-      {id:"leg-press",name:"Leg Press",target:"Jambes",unit:"kg",suggestedWeight:93,sets:3,repMin:8,repMax:8,restSeconds:150,cue:"Bassin collé au dossier."},
+      {id:"smith-squat",name:"Smith Squat",target:"Quadriceps · fessiers",unit:"kg",suggestedWeight:51.3,sets:3,repMin:8,repMax:8,restSeconds:150,cue:"Genoux dans l’axe. Amplitude stable.",priority:true,alternatives:["Hack Squat","Belt Squat"]},
+      {id:"rdl",name:"RDL Smith",target:"Ischios · fessiers",unit:"kg",suggestedWeight:61.3,sets:3,repMin:8,repMax:8,restSeconds:150,cue:"Hanches en arrière, dos neutre.",priority:true,alternatives:["RDL haltères","Hip Hinge guidé"]},
+      {id:"leg-press",name:"Leg Press",target:"Jambes",unit:"kg",suggestedWeight:93,sets:3,repMin:8,repMax:8,restSeconds:150,cue:"Bassin collé au dossier.",alternatives:["Hack Squat","Presse unilatérale"]},
       {id:"leg-curl",name:"Leg Curl",target:"Ischios",unit:"kg",suggestedWeight:39,sets:3,repMin:8,repMax:10,restSeconds:90,cue:"Contracte fort, retour lent."},
       {id:"leg-extension",name:"Leg Extension",target:"Quadriceps",unit:"kg",suggestedWeight:73,sets:2,repMin:10,repMax:10,restSeconds:90,cue:"Pause en haut, pas d’à-coup."},
       {id:"calves",name:"Mollets",target:"Mollets",unit:"kg",suggestedWeight:60,sets:3,repMin:12,repMax:15,restSeconds:75,cue:"Amplitude complète, pause en haut."}
@@ -44,8 +44,8 @@ export const workouts: Workout[] = [
     id:"upper", day:"Samedi", title:"UPPER ESTHÉTIQUE", subtitle:"V-shape · haut de pecs · épaules", accent:"#b88cff",
     exercises:[
       {id:"pullups-upper",name:"Tractions",target:"Dorsaux",unit:"PDC",sets:3,repMin:8,repMax:10,restSeconds:120,cue:"Amplitude propre, aucune rep arrachée.",priority:true},
-      {id:"incline-upper",name:"Développé incliné barre",target:"Haut de pecs",unit:"kg",suggestedWeight:50,sets:3,repMin:8,repMax:10,restSeconds:150,cue:"Deuxième rappel haut de pecs.",priority:true},
-      {id:"row-upper",name:"Rowing poulie",target:"Dos",unit:"kg",suggestedWeight:66,sets:3,repMin:8,repMax:10,restSeconds:120,cue:"Torse stable, contrôle du retour."},
+      {id:"incline-upper",name:"Développé incliné barre",target:"Haut de pecs",unit:"kg",suggestedWeight:50,sets:3,repMin:8,repMax:10,restSeconds:150,cue:"Deuxième rappel haut de pecs.",priority:true,alternatives:["Développé incliné haltères","Chest Press inclinée convergente"]},
+      {id:"row-upper",name:"Rowing poulie",target:"Dos",unit:"kg",suggestedWeight:66,sets:3,repMin:8,repMax:10,restSeconds:120,cue:"Torse stable, contrôle du retour.",alternatives:["Rowing poitrine appuyée","Row machine convergente"]},
       {id:"lat-upper",name:"Lat Pulldown / tirage unilatéral",target:"Dorsaux",unit:"kg",suggestedWeight:59,sets:2,repMin:10,repMax:12,restSeconds:90,cue:"Étirement + largeur."},
       {id:"shoulder-upper",name:"Shoulder Press",target:"Épaules",unit:"kg/bras",suggestedWeight:18,sets:2,repMin:8,repMax:10,restSeconds:120,cue:"1–2 reps en réserve."},
       {id:"lateral-upper",name:"Élévations latérales",target:"Deltoïdes latéraux",unit:"kg/bras",suggestedWeight:12,sets:3,repMin:12,repMax:15,restSeconds:75,cue:"Volume prioritaire pour élargir la silhouette.",priority:true},
