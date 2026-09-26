@@ -814,25 +814,52 @@ export default function Home(){
     arr[index]={...arr[index],reps:Math.max(0,arr[index].reps+delta)};
     const nextSession:SessionState={...session,logs:{...session.logs,[exerciseId]:arr}};
     setSession(nextSession);
-    const exercise=currentWorkout.exercises.find(ex=>ex.id===exerciseId);
+    const context=exerciseContextByLogId(exerciseId);
     pushLiveSession(
       nextSession,
       "set_edited",
-      exercise?lastSetPayload(exercise,arr[index],index+1):null
+      context?lastSetPayload(context.exercise,arr[index],index+1):null
     );
+  }
+
+  function deleteSupersetRound(parent:Exercise,parentIndex:number,index:number){
+    if(!session||!parent.superset?.length) return;
+    const nextLogs={...session.logs};
+    parent.superset.forEach(part=>{
+      const arr=[...(session.logs[part.id]??[])];
+      arr.splice(index,1);
+      nextLogs[part.id]=arr;
+    });
+    const nextSession:SessionState={
+      ...session,
+      logs:nextLogs,
+      exerciseIndex:parentIndex,
+      setIndex:index,
+      completedIds:session.completedIds.filter(id=>id!==parent.id)
+    };
+    setSession(nextSession);
+    pushLiveSession(nextSession,"superset_round_deleted");
   }
 
   function deleteSet(exerciseId:string,index:number){
     if(!session) return;
+    const context=exerciseContextByLogId(exerciseId);
+
+    if(context?.parent.superset?.some(part=>part.id===exerciseId)){
+      deleteSupersetRound(context.parent,context.parentIndex,index);
+      return;
+    }
+
     const arr=[...(session.logs[exerciseId]??[])];
     arr.splice(index,1);
-    const exIndex=currentWorkout.exercises.findIndex(ex=>ex.id===exerciseId);
+    const exIndex=context?.parentIndex??session.exerciseIndex;
+    const parentId=context?.parent.id??exerciseId;
     const nextSession:SessionState={
       ...session,
       logs:{...session.logs,[exerciseId]:arr},
-      exerciseIndex:exIndex>=0?exIndex:session.exerciseIndex,
+      exerciseIndex:exIndex,
       setIndex:arr.length,
-      completedIds:session.completedIds.filter(id=>id!==exerciseId)
+      completedIds:session.completedIds.filter(id=>id!==parentId)
     };
     setSession(nextSession);
     pushLiveSession(nextSession,"set_deleted");
@@ -847,13 +874,20 @@ export default function Home(){
         if(!latest||t>latest.time) latest={exId,index,time:t};
       });
     });
+
     if(!latest){
       const entries=Object.entries(session.logs).filter(([,arr])=>arr.length);
       const last=entries.at(-1);
       if(!last) return;
       latest={exId:last[0],index:last[1].length-1,time:0};
     }
-    deleteSet(latest.exId,latest.index);
+
+    const context=exerciseContextByLogId(latest.exId);
+    if(context?.parent.superset?.some(part=>part.id===latest!.exId)){
+      deleteSupersetRound(context.parent,context.parentIndex,latest.index);
+    }else{
+      deleteSet(latest.exId,latest.index);
+    }
     setRest(0);
   }
 
