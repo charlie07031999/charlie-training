@@ -1100,6 +1100,31 @@ export default function Home(){
   }
 
   const currentSetLogs=currentExercise&&session?session.logs[currentExercise.id]??[]:[];
+  const currentRestTarget=currentExercise&&session
+    ? session.restOverrides[currentExercise.id]??currentExercise.restSeconds
+    : 0;
+
+  const nextExercisePreview=useMemo(()=>{
+    if(!session||!currentExercise||currentWorkout.id==="cardio") return null;
+    const completed=Array.from(new Set([...session.completedIds,currentExercise.id]));
+    const idx=nextExerciseIndex(session,completed,session.deferredIds);
+    return idx>=0?currentWorkout.exercises[idx]:null;
+  },[
+    session?.exerciseIndex,
+    session?.completedIds.join("|"),
+    session?.deferredIds.join("|"),
+    currentExercise?.id,
+    currentWorkout.id
+  ]);
+
+  const allTrackableExercises=useMemo(
+    ()=>workouts.flatMap(w=>w.exercises.flatMap(ex=>
+      ex.superset?.length
+        ? ex.superset.map(part=>supersetPartAsExercise(part,ex))
+        : [ex]
+    )),
+    []
+  );
   const elapsed=session?Math.max(0,Math.floor((now-session.startedAt)/1000)):0;
 
   const todayWorkout=dueWorkoutId?workouts.find(w=>w.id===dueWorkoutId)??null:null;
@@ -1116,7 +1141,7 @@ export default function Home(){
     ? openSleep.lightsOutAt+targetSleepMinutes*60000
     : null;
 
-  const chartExercise=workouts.flatMap(w=>w.exercises).find(ex=>ex.id===chartExerciseId);
+  const chartExercise=allTrackableExercises.find(ex=>ex.id===chartExerciseId);
   const chartValues=completedSessions
     .filter(s=>s.logs?.[chartExerciseId]?.some(x=>x.weight!=null))
     .map(s=>Math.max(...s.logs[chartExerciseId].filter(x=>x.weight!=null).map(x=>Number(x.weight))))
@@ -1352,7 +1377,7 @@ export default function Home(){
       <div className="section-title"><h3>Progression</h3><span>cloud</span></div>
       <div className="chart-card">
         <select value={chartExerciseId} onChange={e=>setChartExerciseId(e.target.value)}>
-          {workouts.flatMap(w=>w.exercises).filter(ex=>ex.unit!=="PDC").map(ex=><option key={ex.id} value={ex.id}>{ex.name}</option>)}
+          {allTrackableExercises.filter(ex=>ex.unit!=="PDC").map(ex=><option key={ex.id} value={ex.id}>{ex.name}</option>)}
         </select>
         <MiniChart values={chartValues} suffix={chartExercise?.unit==="kg/bras"?" kg/bras":" kg"}/>
         <small>{chartExercise?.name} · meilleure charge de chaque séance</small>
