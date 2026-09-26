@@ -291,7 +291,8 @@ export default function Home(){
           completedIds:parsed.completedIds??[],
           deferredIds:parsed.deferredIds??[],
           clientSessionId:parsed.clientSessionId??`legacy-${parsed.startedAt}`,
-          coachMode:parsed.coachMode??"normal"
+          coachMode:parsed.coachMode??"normal",
+          restOverrides:parsed.restOverrides??{}
         };
         restoredLocal=restored;
         setSession(restored);
@@ -313,7 +314,8 @@ export default function Home(){
           deferredIds:Array.isArray(live.deferred_ids)?live.deferred_ids:[],
           coachMode:(["normal","tired","short","crowded"] as CoachMode[]).includes(live.coach_mode as CoachMode)
             ? live.coach_mode as CoachMode
-            : "normal"
+            : "normal",
+          restOverrides:{}
         };
         setSession(restored);
       });
@@ -533,7 +535,8 @@ export default function Home(){
       startedAt:Date.now(),
       completedIds:[],
       deferredIds:[],
-      coachMode:mode
+      coachMode:mode,
+      restOverrides:{}
     };
     setCoachMode(mode);
     setSession(nextSession);
