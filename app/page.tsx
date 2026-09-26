@@ -1182,22 +1182,22 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar">
       <div>
-        <div className="eyebrow">CHARLIE TRAINING · V4</div>
-        <h1>Performance</h1>
+        <div className="eyebrow">CHARLIE TRAINING · V5</div>
+        <h1>{session?currentWorkout.title:"Training"}</h1>
       </div>
       <div className={`sync-pill ${cloudStatus}`}>{cloudLabel}</div>
     </header>
 
     <nav className="tabs">
       {([
-        ["today","Aujourd’hui"],["week","Semaine"],["history","Historique"],
-        ["recovery","Récup"],["coach","Nolan"]
+        ["today","Session"],["week","Semaine"],["history","Progrès"],
+        ["recovery","Récup"],["coach","Coach"]
       ] as const).map(([id,label])=>
         <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>{label}</button>
       )}
     </nav>
 
-    {tab==="today"&&<section>
+    {tab==="today"&&<section className={session?"today-v5 session-v5":"today-v5 home-v5"}>
       {!session?<>
         <div className="dashboard-hero">
           <div>
@@ -1206,6 +1206,7 @@ export default function Home(){
             <p>{todayWorkout
               ? todayWorkout.subtitle
               : "Aucune séance obligatoire restante aujourd’hui."}</p>
+            {todayWorkout&&<button className="primary v5-main-start" onClick={()=>startWorkout(todayWorkout)}>Démarrer la séance</button>}
           </div>
           <div className="day-score">
             <span>Semaine</span>
@@ -1236,27 +1237,21 @@ export default function Home(){
           <p>{autoCoachText}</p>
         </div>
 
-        {todayWorkout&&<div className="hero-card compact-hero">
-          <div className="hero-title-row">
-            <div>
-              <div className="hero-kicker">{schedule[todayIndex].workoutId===todayWorkout.id?"SÉANCE PRÉVUE":"RATTRAPAGE INTELLIGENT"}</div>
-              <h2>{todayWorkout.title}</h2>
-              <p>{todayWorkout.exercises.length} exercices · mode {autoCoachMode==="tired"?"allégé":"normal"}</p>
-            </div>
-            <span className="day-chip">{todayWorkout.day}</span>
-          </div>
-          <div className="hero-actions">
-            <button className="primary" onClick={()=>startWorkout(todayWorkout)}>Lancer</button>
+        <details className="workout-switcher">
+          <summary>Changer de séance</summary>
+          <div className="workout-switcher-body">
             <select value={selectedWorkoutId} onChange={e=>setSelectedWorkoutId(e.target.value)}>
               {workouts.map(w=><option key={w.id} value={w.id}>{w.title}</option>)}
             </select>
-            <button className="secondary" onClick={()=>startWorkout(selectedWorkout)}>Lancer la sélection</button>
+            <button className="secondary" onClick={()=>startWorkout(selectedWorkout)}>Démarrer</button>
           </div>
-        </div>}
+        </details>
 
-        <div className="section-title"><h3>Prochaine cible</h3><span>basée sur tes données</span></div>
+
+
+        <div className="section-title"><h3>Aperçu</h3><span>3 premiers blocs</span></div>
         <div className="exercise-list">
-          {(todayWorkout??selectedWorkout).exercises.slice(0,4).map((ex,i)=>{
+          {(todayWorkout??selectedWorkout).exercises.slice(0,3).map((ex,i)=>{
             if(ex.superset?.length){
               const labels=ex.superset.map(part=>{
                 const rec=recommendationFor(supersetPartAsExercise(part,ex));
