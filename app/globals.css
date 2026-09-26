@@ -25,3 +25,40 @@
 @media(max-width:560px){.dashboard-grid{grid-template-columns:1fr 1fr}.dashboard-stat:last-child{grid-column:1/-1}.dashboard-hero h2{font-size:29px}.metric-entry{grid-template-columns:1fr 1fr}.metric-entry .primary{grid-column:1/-1}.metric-charts{grid-template-columns:1fr}.quality-card{align-items:flex-start;flex-direction:column}.sleep-action-stack{flex-direction:column}.cardio-card{grid-template-columns:1fr}.cardio-card .big,.cardio-card .danger{grid-column:auto}.set-row{grid-template-columns:30px 1fr auto}.set-row>small{grid-column:2/3}.set-row>div{grid-column:3/4;grid-row:1/3}.account-actions{flex-direction:column}}
 
 .live-cloud-note{margin:8px 2px 0;color:var(--green);font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+
+.next-exercise-card{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-top:10px;padding:13px 15px;border:1px solid rgba(108,183,255,.28);background:linear-gradient(145deg,rgba(108,183,255,.08),transparent 72%),var(--panel);border-radius:16px}
+.next-exercise-card>span{color:#8fc8ff;font-size:9px;font-weight:900;letter-spacing:.11em}
+.next-exercise-card>div{display:flex;flex-direction:column;gap:3px}
+.next-exercise-card strong{font-size:13px}
+.next-exercise-card small{color:var(--muted);font-size:10px}
+.next-exercise-card>b{color:#8fc8ff;font-size:20px}
+.progression-banner.split{display:flex;flex-direction:column;gap:4px}
+.progression-banner.split strong{font-size:11px;color:var(--text)}
+.progression-banner.split span{font-size:10px;color:var(--muted);line-height:1.45}
+.rest-target-editor{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center;margin:10px 0}
+.rest-target-editor>button{border:1px solid var(--line);background:#111419;color:var(--text);border-radius:10px;min-height:40px;padding:0 10px;font-size:11px;font-weight:850}
+.rest-target-editor label{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:#111419;border-radius:10px;min-height:40px;padding:0 8px}
+.rest-target-editor label>span,.rest-target-editor label>small{color:var(--muted);font-size:9px}
+.rest-target-editor input{width:54px;border:0;background:transparent;color:var(--text);font-weight:900;text-align:center;outline:0}
+.superset-log-card{display:grid;gap:9px;border:1px solid rgba(184,140,255,.3);background:linear-gradient(145deg,rgba(184,140,255,.08),transparent 55%),var(--panel);border-radius:20px;padding:14px;margin-top:10px}
+.superset-round-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.superset-round-head>div{display:flex;flex-direction:column;gap:2px}
+.superset-round-head span{color:#b88cff;font-size:9px;font-weight:900;letter-spacing:.12em}
+.superset-round-head strong{font-size:18px}
+.superset-round-head small{color:var(--muted);font-size:9px;text-align:right;max-width:160px}
+.superset-part-card{border:1px solid var(--line);background:#111419;border-radius:16px;padding:12px}
+.superset-part-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.superset-part-head>span{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#b88cff;color:#111419;font-size:11px;font-weight:950}
+.superset-part-head>div{display:flex;flex-direction:column;gap:2px}
+.superset-part-head strong{font-size:13px}
+.superset-part-head small{color:var(--muted);font-size:9px}
+.superset-fields{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:8px;align-items:end}
+.superset-fields>label:not(.fail-toggle){display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:9px;font-weight:800}
+.superset-part-card>p{color:var(--muted);font-size:10px;line-height:1.4;margin-top:8px}
+.superset-history-row{display:grid;grid-template-columns:48px 1fr auto;gap:9px;align-items:center;padding:9px 0;border-top:1px solid rgba(255,255,255,.06)}
+.superset-history-row>span{color:var(--muted);font-size:10px}
+.superset-history-row>div{display:flex;flex-direction:column;gap:3px}
+.superset-history-row small{color:var(--muted);font-size:9px}
+.superset-history-row small b{color:var(--text)}
+.superset-history-row>button{border:1px solid var(--line);background:#111419;color:var(--muted);border-radius:9px;padding:5px 8px}
+@media(max-width:560px){.superset-fields{grid-template-columns:1fr 1fr}.superset-fields .fail-toggle{align-self:center}.next-exercise-card{grid-template-columns:auto 1fr auto}}
