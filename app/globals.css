@@ -699,3 +699,94 @@ body{
   .session-v5 .superset-fields{grid-template-columns:1fr 1fr}
   .session-v5 .superset-fields .fail-toggle{align-self:end;min-height:56px}
 }
+
+
+/* V5.1 — imported training journey */
+.journey-intro{
+  margin-top:2px;
+  padding:16px 17px;
+  border:1px solid var(--line);
+  border-radius:19px;
+  background:#111318;
+}
+.journey-intro strong{
+  display:block;
+  font-size:13px;
+}
+.journey-intro p{
+  margin-top:5px;
+  color:#747c86;
+  font-size:10px;
+  line-height:1.5;
+}
+.journey-timeline{
+  margin-top:13px;
+}
+.journey-event{
+  display:grid;
+  grid-template-columns:22px 1fr;
+  gap:10px;
+  min-height:104px;
+}
+.journey-rail{
+  position:relative;
+  display:flex;
+  justify-content:center;
+}
+.journey-rail:after{
+  content:"";
+  position:absolute;
+  top:13px;
+  bottom:-1px;
+  width:1px;
+  background:rgba(255,255,255,.08);
+}
+.journey-event:last-child .journey-rail:after{display:none}
+.journey-rail i{
+  position:relative;
+  z-index:1;
+  width:9px;
+  height:9px;
+  margin-top:5px;
+  border-radius:50%;
+  background:#737b85;
+  box-shadow:0 0 0 5px var(--bg);
+}
+.journey-event.strength .journey-rail i{background:#e8e9eb}
+.journey-event.cardio .journey-rail i{background:#8fc8ff}
+.journey-event.program .journey-rail i{background:var(--orange)}
+.journey-event.recovery .journey-rail i{background:var(--green)}
+.journey-content{
+  padding:0 0 21px;
+}
+.journey-meta{
+  display:flex;
+  gap:7px;
+  align-items:center;
+}
+.journey-meta span{
+  color:#69717b;
+  font-size:9px;
+  font-weight:800;
+}
+.journey-meta b{
+  padding:2px 6px;
+  border-radius:999px;
+  background:#171a20;
+  color:#89919b;
+  font-size:8px;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.journey-content h4{
+  margin:7px 0 0;
+  font-size:14px;
+  letter-spacing:-.025em;
+}
+.journey-content p{
+  margin-top:5px;
+  max-width:580px;
+  color:#7c848e;
+  font-size:10px;
+  line-height:1.52;
+}
