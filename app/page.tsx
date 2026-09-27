@@ -21,6 +21,7 @@ import {
   syncWorkoutSession,
   updateSleepPlan,
   VAPID_PUBLIC_KEY
+  type CloudJourneyEvent
 } from "../lib/cloud";
 
 type CoachMode = "normal"|"tired"|"short"|"crowded";
@@ -176,6 +177,7 @@ export default function Home(){
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
   const [sleepSessions,setSleepSessions]=useState<SleepSession[]>([]);
   const [bodyMetrics,setBodyMetrics]=useState<BodyMetric[]>([]);
+  const [journeyEvents,setJourneyEvents]=useState<CloudJourneyEvent[]>([]);
   const [authUser,setAuthUser]=useState<any>(null);
   const [cloudLoading,setCloudLoading]=useState(true);
   const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error">("idle");
@@ -262,6 +264,8 @@ export default function Home(){
       weightKg:m.weight_kg==null?null:Number(m.weight_kg),
       waistCm:m.waist_cm==null?null:Number(m.waist_cm)
     })));
+
+    setJourneyEvents(state.journey??[]);
 
     if(state.preferences){
       setSleepTarget(state.preferences.sleep_target.slice(0,5));
@@ -1476,7 +1480,28 @@ export default function Home(){
     </section>}
 
     {tab==="history"&&<section>
-      <div className="section-title"><h3>Progression</h3><span>cloud</span></div>
+      <div className="section-title"><h3>Ton évolution</h3><span>{journeyEvents.length} repères importés</span></div>
+      <div className="journey-intro">
+        <strong>Avant l’app aussi.</strong>
+        <p>J’ai importé les repères concrets de notre suivi ChatGPT. Les nouvelles séances continuent ensuite à s’ajouter automatiquement via l’app.</p>
+      </div>
+      <div className="journey-timeline">
+        {journeyEvents.length===0&&<div className="note">Chargement de ton historique suivi…</div>}
+        {journeyEvents.map((event,i)=>{
+          const d=new Date(event.event_date+"T12:00:00");
+          const date=d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"});
+          return <article className={`journey-event ${event.kind}`} key={event.id}>
+            <div className="journey-rail"><i/><span>{i===journeyEvents.length-1?"":" "}</span></div>
+            <div className="journey-content">
+              <div className="journey-meta"><span>{date}</span><b>{event.kind==="strength"?"Force":event.kind==="cardio"?"Cardio":event.kind==="program"?"Programme":event.kind==="recovery"?"Reprise":"Étape"}</b></div>
+              <h4>{event.title}</h4>
+              <p>{event.summary}</p>
+            </div>
+          </article>;
+        })}
+      </div>
+
+      <div className="section-title"><h3>Progression mesurée</h3><span>séances app</span></div>
       <div className="chart-card">
         <select value={chartExerciseId} onChange={e=>setChartExerciseId(e.target.value)}>
           {allTrackableExercises.filter(ex=>ex.unit!=="PDC").map(ex=><option key={ex.id} value={ex.id}>{ex.name}</option>)}
@@ -1502,7 +1527,7 @@ export default function Home(){
         })}
       </div>
 
-      <div className="section-title"><h3>Références de départ</h3><span>avant V4</span></div>
+      <div className="section-title"><h3>Références exercices</h3><span>repères historiques</span></div>
       <div className="history-list">{history.map(h=><div className="history-item" key={h.exerciseId}><strong>{h.label}</strong><span>{h.reference}</span></div>)}</div>
     </section>}
 
@@ -1637,6 +1662,6 @@ export default function Home(){
       </div>
     </section>}
 
-    <footer><span>Cloud → données → décision.</span><span>V4</span></footer>
+    <footer><span>Cloud → données → décision.</span><span>V5.1</span></footer>
   </main>;
 }
