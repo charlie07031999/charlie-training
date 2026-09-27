@@ -20,7 +20,7 @@ import {
   syncLiveWorkout,
   syncWorkoutSession,
   updateSleepPlan,
-  VAPID_PUBLIC_KEY
+  VAPID_PUBLIC_KEY,
   type CloudJourneyEvent
 } from "../lib/cloud";
 
