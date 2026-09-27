@@ -68,6 +68,17 @@ export type CloudBodyMetric = {
   waist_cm?:number|null;
 };
 
+export type CloudJourneyEvent = {
+  id:string;
+  event_key:string;
+  event_date:string;
+  kind:"milestone"|"strength"|"cardio"|"program"|"recovery";
+  title:string;
+  summary:string;
+  metrics:Record<string,any>;
+  source:string;
+};
+
 export type CloudPreferences = {
   sleep_target:string;
   wake_target:string;
@@ -93,7 +104,9 @@ export async function loadCloudState() {
   const user = await ensureUser();
   if (!user) return null;
 
-  const [workoutsRes,sleepRes,metricsRes,prefsRes] = await Promise.all([
+  try{ await supabase.rpc("seed_training_journey"); }catch{}
+
+  const [workoutsRes,sleepRes,metricsRes,prefsRes,journeyRes] = await Promise.all([
     supabase
       .from("workout_sessions")
       .select("id,client_session_id,workout_id,started_at,finished_at,logs,cardio,coach_mode,notes")
@@ -116,7 +129,13 @@ export async function loadCloudState() {
       .from("user_preferences")
       .select("sleep_target,wake_target,prep_target,notifications_enabled,workout_reminder_time,creatine_reminder_time")
       .eq("user_id",user.id)
-      .maybeSingle()
+      .maybeSingle(),
+    supabase
+      .from("training_journey_events")
+      .select("id,event_key,event_date,kind,title,summary,metrics,source")
+      .eq("user_id",user.id)
+      .order("event_date",{ascending:false})
+      .limit(100)
   ]);
 
   return {
@@ -125,7 +144,8 @@ export async function loadCloudState() {
     sleep:(sleepRes.data ?? []) as CloudSleepSession[],
     metrics:(metricsRes.data ?? []) as CloudBodyMetric[],
     preferences:(prefsRes.data ?? null) as CloudPreferences|null,
-    errors:[workoutsRes.error,sleepRes.error,metricsRes.error,prefsRes.error].filter(Boolean)
+    journey:(journeyRes.data ?? []) as CloudJourneyEvent[],
+    errors:[workoutsRes.error,sleepRes.error,metricsRes.error,prefsRes.error,journeyRes.error].filter(Boolean)
   };
 }
 
