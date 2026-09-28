@@ -1393,95 +1393,119 @@ export default function Home(){
 
     {tab==="today"&&<section className={session?"today-v5 session-v5":"today-v5 home-v5"}>
       {!session?<>
-        <div className="dashboard-hero">
-          <div>
-            <div className="eyebrow">PLAN DU JOUR</div>
-            <h2>{todayWorkout?todayWorkout.title:"Récupération"}</h2>
-            <p>{todayWorkout
-              ? todayWorkout.subtitle
-              : "Aucune séance obligatoire restante aujourd’hui."}</p>
-            {todayWorkout&&<button className="primary v5-main-start" onClick={()=>startWorkout(todayWorkout)}>Démarrer la séance</button>}
+        {openSleep?.lightsOutAt?
+          <div className="v7-night-minimal">
+            <div className="v7-moon">☾</div>
+            <span>NUIT EN COURS</span>
+            <h2>Il est temps<br/>de dormir.</h2>
+            <p>Réveil prévu à <strong>{plannedWakeTime}</strong></p>
+            <button className="v7-subtle-action" onClick={wakeNow}>Je suis réveillé</button>
           </div>
-          <div className="day-score">
-            <span>Semaine</span>
-            <strong>{weekDoneCount}/{weekTrainingCount}</strong>
+        :openSleep?
+          <div className="v7-routine-focus">
+            <div className="v7-focus-head"><button className="v7-close" onClick={()=>setTab("today")}>×</button><span>2 / 3</span></div>
+            <h2>Préparation</h2>
+            <p>Tu es au lit depuis {clock(openSleep.bedAt)}.</p>
+            <div className="v7-checklist">
+              <div><i>✓</i><strong>Hygiène</strong><small>Douche, brossage…</small></div>
+              <div><i>✓</i><strong>Tenue de nuit</strong><small>Confort avant tout.</small></div>
+              <div><i>✓</i><strong>Chambre prête</strong><small>Température, lumière.</small></div>
+              <div><i>○</i><strong>Respiration</strong><small>2–5 minutes.</small></div>
+            </div>
+            <button className="primary v7-full" onClick={lightsOutNow}>Lumières éteintes</button>
           </div>
-        </div>
-
-        <div className="week-mini-strip">
-          {schedule.filter(item=>item.workoutId).map(item=>{
-            const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
-            const active=item.workoutId===todayWorkout?.id;
-            return <div key={item.label} className={`week-mini-day ${done?"done":""} ${active?"active":""}`}>
-              <span>{item.label}</span>
-              <i/>
-            </div>;
-          })}
-        </div>
-
-        <div className="dashboard-grid">
-          <div className="dashboard-stat">
-            <span>Sommeil</span>
-            <strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong>
-            <small>{latestSleep?.quality?`Qualité ${latestSleep.quality}/5`:"Dernière nuit enregistrée"}</small>
+        :morningCheckin?
+          <div className="v7-morning-card">
+            <div className="v7-sun">☀</div>
+            <span>BONJOUR CHARLIE</span>
+            <h2>Comment s’est passée ta nuit ?</h2>
+            <div className="v7-sleep-summary">
+              <span>Sommeil</span>
+              <strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong>
+              <small>{latestSleep?(clock(latestSleep.lightsOutAt??latestSleep.bedAt)+" → "+(latestSleep.wakeAt?clock(latestSleep.wakeAt):"—")):""}</small>
+            </div>
+            <div className="v7-morning-question">
+              <span>Énergie au réveil</span>
+              <div>{[1,2,3,4,5].map(q=><button key={q} className={latestSleep?.energy===q?"active":""} onClick={()=>rateEnergy(q)}>{q}</button>)}</div>
+            </div>
+            <div className="v7-morning-question">
+              <span>Qualité du sommeil</span>
+              <div>{[1,2,3,4,5].map(q=><button key={q} className={latestSleep?.quality===q?"active":""} onClick={()=>rateSleep(q)}>{q}</button>)}</div>
+            </div>
+            <label className="v7-morning-note">
+              <span>Commentaire <small>optionnel</small></span>
+              <textarea value={morningNotes} onChange={e=>setMorningNotes(e.target.value)} onBlur={saveMorningNote} placeholder="Bonne nuit, réveil facile…"/>
+            </label>
           </div>
-          <div className="dashboard-stat">
-            <span>Nolan</span>
-            <strong>{autoCoachMode==="tired"?"Allégé":"Normal"}</strong>
-            <small>{autoCoachMode==="tired"?"Volume réduit":"1–2 RIR"}</small>
-          </div>
-          <div className="dashboard-stat">
-            <span>Cloud</span>
-            <strong>{cloudStatus==="ok"?"OK":"…"}</strong>
-            <small>iPhone ↔ Supabase</small>
-          </div>
-        </div>
-
-        <div className="coach-inline">
-          <strong>Conseil du jour</strong>
-          <p>{autoCoachText}</p>
-        </div>
-
-        <details className="workout-switcher">
-          <summary>Changer de séance</summary>
-          <div className="workout-switcher-body">
-            <select value={selectedWorkoutId} onChange={e=>setSelectedWorkoutId(e.target.value)}>
-              {workouts.map(w=><option key={w.id} value={w.id}>{w.title}</option>)}
-            </select>
-            <button className="secondary" onClick={()=>startWorkout(selectedWorkout)}>Démarrer</button>
-          </div>
-        </details>
-
-
-
-        <div className="section-title"><h3>Aperçu</h3><span>3 premiers blocs</span></div>
-        <div className="exercise-list">
-          {(todayWorkout??selectedWorkout).exercises.slice(0,3).map((ex,i)=>{
-            if(ex.superset?.length){
-              const labels=ex.superset.map(part=>{
-                const rec=recommendationFor(supersetPartAsExercise(part,ex));
-                return part.name+" "+(rec.weight!=null?rec.weight+" "+part.unit:"à calibrer");
-              }).join(" · ");
-              return <div className="exercise-row" key={ex.id}>
-                <div className="index">{String(i+1).padStart(2,"0")}</div>
-                <div className="grow">
-                  <div className="row-top"><strong>{ex.name}</strong><span className="priority">SUPERSET</span></div>
-                  <div className="muted">{labels}</div>
-                </div>
-                <div className="load">2 charges</div>
-              </div>;
-            }
-            const rec=recommendationFor(ex);
-            return <div className="exercise-row" key={ex.id}>
-              <div className="index">{String(i+1).padStart(2,"0")}</div>
-              <div className="grow">
-                <div className="row-top"><strong>{ex.name}</strong>{ex.priority&&<span className="priority">P1</span>}</div>
-                <div className="muted">{rec.label}</div>
+        :isEvening?
+          <div className="v7-evening-home">
+            <div className="v7-evening-title">
+              <div>
+                <h2>Bonsoir Charlie</h2>
+                <p>{minutesUntilDisconnect>0?"Plus que "+minutesUntilDisconnect+" min avant la déconnexion.":"Ta routine du soir peut commencer."}</p>
               </div>
-              <div className="load">{rec.weight!=null?`${rec.weight} ${ex.unit}`:ex.unit}</div>
-            </div>;
-          })}
-        </div>
+              <div className="v7-moon-small">☾</div>
+            </div>
+
+            <div className="v7-bed-goal">
+              <span>Objectif ce soir</span>
+              <strong>Au lit à {sleepTarget}</strong>
+              <div className="v7-goal-track"><i style={{width:(minutesUntilDisconnect===0?"72%":Math.max(8,Math.min(70,70-minutesUntilDisconnect))+"%")}}/></div>
+              <small>{minutesUntilDisconnect>0?"Tu es dans les temps.":"On ralentit maintenant."}</small>
+            </div>
+
+            <div className="v7-routine-card">
+              <div className="v7-card-head"><div><strong>Routine du soir</strong><span>3 étapes · ~30 min</span></div></div>
+              <div className="v7-routine-row"><i className={currentMinutes>=disconnectMinutes?"done":""}>✓</i><span>{disconnectTarget}</span><div><strong>Déconnexion</strong><small>Écrans, notifications, travail</small></div></div>
+              <div className="v7-routine-row"><i>○</i><span>{prepTarget}</span><div><strong>Préparation</strong><small>Hygiène, chambre, respiration</small></div></div>
+              <div className="v7-routine-row"><i>↓</i><span>{sleepTarget}</span><div><strong>Au lit</strong><small>Lumières éteintes</small></div></div>
+              <button className="primary v7-full" onClick={()=>setTab("routine")}>Continuer ma routine</button>
+            </div>
+
+            <div className="v7-tomorrow">
+              <span>Demain</span><strong>Réveil {wakeTarget}</strong><small>Objectif {durationLabel(targetSleepMinutes)}</small>
+            </div>
+          </div>
+        :
+          <div className="v7-day-home">
+            <div className="v7-day-intro">
+              <span>BONJOUR CHARLIE</span>
+              <h2>{todayWorkout?todayWorkout.title:"Récupération"}</h2>
+              <p>{todayWorkout?todayWorkout.subtitle:"Pas de séance obligatoire aujourd’hui."}</p>
+              {todayWorkout&&<button className="primary v7-main-cta" onClick={()=>startWorkout(todayWorkout)}>Démarrer la séance</button>}
+            </div>
+
+            <div className="v7-day-stats">
+              <button onClick={()=>setTab("tracking")}><span>Sommeil</span><strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong><small>{latestSleep?.energy?"Énergie "+latestSleep.energy+"/5":"Dernière nuit"}</small></button>
+              <button onClick={()=>setTab("tracking")}><span>Semaine</span><strong>{weekDoneCount}/{weekTrainingCount}</strong><small>séances réalisées</small></button>
+            </div>
+
+            <div className="v7-coach-note">
+              <span>NOLAN</span><strong>{autoCoachMode==="tired"?"On allège aujourd’hui.":"Plan normal."}</strong><p>{autoCoachText}</p>
+            </div>
+
+            <div className="section-title"><h3>Cette semaine</h3><span>{weekDoneCount}/{weekTrainingCount}</span></div>
+            <div className="week-mini-strip">
+              {schedule.filter(item=>item.workoutId).map(item=>{
+                const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
+                const active=item.workoutId===todayWorkout?.id;
+                return <div key={item.label} className={"week-mini-day "+(done?"done ":"")+(active?"active":"")}>
+                  <span>{item.label}</span><i/>
+                </div>;
+              })}
+            </div>
+
+            <details className="workout-switcher v7-switcher">
+              <summary>Changer de séance</summary>
+              <div className="workout-switcher-body">
+                <select value={selectedWorkoutId} onChange={e=>setSelectedWorkoutId(e.target.value)}>
+                  {workouts.map(w=><option key={w.id} value={w.id}>{w.title}</option>)}
+                </select>
+                <button className="secondary" onClick={()=>startWorkout(selectedWorkout)}>Démarrer</button>
+              </div>
+            </details>
+          </div>
+        }
       </>:currentWorkout.id==="cardio"?<>
         <div className="session-head">
           <div><div className="eyebrow">CARDIO FACILE</div><h2>Footing</h2><p>Conversation facile. Pas de chasse au chrono.</p></div>
