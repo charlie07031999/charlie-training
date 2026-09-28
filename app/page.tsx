@@ -199,6 +199,7 @@ function MiniChart({values,suffix=""}:{values:number[];suffix?:string}){
 
 export default function Home(){
   const [tab,setTab]=useState<"today"|"tracking"|"routine"|"profile">("today");
+  const [trackingView,setTrackingView]=useState<"sleep"|"training">("sleep");
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
   const [session,setSession]=useState<SessionState|null>(null);
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
@@ -1442,7 +1443,11 @@ export default function Home(){
             <div className="v7-evening-title">
               <div>
                 <h2>Bonsoir Charlie</h2>
-                <p>{minutesUntilDisconnect>0?"Plus que "+minutesUntilDisconnect+" min avant la déconnexion.":"Ta routine du soir peut commencer."}</p>
+                <p>{currentMinutes>targetBedMinutes
+  ?"Ton heure cible est passée. On coupe maintenant."
+  :minutesUntilDisconnect>0
+    ?"Plus que "+minutesUntilDisconnect+" min avant la déconnexion."
+    :"Ta routine du soir peut commencer."}</p>
               </div>
               <div className="v7-moon-small">☾</div>
             </div>
@@ -1451,15 +1456,15 @@ export default function Home(){
               <span>Objectif ce soir</span>
               <strong>Au lit à {sleepTarget}</strong>
               <div className="v7-goal-track"><i style={{width:(minutesUntilDisconnect===0?"72%":Math.max(8,Math.min(70,70-minutesUntilDisconnect))+"%")}}/></div>
-              <small>{minutesUntilDisconnect>0?"Tu es dans les temps.":"On ralentit maintenant."}</small>
+              <small>{currentMinutes>targetBedMinutes?"Objectif dépassé de "+Math.min(180,currentMinutes-targetBedMinutes)+" min.":minutesUntilDisconnect>0?"Tu es dans les temps.":"On ralentit maintenant."}</small>
             </div>
 
             <div className="v7-routine-card">
               <div className="v7-card-head"><div><strong>Routine du soir</strong><span>3 étapes · ~30 min</span></div></div>
-              <div className="v7-routine-row"><i className={currentMinutes>=disconnectMinutes?"done":""}>✓</i><span>{disconnectTarget}</span><div><strong>Déconnexion</strong><small>Écrans, notifications, travail</small></div></div>
-              <div className="v7-routine-row"><i>○</i><span>{prepTarget}</span><div><strong>Préparation</strong><small>Hygiène, chambre, respiration</small></div></div>
-              <div className="v7-routine-row"><i>↓</i><span>{sleepTarget}</span><div><strong>Au lit</strong><small>Lumières éteintes</small></div></div>
-              <button className="primary v7-full" onClick={()=>setTab("routine")}>Continuer ma routine</button>
+              <div className="v7-routine-row"><i className={currentMinutes>=disconnectMinutes&&currentMinutes<targetBedMinutes?"active":""}>1</i><span>{disconnectTarget}</span><div><strong>Déconnexion</strong><small>Écrans, notifications, travail</small></div></div>
+              <div className="v7-routine-row"><i className={currentMinutes>=disconnectMinutes&&currentMinutes<targetBedMinutes?"active":""}>2</i><span>{prepTarget}</span><div><strong>Préparation</strong><small>Hygiène, chambre, respiration</small></div></div>
+              <div className="v7-routine-row"><i className={currentMinutes>=targetBedMinutes?"active":""}>3</i><span>{sleepTarget}</span><div><strong>Au lit</strong><small>Lumières éteintes</small></div></div>
+              <button className="primary v7-full" onClick={()=>setTab("routine")}>Ouvrir ma routine</button>
             </div>
 
             <div className="v7-tomorrow">
@@ -1701,87 +1706,93 @@ export default function Home(){
       </>}
     </section>}
 
-    {tab==="tracking"&&<section className="v7-tracking">
-      <div className="v7-segmented"><button className="active">7 jours</button><button>30 jours</button><button>12 mois</button></div>
-      <div className="v7-tracking-hero">
-        <span>Sommeil moyen</span>
-        <strong>{avgSleep7?durationLabel(avgSleep7):"—"}</strong>
-        <small>{avgSleepDelta?(avgSleepDelta>0?"+":"")+avgSleepDelta+" min vs période précédente":"Pas encore assez de recul"}</small>
-        <div className="v7-sleep-bars">
-          {[...sleep7].reverse().map(s=>{
-            const mins=sleepMinutesFor(s);
-            return <div key={s.id}><i style={{height:Math.max(20,Math.min(100,(mins/600)*100))+"%"}}/><span>{new Date(s.wakeAt??s.bedAt).toLocaleDateString("fr-FR",{weekday:"narrow"})}</span></div>;
+    {tab==="tracking"&&<section className="v8-tracking">
+      <div className="v8-switch">
+        <button className={trackingView==="sleep"?"active":""} onClick={()=>setTrackingView("sleep")}>Sommeil</button>
+        <button className={trackingView==="training"?"active":""} onClick={()=>setTrackingView("training")}>Training</button>
+      </div>
+
+      {trackingView==="sleep"?<>
+        <div className="v8-section-head">
+          <div><span>7 DERNIERS JOURS</span><h2>Sommeil</h2></div>
+          <strong>{avgSleep7?durationLabel(avgSleep7):"—"}</strong>
+        </div>
+
+        <div className="v7-tracking-hero v8-sleep-hero">
+          <div className="v8-sleep-meta">
+            <span>Moyenne</span>
+            <strong>{avgSleep7?durationLabel(avgSleep7):"—"}</strong>
+            <small>{avgSleepDelta?(avgSleepDelta>0?"+":"")+avgSleepDelta+" min vs période précédente":"Pas encore assez de recul"}</small>
+          </div>
+          <div className="v7-sleep-bars">
+            {[...sleep7].reverse().map(s=>{
+              const mins=sleepMinutesFor(s);
+              return <div key={s.id}><i style={{height:Math.max(20,Math.min(100,(mins/600)*100))+"%"}}/><span>{new Date(s.wakeAt??s.bedAt).toLocaleDateString("fr-FR",{weekday:"narrow"})}</span></div>;
+            })}
+          </div>
+        </div>
+
+        <div className="v7-insight-grid">
+          <div><span>Régularité</span><strong>{sleep7.length?sleepRegularity+" %":"—"}</strong><small>heure de coucher</small></div>
+          <div><span>Énergie</span><strong>{avgEnergy?avgEnergy.toFixed(1)+"/5":"—"}</strong><small>{energyValues.length} check-in(s)</small></div>
+        </div>
+
+        <div className="v7-observations">
+          <h3>À retenir</h3>
+          <p><i>⌁</i>{avgBedDeviation<30&&sleep7.length?"Tes heures de coucher sont assez régulières.":sleep7.length?"Ton coucher varie d’environ "+Math.round(avgBedDeviation)+" min en moyenne.":"Encore quelques nuits et les tendances seront plus utiles."}</p>
+          {avgSleep7>0&&<p><i>◐</i>Moyenne récente : {durationLabel(avgSleep7)} par nuit valide.</p>}
+          {avgEnergy>0&&<p><i>✦</i>Énergie déclarée : {avgEnergy.toFixed(1)}/5 en moyenne.</p>}
+        </div>
+      </>:<>
+        <div className="v8-section-head">
+          <div><span>CETTE SEMAINE</span><h2>Training</h2></div>
+          <strong>{weekDoneCount}/{weekTrainingCount}</strong>
+        </div>
+
+        <div className="v8-week-list">
+          {schedule.map((item,i)=>{
+            const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
+            const missed=Boolean(item.workoutId)&&i<todayIndex&&!done;
+            return <div key={item.label} className={"v8-week-row "+(done?"done ":missed?"missed ":"")}>
+              <span>{item.label}</span>
+              <strong>{item.name}</strong>
+              <small>{done?"Fait":missed?"À rattraper":item.workoutId?"À faire":"Repos"}</small>
+            </div>;
           })}
         </div>
-      </div>
-      <div className="v7-insight-grid">
-        <div><span>Régularité</span><strong>{sleep7.length?sleepRegularity+" %":"—"}</strong><small>heure de coucher</small></div>
-        <div><span>Énergie moyenne</span><strong>{avgEnergy?avgEnergy.toFixed(1)+"/5":"—"}</strong><small>{energyValues.length} check-in(s)</small></div>
-      </div>
-      <div className="v7-observations">
-        <h3>Ce qu’on remarque</h3>
-        <p><i>⌁</i>{avgBedDeviation<30&&sleep7.length?"Tes heures de coucher sont assez régulières cette semaine.":sleep7.length?"Ton coucher varie d’environ "+Math.round(avgBedDeviation)+" min en moyenne.":"Enregistre quelques nuits pour faire ressortir des tendances."}</p>
-        {avgEnergy>0&&<p><i>✦</i>Ton énergie moyenne déclarée est de {avgEnergy.toFixed(1)}/5.</p>}
-        {avgSleep7>0&&<p><i>◐</i>Tu dors en moyenne {durationLabel(avgSleep7)} sur les nuits valides récentes.</p>}
-      </div>
 
-      <div className="section-title"><h3>Planning entraînement</h3><span>{weekDoneCount}/{weekTrainingCount} séances</span></div>
-      <div className="week-grid">
-        {schedule.map((item,i)=>{
-          const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
-          const missed=Boolean(item.workoutId)&&i<todayIndex&&!done;
-          return <div key={item.label} className={`week-card ${done?"done":missed?"missed":""}`}>
-            <div className="week-day">{item.label}</div>
-            <strong>{item.name}</strong>
-            <span>{done?"✓ Fait":missed?"À rattraper":item.workoutId?"À faire":"Repos"}</span>
-          </div>;
-        })}
-      </div>
+        <div className="section-title"><h3>Progression</h3><span>charges</span></div>
+        <div className="chart-card v8-chart-card">
+          <select value={chartExerciseId} onChange={e=>setChartExerciseId(e.target.value)}>
+            {allTrackableExercises.filter(ex=>ex.unit!=="PDC").map(ex=><option key={ex.id} value={ex.id}>{ex.name}</option>)}
+          </select>
+          <MiniChart values={chartValues} suffix={chartExercise?.unit==="kg/bras"?" kg/bras":" kg"}/>
+          <small>{chartExercise?.name} · meilleure charge par séance</small>
+        </div>
 
-      {dueWorkoutId&&schedule[todayIndex].workoutId!==dueWorkoutId&&
-        <div className="coach-inline"><strong>Rattrapage intelligent</strong><p>La séance {workouts.find(w=>w.id===dueWorkoutId)?.title} n’est pas encore faite cette semaine : elle devient prioritaire aujourd’hui.</p></div>
-      }
+        <div className="section-title"><h3>Dernières séances</h3><span>{completedSessions.length}</span></div>
+        <div className="session-history v8-session-history">
+          {recentSessions.length===0&&<div className="note">La prochaine séance terminée apparaîtra ici.</div>}
+          {recentSessions.slice(0,5).map((s,i)=>{
+            const w=workouts.find(x=>x.id===s.workoutId);
+            const sets=Object.values(s.logs).reduce((n,a)=>n+a.length,0);
+            return <div className="session-history-item" key={s.id??s.finishedAt+i}>
+              <div><strong>{w?.title??s.workoutId}</strong><span>{dateKey(s.finishedAt)}</span></div>
+              <div className="session-stats"><b>{s.cardio?s.cardio.durationMinutes+"m":sets}</b><small>{s.cardio?"cardio":"séries"}</small></div>
+            </div>;
+          })}
+        </div>
 
-      <div className="section-title"><h3>6 dernières semaines</h3><span>régularité</span></div>
-      <div className="bar-list">
-        {sixWeeks.map(w=><div className="bar-row" key={w.label}>
-          <span>{w.label}</span>
-          <div className="bar-track"><i style={{width:`${Math.max(5,(w.count/maxWeekCount)*100)}%`}}/></div>
-          <strong>{w.count}</strong>
-        </div>)}
-      </div>
-    </section>}
-
-    {tab==="tracking"&&<section className="v7-tracking-detail">
-      <div className="section-title"><h3>Ton évolution</h3><span>{journeyEvents.length} repères importés</span></div>
-      <div className="journey-intro">
-        <strong>Avant l’app aussi.</strong>
-        <p>J’ai importé les repères concrets de notre suivi ChatGPT. Les nouvelles séances continuent ensuite à s’ajouter automatiquement via l’app.</p>
-      </div>
-      <div className="journey-timeline">
-        {journeyEvents.length===0&&<div className="note">Chargement de ton historique suivi…</div>}
-        {journeyEvents.slice(0,4).map((event,i)=>{
-          const d=new Date(event.event_date+"T12:00:00");
-          const date=d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"});
-          return <article className={`journey-event ${event.kind}`} key={event.id}>
-            <div className="journey-rail"><i/></div>
-            <div className="journey-content">
-              <div className="journey-meta"><span>{date}</span><b>{event.kind==="strength"?"Force":event.kind==="cardio"?"Cardio":event.kind==="program"?"Programme":event.kind==="recovery"?"Reprise":"Étape"}</b></div>
-              <h4>{event.title}</h4>
-              <p>{event.summary}</p>
-            </div>
-          </article>;
-        })}
-        {journeyEvents.length>4&&<details className="journey-more">
-          <summary>Voir les {journeyEvents.length-4} repères précédents</summary>
-          <div>
-            {journeyEvents.slice(4).map(event=>{
+        {journeyEvents.length>0&&<details className="v8-history-details">
+          <summary>Historique complet</summary>
+          <div className="journey-timeline">
+            {journeyEvents.slice(0,8).map(event=>{
               const d=new Date(event.event_date+"T12:00:00");
               const date=d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"});
-              return <article className={`journey-event ${event.kind}`} key={event.id}>
+              return <article className={"journey-event "+event.kind} key={event.id}>
                 <div className="journey-rail"><i/></div>
                 <div className="journey-content">
-                  <div className="journey-meta"><span>{date}</span><b>{event.kind==="strength"?"Force":event.kind==="cardio"?"Cardio":event.kind==="program"?"Programme":event.kind==="recovery"?"Reprise":"Étape"}</b></div>
+                  <div className="journey-meta"><span>{date}</span></div>
                   <h4>{event.title}</h4>
                   <p>{event.summary}</p>
                 </div>
@@ -1789,78 +1800,61 @@ export default function Home(){
             })}
           </div>
         </details>}
-      </div>
-      <div className="section-title"><h3>Progression mesurée</h3><span>séances app</span></div>
-      <div className="chart-card">
-        <select value={chartExerciseId} onChange={e=>setChartExerciseId(e.target.value)}>
-          {allTrackableExercises.filter(ex=>ex.unit!=="PDC").map(ex=><option key={ex.id} value={ex.id}>{ex.name}</option>)}
-        </select>
-        <MiniChart values={chartValues} suffix={chartExercise?.unit==="kg/bras"?" kg/bras":" kg"}/>
-        <small>{chartExercise?.name} · meilleure charge de chaque séance</small>
-      </div>
-
-      <div className="section-title"><h3>Dernières séances</h3><span>{completedSessions.length} enregistrée(s)</span></div>
-      <div className="session-history">
-        {recentSessions.length===0&&<div className="note">La prochaine séance terminée apparaîtra ici.</div>}
-        {recentSessions.map((s,i)=>{
-          const w=workouts.find(x=>x.id===s.workoutId);
-          const sets=Object.values(s.logs).reduce((n,a)=>n+a.length,0);
-          const volume=Math.round(Object.values(s.logs).flat().reduce((n,x)=>n+(x.weight??0)*x.reps,0));
-          const duration=s.startedAt?Math.max(0,Math.floor((s.finishedAt-s.startedAt)/1000)):0;
-          return <div className="session-history-item" key={s.id??s.finishedAt+i}>
-            <div><strong>{w?.title??s.workoutId}</strong><span>{dateKey(s.finishedAt)}</span></div>
-            <div className="session-stats"><b>{s.cardio?`${s.cardio.durationMinutes}m`:sets}</b><small>{s.cardio?"cardio":"séries"}</small></div>
-            <div className="session-stats"><b>{duration?formatTimer(duration):"—"}</b><small>durée</small></div>
-            <div className="session-stats"><b>{(s.cardio?.distanceKm ?? volume)||"—"}</b><small>{s.cardio?.distanceKm?"km":"kg·reps"}</small></div>
-          </div>;
-        })}
-      </div>
-
-      <div className="section-title"><h3>Références exercices</h3><span>repères historiques</span></div>
-      <div className="history-list">{history.map(h=><div className="history-item" key={h.exerciseId}><strong>{h.label}</strong><span>{h.reference}</span></div>)}</div>
+      </>}
     </section>}
 
-    {tab==="routine"&&<section className="v7-routine-settings">
-      <div className="v7-routine-header">
-        <span>MA ROUTINE</span>
-        <h2>Le soir, tu exécutes.<br/>Le matin, tu constates.</h2>
-        <p>Ces horaires pilotent automatiquement l’accueil du soir et le réveil conseillé.</p>
+    {tab==="routine"&&<section className="v8-routine">
+      <div className="v8-section-head v8-routine-title">
+        <div><span>MA ROUTINE</span><h2>Sommeil</h2></div>
+        <strong>{durationLabel(targetSleepMinutes)}</strong>
       </div>
 
-      <div className="v7-routine-preview">
-        <div><i>1</i><span>{disconnectTarget}</span><strong>Déconnexion</strong><small>Écrans, notifications, travail</small></div>
-        <div><i>2</i><span>{prepTarget}</span><strong>Préparation</strong><small>Hygiène, chambre, respiration</small></div>
-        <div><i>3</i><span>{sleepTarget}</span><strong>Au lit</strong><small>Lumières éteintes</small></div>
+      <div className="v8-settings-list">
+        <label>
+          <div><strong>Déconnexion</strong><small>Écrans, notifications, travail</small></div>
+          <input type="time" value={disconnectTarget} onChange={e=>setDisconnectTarget(e.target.value)}/>
+        </label>
+        <label>
+          <div><strong>Préparation</strong><small>Hygiène, chambre, respiration</small></div>
+          <input type="time" value={prepTarget} onChange={e=>setPrepTarget(e.target.value)}/>
+        </label>
+        <label>
+          <div><strong>Au lit</strong><small>Heure cible</small></div>
+          <input type="time" value={sleepTarget} onChange={e=>setSleepTarget(e.target.value)}/>
+        </label>
+        <label>
+          <div><strong>Réveil</strong><small>Heure habituelle</small></div>
+          <input type="time" value={wakeTarget} onChange={e=>setWakeTarget(e.target.value)}/>
+        </label>
+        <label>
+          <div><strong>Objectif de sommeil</strong><small>Utilisé pour le réveil conseillé</small></div>
+          <select value={sleepGoalMinutes} onChange={e=>setSleepGoalMinutes(Number(e.target.value))}>
+            <option value={450}>7 h 30</option>
+            <option value={480}>8 h 00</option>
+            <option value={510}>8 h 30</option>
+            <option value={540}>9 h 00</option>
+          </select>
+        </label>
       </div>
 
-      {!openSleep&&<button className="primary v7-full v7-routine-start" onClick={()=>beginSleep(false)}>Commencer la routine du soir</button>}
-      {openSleep&&!openSleep.lightsOutAt&&<button className="primary v7-full v7-routine-start" onClick={lightsOutNow}>Lumières éteintes</button>}
+      {!openSleep&&<button className="primary v7-full v8-routine-cta" onClick={()=>beginSleep(false)}>Je vais au lit</button>}
+      {openSleep&&!openSleep.lightsOutAt&&<button className="primary v7-full v8-routine-cta" onClick={lightsOutNow}>Lumières éteintes</button>}
+      {openSleep?.lightsOutAt&&<div className="v8-night-status"><span>Nuit en cours</span><strong>Réveil {plannedWakeTime}</strong></div>}
 
-      <div className="section-title"><h3>Réglages sommeil</h3><span>synchronisés</span></div>
-      <div className="sleep-v6-settings">
-        <label><span>Déconnexion</span><input type="time" value={disconnectTarget} onChange={e=>setDisconnectTarget(e.target.value)}/><small>Début du ralentissement.</small></label>
-        <label><span>Préparation</span><input type="time" value={prepTarget} onChange={e=>setPrepTarget(e.target.value)}/><small>Routine salle de bain / chambre.</small></label>
-        <label><span>Coucher cible</span><input type="time" value={sleepTarget} onChange={e=>setSleepTarget(e.target.value)}/><small>Heure idéale au lit.</small></label>
-        <label><span>Réveil cible</span><input type="time" value={wakeTarget} onChange={e=>setWakeTarget(e.target.value)}/><small>Heure de lever habituelle.</small></label>
-        <label className="sleep-v6-goal"><span>Objectif de sommeil</span><select value={sleepGoalMinutes} onChange={e=>setSleepGoalMinutes(Number(e.target.value))}>
-          <option value={450}>7 h 30</option>
-          <option value={480}>8 h 00</option>
-          <option value={510}>8 h 30</option>
-          <option value={540}>9 h 00</option>
-        </select><small>Utilisé pour le réveil conseillé.</small></label>
-      </div>
-
-      <div className="section-title"><h3>Notifications</h3><span>PWA</span></div>
-      <div className="integration-card connected">
-        <div><strong>Web Push</strong><span>Repos local + rappels serveur pour coucher, séance et créatine. Les rappels serveur fonctionnent même lorsque la PWA est fermée.</span></div>
-        <b>{pushReady?"Cet appareil":notificationsEnabled?"Autre appareil":"Off"}</b>
-      </div>
-      {!notificationsEnabled&&<button className="primary big" onClick={enableNotifications}>Activer les notifications</button>}
-      <div className="recovery-grid">
-        <label className="time-card"><span>Rappel séance</span><input type="time" value={workoutReminderTime} onChange={e=>setWorkoutReminderTime(e.target.value)}/></label>
-        <label className="time-card"><span>Rappel créatine</span><input type="time" value={creatineReminderTime} onChange={e=>setCreatineReminderTime(e.target.value)}/></label>
-      </div>
-
+      <details className="v8-settings-details">
+        <summary>Notifications & rappels</summary>
+        <div className="v8-details-body">
+          <div className="integration-card connected">
+            <div><strong>Notifications</strong><span>Rappels coucher, séance et créatine.</span></div>
+            <b>{pushReady?"Cet appareil":notificationsEnabled?"Actif":"Off"}</b>
+          </div>
+          {!notificationsEnabled&&<button className="primary big" onClick={enableNotifications}>Activer les notifications</button>}
+          <div className="recovery-grid">
+            <label className="time-card"><span>Rappel séance</span><input type="time" value={workoutReminderTime} onChange={e=>setWorkoutReminderTime(e.target.value)}/></label>
+            <label className="time-card"><span>Rappel créatine</span><input type="time" value={creatineReminderTime} onChange={e=>setCreatineReminderTime(e.target.value)}/></label>
+          </div>
+        </div>
+      </details>
     </section>}
 
     {tab==="profile"&&<section className="v7-profile">
@@ -1932,6 +1926,5 @@ export default function Home(){
       </div>
     </div>}
 
-    <footer><span>Cloud → données → décision.</span><span>V5.3</span></footer>
   </main>;
 }
