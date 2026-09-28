@@ -790,3 +790,123 @@ body{
   font-size:10px;
   line-height:1.52;
 }
+
+
+/* V5.2 — clarity + useful context */
+.week-mini-strip{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:6px;
+  margin:10px 2px 0;
+}
+.week-mini-day{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  padding:7px 4px;
+  border-radius:12px;
+  background:#0f1115;
+  color:#636b75;
+  font-size:8px;
+  font-weight:800;
+}
+.week-mini-day i{
+  width:6px;
+  height:6px;
+  border-radius:999px;
+  background:#343941;
+}
+.week-mini-day.done{
+  color:#8a929c;
+}
+.week-mini-day.done i{
+  background:var(--green);
+}
+.week-mini-day.active{
+  background:#16191f;
+  color:#f2f3f4;
+}
+.week-mini-day.active i{
+  background:var(--orange);
+  box-shadow:0 0 0 4px rgba(255,116,70,.08);
+}
+
+.session-track{
+  order:1;
+  height:4px;
+  margin:0 2px 12px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#15181d;
+}
+.session-track i{
+  display:block;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#f2f3f4,#9ba2ab);
+  transition:width .25s ease;
+}
+
+.previous-performance{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:3px 10px;
+  align-items:baseline;
+  margin-top:13px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+}
+.previous-performance>span{
+  grid-row:1/3;
+  align-self:center;
+  color:#5f6771;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.09em;
+}
+.previous-performance strong{
+  font-size:12px;
+  color:#dfe2e5;
+}
+.previous-performance small{
+  color:#6f7781;
+  font-size:8px;
+}
+.session-v5 .target-card .previous-performance+p{
+  margin-top:10px;
+}
+
+.journey-more{
+  margin-top:2px;
+  border-top:1px solid var(--line);
+}
+.journey-more>summary{
+  list-style:none;
+  cursor:pointer;
+  padding:12px 0 15px 32px;
+  color:#747c86;
+  font-size:10px;
+  font-weight:850;
+}
+.journey-more>summary::-webkit-details-marker{display:none}
+.journey-more>summary:after{
+  content:"+";
+  float:right;
+  margin-right:2px;
+  color:#565e68;
+  font-size:17px;
+}
+.journey-more[open]>summary:after{content:"−"}
+.journey-more .journey-event:first-child{margin-top:2px}
+
+@media(max-width:420px){
+  .week-mini-day{padding:7px 2px}
+  .previous-performance{
+    grid-template-columns:1fr;
+    gap:3px;
+  }
+  .previous-performance>span{
+    grid-row:auto;
+  }
+}
