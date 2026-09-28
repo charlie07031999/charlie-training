@@ -198,7 +198,7 @@ function MiniChart({values,suffix=""}:{values:number[];suffix?:string}){
 }
 
 export default function Home(){
-  const [tab,setTab]=useState<"today"|"week"|"history"|"recovery"|"coach">("today");
+  const [tab,setTab]=useState<"today"|"tracking"|"routine"|"profile">("today");
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
   const [session,setSession]=useState<SessionState|null>(null);
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
@@ -1324,24 +1324,70 @@ export default function Home(){
     .slice(-12);
 
   const recentSessions=[...completedSessions].sort((a,b)=>b.finishedAt-a.finishedAt).slice(0,8);
+
+  const validSleeps=[...sleepSessions]
+    .filter(s=>{
+      if(!s.wakeAt) return false;
+      const minutes=Math.round((s.wakeAt-(s.lightsOutAt??s.bedAt))/60000);
+      return minutes>=180&&minutes<=840;
+    })
+    .sort((a,b)=>(b.wakeAt??0)-(a.wakeAt??0));
+  const sleep7=validSleeps.slice(0,7);
+  const previousSleep7=validSleeps.slice(7,14);
+  const sleepMinutesFor=(s:SleepSession)=>s.wakeAt?Math.round((s.wakeAt-(s.lightsOutAt??s.bedAt))/60000):0;
+  const avgSleep7=sleep7.length?Math.round(sleep7.reduce((n,s)=>n+sleepMinutesFor(s),0)/sleep7.length):0;
+  const avgPrevSleep7=previousSleep7.length?Math.round(previousSleep7.reduce((n,s)=>n+sleepMinutesFor(s),0)/previousSleep7.length):0;
+  const avgSleepDelta=avgSleep7&&avgPrevSleep7?avgSleep7-avgPrevSleep7:0;
+  const energyValues=sleep7.map(s=>s.energy).filter((v):v is number=>typeof v==="number");
+  const avgEnergy=energyValues.length?energyValues.reduce((a,b)=>a+b,0)/energyValues.length:0;
+  const targetBedParts=sleepTarget.split(":").map(Number);
+  const targetBedMinutes=targetBedParts[0]*60+targetBedParts[1];
+  const bedtimeDeviations=sleep7.map(s=>{
+    const d=new Date(s.lightsOutAt??s.bedAt);
+    const actual=d.getHours()*60+d.getMinutes();
+    let diff=Math.abs(actual-targetBedMinutes);
+    if(diff>720) diff=1440-diff;
+    return diff;
+  });
+  const avgBedDeviation=bedtimeDeviations.length?bedtimeDeviations.reduce((a,b)=>a+b,0)/bedtimeDeviations.length:0;
+  const sleepRegularity=sleep7.length?Math.max(0,Math.min(100,Math.round(100-(avgBedDeviation/120)*100))):0;
+  const nowDate=new Date(now);
+  const currentMinutes=nowDate.getHours()*60+nowDate.getMinutes();
+  const disconnectParts=disconnectTarget.split(":").map(Number);
+  const disconnectMinutes=disconnectParts[0]*60+disconnectParts[1];
+  const isEvening=currentMinutes>=disconnectMinutes||currentMinutes<120;
+  const minutesUntilDisconnect=currentMinutes<=disconnectMinutes?disconnectMinutes-currentMinutes:0;
+  const recentWake=latestSleep?.wakeAt??0;
+  const morningCheckin=Boolean(
+    latestSleep?.wakeAt &&
+    now-recentWake<10*60*60*1000 &&
+    (latestSleep.energy==null||latestSleep.quality==null) &&
+    nowDate.getHours()<13
+  );
+
   const authAnonymous=Boolean(authUser?.is_anonymous);
   const cloudLabel=cloudLoading?"Chargement":cloudStatus==="ok"?"Synchronisé":cloudStatus==="syncing"?"Synchro…":"À vérifier";
 
-  return <main className={`app-shell ${session?"gym-mode":""}`}>
-    <header className={`topbar ${session?"gym-topbar":""}`}>
+  return <main className={"app-shell app-v7 "+(session?"gym-mode ":"")+(isEvening?"evening-ui":"day-ui")}>
+    <header className={"topbar v7-topbar "+(session?"gym-topbar":"")}>
       <div>
-        <div className="eyebrow">CHARLIE · TRAINING & RÉCUP</div>
-        <h1>{session?currentWorkout.title:"Aujourd’hui"}</h1>
+        <div className="eyebrow">CHARLIE</div>
+        <h1>{session?currentWorkout.title:tab==="today"?"Aujourd’hui":tab==="tracking"?"Suivi":tab==="routine"?"Routine":"Profil"}</h1>
       </div>
-      <div className={`sync-pill ${cloudStatus}`}>{cloudLabel}</div>
+      <div className={"sync-pill "+cloudStatus}>{cloudLabel}</div>
     </header>
 
-    <nav className={`tabs ${session?"session-tabs-hidden":""}`}>
+    <nav className={"tabs v7-tabs "+(session?"session-tabs-hidden":"")}>
       {([
-        ["today","Aujourd’hui"],["week","Planning"],["history","Progrès"],
-        ["recovery","Sommeil"],["coach","Coach"]
+        ["today","Aujourd’hui"],
+        ["tracking","Suivi"],
+        ["routine","Routine"],
+        ["profile","Profil"]
       ] as const).map(([id,label])=>
-        <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>{label}</button>
+        <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>
+          <span className="v7-tab-icon" aria-hidden="true">{id==="today"?"◐":id==="tracking"?"⌁":id==="routine"?"☷":"○"}</span>
+          <span>{label}</span>
+        </button>
       )}
     </nav>
 
