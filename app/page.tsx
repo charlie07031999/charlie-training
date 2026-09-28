@@ -1820,75 +1820,21 @@ export default function Home(){
       <div className="history-list">{history.map(h=><div className="history-item" key={h.exerciseId}><strong>{h.label}</strong><span>{h.reference}</span></div>)}</div>
     </section>}
 
-    {tab==="recovery"&&<section className="sleep-v6">
-      <div className="sleep-v6-hero">
-        <div>
-          <div className="eyebrow">{openSleep?"NUIT EN COURS":"SOMMEIL"}</div>
-          <h2>{openSleep?.lightsOutAt?"Téléphone posé. Dors.":openSleep?"Prépare ta nuit.":"Ta récupération, sans bruit."}</h2>
-          <p>{openSleep?.lightsOutAt
-            ? `Extinction à ${clock(openSleep.lightsOutAt)} · réveil prévu ${plannedWakeTime}.`
-            : `Objectif : ${durationLabel(targetSleepMinutes)} · coucher ${sleepTarget} · réveil ${wakeTarget}.`}</p>
-        </div>
-        <div className="sleep-v6-score">
-          <span>Dernière nuit</span>
-          <strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong>
-          <small>{latestSleep?.energy?`Énergie ${latestSleep.energy}/5`:latestSleep?.quality?`Qualité ${latestSleep.quality}/5`:"À compléter"}</small>
-        </div>
+    {tab==="routine"&&<section className="v7-routine-settings">
+      <div className="v7-routine-header">
+        <span>MA ROUTINE</span>
+        <h2>Le soir, tu exécutes.<br/>Le matin, tu constates.</h2>
+        <p>Ces horaires pilotent automatiquement l’accueil du soir et le réveil conseillé.</p>
       </div>
 
-      {!openSleep&&<div className="sleep-v6-tonight">
-        <div className="sleep-v6-sectionhead">
-          <div><span>CE SOIR</span><strong>Routine du soir</strong></div>
-          <b>{disconnectTarget} → {sleepTarget}</b>
-        </div>
-        <div className="sleep-v6-timeline">
-          <div><i/><span>{disconnectTarget}</span><strong>Déconnexion</strong><small>Écrans, notifications, travail.</small></div>
-          <div><i/><span>{prepTarget}</span><strong>Préparation</strong><small>Hygiène, chambre, lumière basse.</small></div>
-          <div><i/><span>{sleepTarget}</span><strong>Au lit</strong><small>Téléphone posé, lumière éteinte.</small></div>
-        </div>
-        <div className="sleep-v6-actions">
-          <button className="secondary" onClick={()=>beginSleep(false)}>Je vais au lit</button>
-          <button className="primary" onClick={()=>beginSleep(true)}>Je dors maintenant</button>
-        </div>
-      </div>}
+      <div className="v7-routine-preview">
+        <div><i>1</i><span>{disconnectTarget}</span><strong>Déconnexion</strong><small>Écrans, notifications, travail</small></div>
+        <div><i>2</i><span>{prepTarget}</span><strong>Préparation</strong><small>Hygiène, chambre, respiration</small></div>
+        <div><i>3</i><span>{sleepTarget}</span><strong>Au lit</strong><small>Lumières éteintes</small></div>
+      </div>
 
-      {openSleep&&!openSleep.lightsOutAt&&<div className="sleep-v6-focus">
-        <span>AU LIT DEPUIS {clock(openSleep.bedAt)}</span>
-        <strong>Dernière action : poser le téléphone.</strong>
-        <p>Quand tu éteins vraiment, enregistre l’heure. Après ça, l’app n’a plus rien à te demander.</p>
-        <button className="primary" onClick={lightsOutNow}>Lumières éteintes</button>
-      </div>}
-
-      {openSleep&&openSleep.lightsOutAt&&<div className="sleep-v6-night">
-        <div className="sleep-v6-moon">☾</div>
-        <span>NUIT EN COURS</span>
-        <h3>Il est temps de dormir.</h3>
-        <p>Réveil conseillé <strong>{suggestedWakeAt?clock(suggestedWakeAt):"—"}</strong> pour conserver {durationLabel(targetSleepMinutes)}.</p>
-        <label>
-          <span>Réveil prévu</span>
-          <input type="time" value={plannedWakeTime} onChange={e=>changeWakePlan(e.target.value)}/>
-        </label>
-        <button className="ghost sleep-v6-wake" onClick={wakeNow}>Je suis réveillé</button>
-      </div>}
-
-      {latestSleep?.wakeAt&&<div className="sleep-v6-checkin">
-        <div className="sleep-v6-sectionhead">
-          <div><span>CE MATIN</span><strong>Check-in en 20 secondes</strong></div>
-          <b>{durationLabel(latestSleepMinutes)}</b>
-        </div>
-        <div className="sleep-v6-question">
-          <span>Énergie au réveil</span>
-          <div>{[1,2,3,4,5].map(q=><button key={q} className={latestSleep.energy===q?"active":""} onClick={()=>rateEnergy(q)}>{q}</button>)}</div>
-        </div>
-        <div className="sleep-v6-question">
-          <span>Qualité de la nuit</span>
-          <div>{[1,2,3,4,5].map(q=><button key={q} className={latestSleep.quality===q?"active":""} onClick={()=>rateSleep(q)}>{q}</button>)}</div>
-        </div>
-        <label className="sleep-v6-note">
-          <span>Note <small>optionnel</small></span>
-          <textarea value={morningNotes} onChange={e=>setMorningNotes(e.target.value)} onBlur={saveMorningNote} placeholder="Réveil facile, nuit coupée, jambes lourdes…"/>
-        </label>
-      </div>}
+      {!openSleep&&<button className="primary v7-full v7-routine-start" onClick={()=>beginSleep(false)}>Commencer la routine du soir</button>}
+      {openSleep&&!openSleep.lightsOutAt&&<button className="primary v7-full v7-routine-start" onClick={lightsOutNow}>Lumières éteintes</button>}
 
       <div className="section-title"><h3>Réglages sommeil</h3><span>synchronisés</span></div>
       <div className="sleep-v6-settings">
@@ -1904,17 +1850,6 @@ export default function Home(){
         </select><small>Utilisé pour le réveil conseillé.</small></label>
       </div>
 
-      <div className="section-title"><h3>Mensurations</h3><span>optionnel</span></div>
-      <div className="metric-entry">
-        <label>Poids<input inputMode="decimal" placeholder="69.0" value={metricWeight} onChange={e=>setMetricWeight(e.target.value)}/><span>kg</span></label>
-        <label>Tour de taille<input inputMode="decimal" placeholder="80.0" value={metricWaist} onChange={e=>setMetricWaist(e.target.value)}/><span>cm</span></label>
-        <button className="primary" onClick={addMetric}>Enregistrer</button>
-      </div>
-      <div className="metric-charts">
-        <div className="chart-card"><strong>Poids</strong><MiniChart values={weightSeries} suffix=" kg"/></div>
-        <div className="chart-card"><strong>Tour de taille</strong><MiniChart values={waistSeries} suffix=" cm"/></div>
-      </div>
-
       <div className="section-title"><h3>Notifications</h3><span>PWA</span></div>
       <div className="integration-card connected">
         <div><strong>Web Push</strong><span>Repos local + rappels serveur pour coucher, séance et créatine. Les rappels serveur fonctionnent même lorsque la PWA est fermée.</span></div>
@@ -1926,24 +1861,6 @@ export default function Home(){
         <label className="time-card"><span>Rappel créatine</span><input type="time" value={creatineReminderTime} onChange={e=>setCreatineReminderTime(e.target.value)}/></label>
       </div>
 
-      <div className="section-title"><h3>Compte & sync</h3><span>{authAnonymous?"anonyme":"sécurisé"}</span></div>
-      <div className="account-card">
-        <strong>{authAnonymous?"Sécuriser tes données":"Compte sécurisé"}</strong>
-        <p>{authAnonymous
-          ?"Ajoute ton email pour retrouver tes données sur un nouvel iPhone ou ton Mac."
-          : `Connecté avec ${authUser?.email??"ton compte"}.`}</p>
-        <input type="email" placeholder="ton@email.fr" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/>
-        <div className="account-actions">
-          {authAnonymous&&<button className="primary" onClick={secureAccount}>Sécuriser ce compte</button>}
-          <button className="secondary" onClick={requestMagicLink}>Recevoir un lien de connexion</button>
-        </div>
-        {accountMessage&&<small>{accountMessage}</small>}
-      </div>
-
-      <div className={`integration-card ${isCloudConfigured?"connected":""}`}>
-        <div><strong>Cloud privé</strong><span>Les séances, nuits, mensurations et préférences sont chargées depuis Supabase à l’ouverture.</span></div>
-        <b>{cloudStatus==="ok"?"Actif":"…"}</b>
-      </div>
     </section>}
 
     {tab==="coach"&&<section>
