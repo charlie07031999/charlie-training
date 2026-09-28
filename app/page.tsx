@@ -1701,8 +1701,31 @@ export default function Home(){
       </>}
     </section>}
 
-    {tab==="week"&&<section>
-      <div className="section-title"><h3>Semaine réelle</h3><span>{weekDoneCount}/{weekTrainingCount} séances</span></div>
+    {tab==="tracking"&&<section className="v7-tracking">
+      <div className="v7-segmented"><button className="active">7 jours</button><button>30 jours</button><button>12 mois</button></div>
+      <div className="v7-tracking-hero">
+        <span>Sommeil moyen</span>
+        <strong>{avgSleep7?durationLabel(avgSleep7):"—"}</strong>
+        <small>{avgSleepDelta?(avgSleepDelta>0?"+":"")+avgSleepDelta+" min vs période précédente":"Pas encore assez de recul"}</small>
+        <div className="v7-sleep-bars">
+          {[...sleep7].reverse().map(s=>{
+            const mins=sleepMinutesFor(s);
+            return <div key={s.id}><i style={{height:Math.max(20,Math.min(100,(mins/600)*100))+"%"}}/><span>{new Date(s.wakeAt??s.bedAt).toLocaleDateString("fr-FR",{weekday:"narrow"})}</span></div>;
+          })}
+        </div>
+      </div>
+      <div className="v7-insight-grid">
+        <div><span>Régularité</span><strong>{sleep7.length?sleepRegularity+" %":"—"}</strong><small>heure de coucher</small></div>
+        <div><span>Énergie moyenne</span><strong>{avgEnergy?avgEnergy.toFixed(1)+"/5":"—"}</strong><small>{energyValues.length} check-in(s)</small></div>
+      </div>
+      <div className="v7-observations">
+        <h3>Ce qu’on remarque</h3>
+        <p><i>⌁</i>{avgBedDeviation<30&&sleep7.length?"Tes heures de coucher sont assez régulières cette semaine.":sleep7.length?"Ton coucher varie d’environ "+Math.round(avgBedDeviation)+" min en moyenne.":"Enregistre quelques nuits pour faire ressortir des tendances."}</p>
+        {avgEnergy>0&&<p><i>✦</i>Ton énergie moyenne déclarée est de {avgEnergy.toFixed(1)}/5.</p>}
+        {avgSleep7>0&&<p><i>◐</i>Tu dors en moyenne {durationLabel(avgSleep7)} sur les nuits valides récentes.</p>}
+      </div>
+
+      <div className="section-title"><h3>Planning entraînement</h3><span>{weekDoneCount}/{weekTrainingCount} séances</span></div>
       <div className="week-grid">
         {schedule.map((item,i)=>{
           const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
@@ -1729,7 +1752,7 @@ export default function Home(){
       </div>
     </section>}
 
-    {tab==="history"&&<section>
+    {tab==="tracking"&&<section className="v7-tracking-detail">
       <div className="section-title"><h3>Ton évolution</h3><span>{journeyEvents.length} repères importés</span></div>
       <div className="journey-intro">
         <strong>Avant l’app aussi.</strong>
