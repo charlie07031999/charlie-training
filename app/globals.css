@@ -2173,3 +2173,133 @@ body{
     font-size:22px;
   }
 }
+
+
+/* V9 — one screen, one decision */
+.v9-page-title{
+  padding:4px 2px 2px;
+}
+.v9-page-title span{
+  display:block;
+  color:#6f788a;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.14em;
+}
+.v9-page-title h2{
+  margin-top:4px;
+  font-size:29px;
+  letter-spacing:-.05em;
+}
+
+.v9-evening-card{
+  padding:18px;
+  border:1px solid rgba(108,123,255,.14);
+  border-radius:24px;
+  background:
+    linear-gradient(180deg,rgba(27,37,70,.36),rgba(15,20,31,.96));
+}
+.v9-evening-goal{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  padding-bottom:16px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.v9-evening-goal span{
+  display:block;
+  color:#778197;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.1em;
+}
+.v9-evening-goal strong{
+  display:block;
+  margin-top:5px;
+  font-size:24px;
+  letter-spacing:-.04em;
+}
+.v9-evening-goal small{
+  padding:6px 9px;
+  border-radius:999px;
+  background:#1a2130;
+  color:#9aa5ba;
+  font-size:8px;
+  font-weight:850;
+}
+.v9-routine-lines{
+  display:grid;
+  gap:0;
+}
+.v9-routine-lines>div{
+  display:grid;
+  grid-template-columns:28px 46px 1fr;
+  gap:8px;
+  align-items:center;
+  min-height:54px;
+  border-bottom:1px solid rgba(255,255,255,.055);
+}
+.v9-routine-lines>div:last-child{
+  border-bottom:0;
+}
+.v9-routine-lines i{
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+  border-radius:999px;
+  background:#171d29;
+  color:#687286;
+  font-style:normal;
+  font-size:8px;
+  font-weight:900;
+}
+.v9-routine-lines span{
+  color:#8791a4;
+  font-size:9px;
+}
+.v9-routine-lines strong{
+  color:#dfe3eb;
+  font-size:10px;
+}
+.v9-routine-lines>div.active i{
+  background:#6372ff;
+  color:white;
+}
+.v9-routine-lines>div.active strong{
+  color:white;
+}
+.v9-evening-cta{
+  margin-top:14px;
+}
+.v9-tomorrow{
+  margin-top:11px;
+  text-align:center;
+  color:#667083;
+  font-size:8px;
+}
+
+@media(max-width:699px){
+  .v7-topbar:not(.gym-topbar){
+    display:none;
+  }
+  .app-v7{
+    padding-top:20px;
+  }
+  .v7-evening-title{
+    padding-top:0;
+  }
+  .v7-evening-title h2{
+    font-size:31px;
+  }
+  .v7-evening-title p{
+    max-width:250px;
+  }
+  .v8-routine-title{
+    display:none;
+  }
+  .v7-profile-card{
+    margin-top:2px;
+  }
+}
