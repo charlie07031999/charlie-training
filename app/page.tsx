@@ -485,7 +485,11 @@ export default function Home(){
     const logs=last.logs;
     const lastWeight=[...logs].reverse().find(x=>x.weight!=null)?.weight;
     const hasFail=logs.some(x=>x.failed||x.reps<ex.repMin);
-    const allTop=logs.length>=ex.sets&&logs.every(x=>
+    const weightedLogs=logs.filter(x=>x.weight!=null);
+    const sameWorkingLoad=weightedLogs.length<=1||weightedLogs.every(x=>
+      Math.abs(Number(x.weight)-Number(lastWeight??x.weight))<0.25
+    );
+    const allTop=logs.length>=ex.sets&&sameWorkingLoad&&logs.every(x=>
       x.reps>=ex.repMax&&!x.failed&&(x.rir==null||x.rir>=1)
     );
 
@@ -528,6 +532,13 @@ export default function Home(){
       return {
         weight:lastWeight??ex.suggestedWeight,
         label:"Consolide la charge : cherche plus de reps propres avant d’augmenter."
+      };
+    }
+
+    if(weightedLogs.length>1&&!sameWorkingLoad&&lastWeight!=null){
+      return {
+        weight:lastWeight,
+        label:`Top set à ${lastWeight} ${ex.unit} validé → transforme-le maintenant en vraie charge de travail.`
       };
     }
 
@@ -1194,9 +1205,14 @@ export default function Home(){
     : null;
 
   const chartExercise=allTrackableExercises.find(ex=>ex.id===chartExerciseId);
+  const chartExerciseIds=exerciseAliases[chartExerciseId]??[chartExerciseId];
   const chartValues=completedSessions
-    .filter(s=>s.logs?.[chartExerciseId]?.some(x=>x.weight!=null))
-    .map(s=>Math.max(...s.logs[chartExerciseId].filter(x=>x.weight!=null).map(x=>Number(x.weight))))
+    .map(s=>{
+      const id=chartExerciseIds.find(key=>s.logs?.[key]?.some(x=>x.weight!=null));
+      if(!id) return null;
+      return Math.max(...s.logs[id].filter(x=>x.weight!=null).map(x=>Number(x.weight)));
+    })
+    .filter((v):v is number=>v!=null)
     .slice(-10);
 
   const sixWeeks=Array.from({length:6},(_,i)=>{
