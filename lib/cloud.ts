@@ -59,6 +59,9 @@ export type CloudSleepSession = {
   planned_wake_at?:string|null;
   wake_at?:string|null;
   quality?:number|null;
+  energy?:number|null;
+  notes?:string|null;
+  source?:string|null;
 };
 
 export type CloudBodyMetric = {
@@ -83,6 +86,10 @@ export type CloudPreferences = {
   sleep_target:string;
   wake_target:string;
   prep_target:string;
+  disconnect_target:string;
+  sleep_goal_minutes:number;
+  weekend_sleep_target?:string|null;
+  weekend_wake_target?:string|null;
   notifications_enabled:boolean;
   workout_reminder_time:string;
   creatine_reminder_time:string;
@@ -115,7 +122,7 @@ export async function loadCloudState() {
       .limit(120),
     supabase
       .from("sleep_sessions")
-      .select("id,bed_at,lights_out_at,planned_wake_at,wake_at,quality")
+      .select("id,bed_at,lights_out_at,planned_wake_at,wake_at,quality,energy,notes,source")
       .eq("user_id",user.id)
       .order("bed_at",{ascending:false})
       .limit(60),
@@ -127,7 +134,7 @@ export async function loadCloudState() {
       .limit(120),
     supabase
       .from("user_preferences")
-      .select("sleep_target,wake_target,prep_target,notifications_enabled,workout_reminder_time,creatine_reminder_time")
+      .select("sleep_target,wake_target,prep_target,disconnect_target,sleep_goal_minutes,weekend_sleep_target,weekend_wake_target,notifications_enabled,workout_reminder_time,creatine_reminder_time")
       .eq("user_id",user.id)
       .maybeSingle(),
     supabase
@@ -413,6 +420,28 @@ export async function setSleepQuality(id:string,quality:number){
   const {error}=await supabase
     .from("sleep_sessions")
     .update({quality,updated_at:new Date().toISOString()})
+    .eq("id",id)
+    .eq("user_id",user.id);
+
+  return error?{ok:false,reason:error.message}:{ok:true};
+}
+
+export async function saveSleepCheckin(
+  id:string,
+  input:{quality?:number|null;energy?:number|null;notes?:string|null}
+){
+  if(!supabase) return {ok:false,reason:"not_configured" as const};
+  const user=await ensureUser();
+  if(!user) return {ok:false,reason:"auth_failed" as const};
+
+  const payload:Record<string,unknown>={updated_at:new Date().toISOString()};
+  if("quality" in input) payload.quality=input.quality ?? null;
+  if("energy" in input) payload.energy=input.energy ?? null;
+  if("notes" in input) payload.notes=input.notes?.trim() || null;
+
+  const {error}=await supabase
+    .from("sleep_sessions")
+    .update(payload)
     .eq("id",id)
     .eq("user_id",user.id);
 
