@@ -1024,3 +1024,126 @@ body{
   .gym-mode{padding-bottom:52px}
   .gym-rest-dock{bottom:18px}
 }
+
+
+/* V5.3 — gym mode */
+.gym-mode{
+  padding-bottom:104px;
+}
+.gym-mode .session-tabs-hidden{
+  display:none;
+}
+.gym-topbar{
+  margin-bottom:10px;
+}
+.gym-topbar .eyebrow{
+  color:#555d67;
+}
+.gym-topbar h1{
+  font-size:18px;
+  color:#d9dde1;
+}
+
+.quick-load{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  margin-top:6px;
+}
+.quick-load button{
+  min-height:34px;
+  border:0;
+  border-radius:10px;
+  background:#1a1d23;
+  color:#aeb5bd;
+  font-size:10px;
+  font-weight:900;
+}
+.quick-load button:active{
+  transform:scale(.98);
+  background:#242831;
+}
+.compact-load{
+  margin-top:5px;
+}
+.compact-load button{
+  min-height:29px;
+  font-size:12px;
+}
+
+.gym-rest-dock{
+  position:fixed;
+  z-index:80;
+  left:12px;
+  right:12px;
+  bottom:12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  width:min(calc(100% - 24px),680px);
+  margin:auto;
+  padding:10px 11px 10px 14px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:19px;
+  background:rgba(18,20,25,.94);
+  box-shadow:0 18px 50px rgba(0,0,0,.5);
+  backdrop-filter:blur(22px) saturate(140%);
+  -webkit-backdrop-filter:blur(22px) saturate(140%);
+}
+.gym-rest-dock>div:first-child{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:0 8px;
+  align-items:center;
+  min-width:0;
+}
+.gym-rest-dock span{
+  color:#6e7680;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+.gym-rest-dock strong{
+  grid-row:1/3;
+  grid-column:2;
+  font-size:27px;
+  letter-spacing:-.05em;
+  color:#f3f4f5;
+}
+.gym-rest-dock small{
+  grid-column:1;
+  max-width:110px;
+  overflow:hidden;
+  color:#8b939d;
+  font-size:8px;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.gym-rest-dock>div:last-child{
+  display:flex;
+  gap:5px;
+}
+.gym-rest-dock button{
+  min-width:46px;
+  min-height:40px;
+  border:0;
+  border-radius:12px;
+  background:#22262d;
+  color:#c5cad0;
+  font-size:10px;
+  font-weight:900;
+}
+.gym-rest-dock button.skip{
+  background:#f1f2f3;
+  color:#101216;
+}
+
+@media(min-width:700px){
+  .gym-mode{
+    padding-bottom:70px;
+  }
+  .gym-rest-dock{
+    bottom:16px;
+  }
+}
