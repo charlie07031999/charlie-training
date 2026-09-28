@@ -1375,7 +1375,7 @@ export default function Home(){
         <div className="eyebrow">CHARLIE</div>
         <h1>{session?currentWorkout.title:tab==="today"?"Aujourd’hui":tab==="tracking"?"Suivi":tab==="routine"?"Routine":"Profil"}</h1>
       </div>
-      <div className={"sync-pill "+cloudStatus}>{cloudLabel}</div>
+      <div className={"sync-pill v9-global-sync "+cloudStatus}>{cloudLabel}</div>
     </header>
 
     <nav className={"tabs v7-tabs "+(session?"session-tabs-hidden":"")}>
@@ -1452,23 +1452,28 @@ export default function Home(){
               <div className="v7-moon-small">☾</div>
             </div>
 
-            <div className="v7-bed-goal">
-              <span>Objectif ce soir</span>
-              <strong>Au lit à {sleepTarget}</strong>
-              <div className="v7-goal-track"><i style={{width:(minutesUntilDisconnect===0?"72%":Math.max(8,Math.min(70,70-minutesUntilDisconnect))+"%")}}/></div>
-              <small>{currentMinutes>targetBedMinutes?"Objectif dépassé de "+Math.min(180,currentMinutes-targetBedMinutes)+" min.":minutesUntilDisconnect>0?"Tu es dans les temps.":"On ralentit maintenant."}</small>
-            </div>
+            <div className="v9-evening-card">
+              <div className="v9-evening-goal">
+                <div><span>OBJECTIF CE SOIR</span><strong>Au lit à {sleepTarget}</strong></div>
+                <small>{currentMinutes>targetBedMinutes?"+"+Math.min(180,currentMinutes-targetBedMinutes)+" min":minutesUntilDisconnect>0?"dans "+minutesUntilDisconnect+" min":"maintenant"}</small>
+              </div>
 
-            <div className="v7-routine-card">
-              <div className="v7-card-head"><div><strong>Routine du soir</strong><span>3 étapes · ~30 min</span></div></div>
-              <div className="v7-routine-row"><i className={currentMinutes>=disconnectMinutes&&currentMinutes<targetBedMinutes?"active":""}>1</i><span>{disconnectTarget}</span><div><strong>Déconnexion</strong><small>Écrans, notifications, travail</small></div></div>
-              <div className="v7-routine-row"><i className={currentMinutes>=disconnectMinutes&&currentMinutes<targetBedMinutes?"active":""}>2</i><span>{prepTarget}</span><div><strong>Préparation</strong><small>Hygiène, chambre, respiration</small></div></div>
-              <div className="v7-routine-row"><i className={currentMinutes>=targetBedMinutes?"active":""}>3</i><span>{sleepTarget}</span><div><strong>Au lit</strong><small>Lumières éteintes</small></div></div>
-              <button className="primary v7-full" onClick={()=>setTab("routine")}>Ouvrir ma routine</button>
-            </div>
+              <div className="v9-routine-lines">
+                <div className={currentMinutes>=disconnectMinutes&&currentMinutes<targetBedMinutes?"active":""}>
+                  <i>1</i><span>{disconnectTarget}</span><strong>Déconnexion</strong>
+                </div>
+                <div className={currentMinutes>=disconnectMinutes&&currentMinutes<targetBedMinutes?"active":""}>
+                  <i>2</i><span>{prepTarget}</span><strong>Préparation</strong>
+                </div>
+                <div className={currentMinutes>=targetBedMinutes?"active":""}>
+                  <i>3</i><span>{sleepTarget}</span><strong>Au lit</strong>
+                </div>
+              </div>
 
-            <div className="v7-tomorrow">
-              <span>Demain</span><strong>Réveil {wakeTarget}</strong><small>Objectif {durationLabel(targetSleepMinutes)}</small>
+              <button className="primary v7-full v9-evening-cta" onClick={()=>setTab("routine")}>
+                {currentMinutes>=targetBedMinutes?"Aller dormir":"Ouvrir ma routine"}
+              </button>
+              <div className="v9-tomorrow">Demain · réveil {wakeTarget} · objectif {durationLabel(targetSleepMinutes)}</div>
             </div>
           </div>
         :
@@ -1707,6 +1712,7 @@ export default function Home(){
     </section>}
 
     {tab==="tracking"&&<section className="v8-tracking">
+      <div className="v9-page-title"><span>SUIVI</span><h2>Ton évolution</h2></div>
       <div className="v8-switch">
         <button className={trackingView==="sleep"?"active":""} onClick={()=>setTrackingView("sleep")}>Sommeil</button>
         <button className={trackingView==="training"?"active":""} onClick={()=>setTrackingView("training")}>Training</button>
@@ -1804,6 +1810,7 @@ export default function Home(){
     </section>}
 
     {tab==="routine"&&<section className="v8-routine">
+      <div className="v9-page-title"><span>ROUTINE</span><h2>Sommeil</h2></div>
       <div className="v8-section-head v8-routine-title">
         <div><span>MA ROUTINE</span><h2>Sommeil</h2></div>
         <strong>{durationLabel(targetSleepMinutes)}</strong>
@@ -1858,6 +1865,7 @@ export default function Home(){
     </section>}
 
     {tab==="profile"&&<section className="v7-profile">
+      <div className="v9-page-title"><span>PROFIL</span><h2>Réglages</h2></div>
       <div className="v7-profile-card">
         <div className="v7-avatar">C</div>
         <div><span>PROFIL</span><h2>Charlie</h2><p>{authAnonymous?"Compte local anonyme":"Compte synchronisé"}</p></div>
