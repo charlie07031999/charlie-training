@@ -139,7 +139,31 @@ function urlBase64ToUint8Array(base64String:string){
   return Uint8Array.from([...rawData].map(ch=>ch.charCodeAt(0)));
 }
 
+const exerciseAliases:Record<string,string[]>={
+  "incline-bench":["incline-bench","incline-upper"],
+  "incline-upper":["incline-bench","incline-upper"],
+  "row":["row","row-upper"],
+  "row-upper":["row","row-upper"],
+  "lat-pulldown":["lat-pulldown","lat-upper"],
+  "lat-upper":["lat-pulldown","lat-upper"],
+  "shoulder-press":["shoulder-press","shoulder-upper"],
+  "shoulder-upper":["shoulder-press","shoulder-upper"],
+  "lateral":["lateral","lateral-upper"],
+  "lateral-upper":["lateral","lateral-upper"]
+};
+
+const exerciseLoadSteps:Record<string,number>={
+  "incline-bench":5,
+  "incline-upper":5,
+  "smith-squat":5,
+  "rdl":5,
+  "leg-press":7,
+  "crunch":4,
+  "abs-upper":4
+};
+
 function incrementFor(ex:Exercise){
+  if(exerciseLoadSteps[ex.id]!=null) return exerciseLoadSteps[ex.id];
   if(ex.unit==="kg/bras") return 2;
   if(ex.unit==="+kg") return 2.5;
   if(ex.unit==="kg") return 2.5;
@@ -431,9 +455,13 @@ export default function Home(){
         : `Dernière nuit ${durationLabel(latestSleepMinutes)} : récupération compatible avec le plan normal.`;
 
   function recentExerciseLogs(exerciseId:string,limit=3){
+    const ids=exerciseAliases[exerciseId]??[exerciseId];
     return [...completedSessions]
       .sort((a,b)=>b.finishedAt-a.finishedAt)
-      .map(session=>({session,logs:session.logs?.[exerciseId]??[]}))
+      .map(session=>{
+        const match=ids.find(id=>(session.logs?.[id]??[]).length>0);
+        return {session,logs:match?(session.logs?.[match]??[]):[],matchedId:match??exerciseId};
+      })
       .filter(x=>x.logs.length>0)
       .slice(0,limit);
   }
@@ -1111,6 +1139,16 @@ export default function Home(){
   }
 
   const currentSetLogs=currentExercise&&session?session.logs[currentExercise.id]??[]:[];
+  const currentPrevious=currentExercise?latestExerciseLogs(currentExercise.id):null;
+  const currentPreviousBest=currentPrevious?.logs.reduce<SetLog|null>((best,set)=>{
+    if(!best) return set;
+    const bw=best.weight??0;
+    const sw=set.weight??0;
+    if(sw>bw) return set;
+    if(sw===bw&&set.reps>best.reps) return set;
+    return best;
+  },null)??null;
+  const currentPreviousReps=currentPrevious?.logs.reduce((sum,set)=>sum+set.reps,0)??0;
   const currentRestTarget=currentExercise&&session
     ? session.restOverrides[currentExercise.id]??currentExercise.restSeconds
     : 0;
@@ -1137,6 +1175,9 @@ export default function Home(){
     []
   );
   const elapsed=session?Math.max(0,Math.floor((now-session.startedAt)/1000)):0;
+  const sessionProgress=session&&currentWorkout.id!=="cardio"
+    ? Math.min(100,Math.round((session.completedIds.length/currentWorkout.exercises.length)*100))
+    : 0;
 
   const todayWorkout=dueWorkoutId?workouts.find(w=>w.id===dueWorkoutId)??null:null;
   const weekDoneCount=doneWorkoutIds.size;
@@ -1186,7 +1227,7 @@ export default function Home(){
   return <main className="app-shell">
     <header className="topbar">
       <div>
-        <div className="eyebrow">CHARLIE TRAINING · V5</div>
+        <div className="eyebrow">CHARLIE TRAINING · V5.2</div>
         <h1>{session?currentWorkout.title:"Training"}</h1>
       </div>
       <div className={`sync-pill ${cloudStatus}`}>{cloudLabel}</div>
@@ -1216,6 +1257,17 @@ export default function Home(){
             <span>Semaine</span>
             <strong>{weekDoneCount}/{weekTrainingCount}</strong>
           </div>
+        </div>
+
+        <div className="week-mini-strip">
+          {schedule.filter(item=>item.workoutId).map(item=>{
+            const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
+            const active=item.workoutId===todayWorkout?.id;
+            return <div key={item.label} className={`week-mini-day ${done?"done":""} ${active?"active":""}`}>
+              <span>{item.label}</span>
+              <i/>
+            </div>;
+          })}
         </div>
 
         <div className="dashboard-grid">
@@ -1305,6 +1357,10 @@ export default function Home(){
           <div className="session-progress">{session.exerciseIndex+1}/{currentWorkout.exercises.length}</div>
         </div>
 
+        <div className="session-track" aria-label="Progression de la séance">
+          <i style={{width:sessionProgress+"%"}}/>
+        </div>
+
         <div className="live-strip">
           <div><span>Temps</span><strong>{formatTimer(elapsed)}</strong></div>
           <div><span>Finis</span><strong>{session.completedIds.length}</strong></div>
@@ -1318,6 +1374,17 @@ export default function Home(){
             <div><span>Objectif</span><strong>{effectiveTarget().repMin}–{effectiveTarget().repMax}</strong></div>
             <div><span>Repos cible</span><strong>{formatTimer(currentRestTarget)}</strong></div>
           </div>
+          {currentPrevious&&<div className="previous-performance">
+            <span>DERNIÈRE FOIS</span>
+            <strong>
+              {currentPreviousBest?.weight!=null
+                ? currentPreviousBest.weight+" "+currentExercise.unit+" × "+currentPreviousBest.reps
+                : currentPreviousBest
+                  ? currentPreviousBest.reps+" reps"
+                  : "—"}
+            </strong>
+            <small>{dateKey(currentPrevious.session.finishedAt)} · {currentPrevious.logs.length} série(s) · {currentPreviousReps} reps</small>
+          </div>}
           <p>{currentExercise.cue}</p>
         </div>}
 
@@ -1487,11 +1554,11 @@ export default function Home(){
       </div>
       <div className="journey-timeline">
         {journeyEvents.length===0&&<div className="note">Chargement de ton historique suivi…</div>}
-        {journeyEvents.map((event,i)=>{
+        {journeyEvents.slice(0,4).map((event,i)=>{
           const d=new Date(event.event_date+"T12:00:00");
           const date=d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"});
           return <article className={`journey-event ${event.kind}`} key={event.id}>
-            <div className="journey-rail"><i/><span>{i===journeyEvents.length-1?"":" "}</span></div>
+            <div className="journey-rail"><i/></div>
             <div className="journey-content">
               <div className="journey-meta"><span>{date}</span><b>{event.kind==="strength"?"Force":event.kind==="cardio"?"Cardio":event.kind==="program"?"Programme":event.kind==="recovery"?"Reprise":"Étape"}</b></div>
               <h4>{event.title}</h4>
@@ -1499,8 +1566,24 @@ export default function Home(){
             </div>
           </article>;
         })}
+        {journeyEvents.length>4&&<details className="journey-more">
+          <summary>Voir les {journeyEvents.length-4} repères précédents</summary>
+          <div>
+            {journeyEvents.slice(4).map(event=>{
+              const d=new Date(event.event_date+"T12:00:00");
+              const date=d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"});
+              return <article className={`journey-event ${event.kind}`} key={event.id}>
+                <div className="journey-rail"><i/></div>
+                <div className="journey-content">
+                  <div className="journey-meta"><span>{date}</span><b>{event.kind==="strength"?"Force":event.kind==="cardio"?"Cardio":event.kind==="program"?"Programme":event.kind==="recovery"?"Reprise":"Étape"}</b></div>
+                  <h4>{event.title}</h4>
+                  <p>{event.summary}</p>
+                </div>
+              </article>;
+            })}
+          </div>
+        </details>}
       </div>
-
       <div className="section-title"><h3>Progression mesurée</h3><span>séances app</span></div>
       <div className="chart-card">
         <select value={chartExerciseId} onChange={e=>setChartExerciseId(e.target.value)}>
@@ -1662,6 +1745,6 @@ export default function Home(){
       </div>
     </section>}
 
-    <footer><span>Cloud → données → décision.</span><span>V5.1</span></footer>
+    <footer><span>Cloud → données → décision.</span><span>V5.2</span></footer>
   </main>;
 }
