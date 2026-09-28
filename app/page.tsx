@@ -1863,12 +1863,52 @@ export default function Home(){
 
     </section>}
 
-    {tab==="coach"&&<section>
-      <div className="coach-card">
-        <div className="eyebrow">NOLAN · CONNECTÉ AUX DONNÉES</div>
+    {tab==="profile"&&<section className="v7-profile">
+      <div className="v7-profile-card">
+        <div className="v7-avatar">C</div>
+        <div><span>PROFIL</span><h2>Charlie</h2><p>{authAnonymous?"Compte local anonyme":"Compte synchronisé"}</p></div>
+        <b className={cloudStatus==="ok"?"ok":""}>{cloudStatus==="ok"?"Cloud actif":"Sync…"}</b>
+      </div>
+
+      <div className="section-title"><h3>Compte & synchronisation</h3><span>{authAnonymous?"à sécuriser":"sécurisé"}</span></div>
+      <div className="account-card">
+        <strong>{authAnonymous?"Sécuriser tes données":"Compte sécurisé"}</strong>
+        <p>{authAnonymous
+          ?"Ajoute ton email pour retrouver tes données sur un nouvel iPhone ou ton Mac."
+          :"Connecté avec "+(authUser?.email??"ton compte")+"."}</p>
+        <input type="email" placeholder="ton@email.fr" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/>
+        <div className="account-actions">
+          {authAnonymous&&<button className="primary" onClick={secureAccount}>Sécuriser ce compte</button>}
+          <button className="secondary" onClick={requestMagicLink}>Recevoir un lien de connexion</button>
+        </div>
+        {accountMessage&&<small>{accountMessage}</small>}
+      </div>
+
+      <div className="section-title"><h3>Données corporelles</h3><span>optionnel</span></div>
+      <div className="metric-entry">
+        <label>Poids<input inputMode="decimal" placeholder="69.0" value={metricWeight} onChange={e=>setMetricWeight(e.target.value)}/><span>kg</span></label>
+        <label>Tour de taille<input inputMode="decimal" placeholder="80.0" value={metricWaist} onChange={e=>setMetricWaist(e.target.value)}/><span>cm</span></label>
+        <button className="primary" onClick={addMetric}>Enregistrer</button>
+      </div>
+      <div className="metric-charts">
+        <div className="chart-card"><strong>Poids</strong><MiniChart values={weightSeries} suffix=" kg"/></div>
+        <div className="chart-card"><strong>Tour de taille</strong><MiniChart values={waistSeries} suffix=" cm"/></div>
+      </div>
+
+      <div className="section-title"><h3>App & données</h3><span>Supabase</span></div>
+      <div className={"integration-card "+(isCloudConfigured?"connected":"")}>
+        <div><strong>Cloud privé</strong><span>Séances, nuits, mensurations et préférences sont synchronisées à l’ouverture.</span></div>
+        <b>{cloudStatus==="ok"?"Actif":"…"}</b>
+      </div>
+      <div className="integration-card connected">
+        <div><strong>Web Push</strong><span>Notifications de routine, entraînement et créatine.</span></div>
+        <b>{pushReady?"Cet appareil":notificationsEnabled?"Actif":"Off"}</b>
+      </div>
+
+      <div className="section-title"><h3>Nolan</h3><span>adaptation séance</span></div>
+      <div className="coach-card v7-profile-coach">
         <h2>{autoCoachMode==="tired"?"On allège aujourd’hui.":"Plan normal."}</h2>
         <p>{autoCoachText}</p>
-
         <div className="coach-options">
           {([
             ["normal","Normal"],["tired","Mal dormi"],["short","40 min max"],["crowded","Salle blindée"]
@@ -1876,27 +1916,6 @@ export default function Home(){
             <button key={id} className={coachMode===id?"selected":""} onClick={()=>setCoachMode(id)}>{label}</button>
           )}
         </div>
-
-        <div className="coach-result">
-          {coachMode==="normal"&&<>1–2 RIR. Progression si le haut de fourchette est validé proprement.</>}
-          {coachMode==="tired"&&<>Une série de moins sur les mouvements concernés, zéro échec forcé.</>}
-          {coachMode==="short"&&<>Deux séries par exercice, priorités P1 d’abord.</>}
-          {coachMode==="crowded"&&<>“Machine prise” reporte l’exercice et le repropose avant la fin.</>}
-        </div>
-
-        {todayWorkout&&<>
-          <div className="section-title"><h3>{todayWorkout.title}</h3><span>cibles Nolan</span></div>
-          <div className="exercise-list">
-            {todayWorkout.exercises.slice(0,5).map(ex=>{
-              const rec=recommendationFor(ex);
-              return <div className="exercise-row" key={ex.id}>
-                <div className="grow"><strong>{ex.name}</strong><div className="muted">{rec.label}</div></div>
-                <div className="load">{rec.weight!=null?`${rec.weight} ${ex.unit}`:"—"}</div>
-              </div>;
-            })}
-          </div>
-          <button className="primary big" onClick={()=>{setSelectedWorkoutId(todayWorkout.id);startWorkout(todayWorkout)}}>Lancer avec ce plan</button>
-        </>}
       </div>
     </section>}
 
