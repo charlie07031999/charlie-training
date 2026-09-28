@@ -16,6 +16,7 @@ import {
   sendMagicLink,
   setLightsOut,
   setSleepQuality,
+  saveSleepCheckin,
   startSleepSession,
   syncLiveWorkout,
   syncWorkoutSession,
@@ -65,6 +66,8 @@ type SleepSession = {
   plannedWakeAt?:number|null;
   wakeAt?:number|null;
   quality?:number|null;
+  energy?:number|null;
+  notes?:string|null;
 };
 
 type BodyMetric = {
@@ -224,8 +227,11 @@ export default function Home(){
 
   const [sleepTarget,setSleepTarget]=useState("23:00");
   const [prepTarget,setPrepTarget]=useState("22:15");
+  const [disconnectTarget,setDisconnectTarget]=useState("22:00");
   const [wakeTarget,setWakeTarget]=useState("07:00");
+  const [sleepGoalMinutes,setSleepGoalMinutes]=useState(510);
   const [plannedWakeTime,setPlannedWakeTime]=useState("07:00");
+  const [morningNotes,setMorningNotes]=useState("");
   const [notificationsEnabled,setNotificationsEnabled]=useState(false);
   const [pushReady,setPushReady]=useState(false);
   const [workoutReminderTime,setWorkoutReminderTime]=useState("08:00");
@@ -280,7 +286,9 @@ export default function Home(){
       lightsOutAt:s.lights_out_at?new Date(s.lights_out_at).getTime():null,
       plannedWakeAt:s.planned_wake_at?new Date(s.planned_wake_at).getTime():null,
       wakeAt:s.wake_at?new Date(s.wake_at).getTime():null,
-      quality:s.quality??null
+      quality:s.quality??null,
+      energy:s.energy??null,
+      notes:s.notes??null
     })));
 
     setBodyMetrics(state.metrics.map(m=>({
@@ -296,6 +304,8 @@ export default function Home(){
       setSleepTarget(state.preferences.sleep_target.slice(0,5));
       setWakeTarget(state.preferences.wake_target.slice(0,5));
       setPrepTarget(state.preferences.prep_target.slice(0,5));
+      setDisconnectTarget((state.preferences.disconnect_target??"22:00").slice(0,5));
+      setSleepGoalMinutes(Number(state.preferences.sleep_goal_minutes??510));
       setNotificationsEnabled(Boolean(state.preferences.notifications_enabled));
       setWorkoutReminderTime(state.preferences.workout_reminder_time.slice(0,5));
       setCreatineReminderTime(state.preferences.creatine_reminder_time.slice(0,5));
@@ -379,6 +389,8 @@ export default function Home(){
         sleep_target:sleepTarget,
         wake_target:wakeTarget,
         prep_target:prepTarget,
+        disconnect_target:disconnectTarget,
+        sleep_goal_minutes:sleepGoalMinutes,
         notifications_enabled:notificationsEnabled,
         workout_reminder_time:workoutReminderTime,
         creatine_reminder_time:creatineReminderTime
@@ -386,7 +398,7 @@ export default function Home(){
     },500);
     return()=>clearTimeout(t);
   },[
-    prefsLoaded,sleepTarget,wakeTarget,prepTarget,notificationsEnabled,
+    prefsLoaded,sleepTarget,wakeTarget,prepTarget,disconnectTarget,sleepGoalMinutes,notificationsEnabled,
     workoutReminderTime,creatineReminderTime
   ]);
 
@@ -1060,7 +1072,7 @@ export default function Home(){
     finishWorkout({},cardio);
   }
 
-  const targetSleepMinutes=sleepWindowMinutes(sleepTarget,wakeTarget);
+  const targetSleepMinutes=sleepGoalMinutes || sleepWindowMinutes(sleepTarget,wakeTarget);
 
   async function beginSleep(lightsOut:boolean){
     const at=Date.now();
@@ -1120,6 +1132,22 @@ export default function Home(){
     const res=await setSleepQuality(latestSleep.id,q);
     if(res.ok) await refreshCloud();
   }
+
+  async function rateEnergy(energy:number){
+    if(!latestSleep) return;
+    const res=await saveSleepCheckin(latestSleep.id,{energy});
+    if(res.ok) await refreshCloud();
+  }
+
+  async function saveMorningNote(){
+    if(!latestSleep) return;
+    const res=await saveSleepCheckin(latestSleep.id,{notes:morningNotes});
+    if(res.ok) await refreshCloud();
+  }
+
+  useEffect(()=>{
+    setMorningNotes(latestSleep?.notes??"");
+  },[latestSleep?.id,latestSleep?.notes]);
 
   async function addMetric(){
     const weightKg=metricWeight?Number(metricWeight.replace(",",".")):null;
@@ -1302,16 +1330,16 @@ export default function Home(){
   return <main className={`app-shell ${session?"gym-mode":""}`}>
     <header className={`topbar ${session?"gym-topbar":""}`}>
       <div>
-        <div className="eyebrow">CHARLIE TRAINING · V5.3</div>
-        <h1>{session?currentWorkout.title:"Training"}</h1>
+        <div className="eyebrow">CHARLIE · TRAINING & RÉCUP</div>
+        <h1>{session?currentWorkout.title:"Aujourd’hui"}</h1>
       </div>
       <div className={`sync-pill ${cloudStatus}`}>{cloudLabel}</div>
     </header>
 
     <nav className={`tabs ${session?"session-tabs-hidden":""}`}>
       {([
-        ["today","Session"],["week","Semaine"],["history","Progrès"],
-        ["recovery","Récup"],["coach","Coach"]
+        ["today","Aujourd’hui"],["week","Planning"],["history","Progrès"],
+        ["recovery","Sommeil"],["coach","Coach"]
       ] as const).map(([id,label])=>
         <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>{label}</button>
       )}
@@ -1699,56 +1727,88 @@ export default function Home(){
       <div className="history-list">{history.map(h=><div className="history-item" key={h.exerciseId}><strong>{h.label}</strong><span>{h.reference}</span></div>)}</div>
     </section>}
 
-    {tab==="recovery"&&<section>
-      <div className="recovery-hero">
+    {tab==="recovery"&&<section className="sleep-v6">
+      <div className="sleep-v6-hero">
         <div>
-          <div className="eyebrow">RÉCUPÉRATION</div>
-          <h2>{openSleep?"Nuit en cours":"Sommeil & corps"}</h2>
-          <p>{openSleep
-            ?"L’app suit cette nuit dans le cloud."
-            :"Tes données de récupération restent liées à ton compte Supabase."}</p>
+          <div className="eyebrow">{openSleep?"NUIT EN COURS":"SOMMEIL"}</div>
+          <h2>{openSleep?.lightsOutAt?"Téléphone posé. Dors.":openSleep?"Prépare ta nuit.":"Ta récupération, sans bruit."}</h2>
+          <p>{openSleep?.lightsOutAt
+            ? `Extinction à ${clock(openSleep.lightsOutAt)} · réveil prévu ${plannedWakeTime}.`
+            : `Objectif : ${durationLabel(targetSleepMinutes)} · coucher ${sleepTarget} · réveil ${wakeTarget}.`}</p>
         </div>
-        <div className="sleep-score"><span>Dernière nuit</span><strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong></div>
+        <div className="sleep-v6-score">
+          <span>Dernière nuit</span>
+          <strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong>
+          <small>{latestSleep?.energy?`Énergie ${latestSleep.energy}/5`:latestSleep?.quality?`Qualité ${latestSleep.quality}/5`:"À compléter"}</small>
+        </div>
       </div>
 
-      {!openSleep&&<div className="bedtime-action">
-        <div><span className="eyebrow">CE SOIR</span><strong>Deux façons de lancer la nuit</strong><small>“Au lit” enregistre l’arrivée au lit. “Je dors maintenant” enregistre directement l’extinction.</small></div>
-        <div className="sleep-action-stack">
-          <button className="secondary bedtime-button" onClick={()=>beginSleep(false)}>Je vais au lit</button>
-          <button className="primary bedtime-button" onClick={()=>beginSleep(true)}>Je dors maintenant</button>
+      {!openSleep&&<div className="sleep-v6-tonight">
+        <div className="sleep-v6-sectionhead">
+          <div><span>CE SOIR</span><strong>Routine du soir</strong></div>
+          <b>{disconnectTarget} → {sleepTarget}</b>
+        </div>
+        <div className="sleep-v6-timeline">
+          <div><i/><span>{disconnectTarget}</span><strong>Déconnexion</strong><small>Écrans, notifications, travail.</small></div>
+          <div><i/><span>{prepTarget}</span><strong>Préparation</strong><small>Hygiène, chambre, lumière basse.</small></div>
+          <div><i/><span>{sleepTarget}</span><strong>Au lit</strong><small>Téléphone posé, lumière éteinte.</small></div>
+        </div>
+        <div className="sleep-v6-actions">
+          <button className="secondary" onClick={()=>beginSleep(false)}>Je vais au lit</button>
+          <button className="primary" onClick={()=>beginSleep(true)}>Je dors maintenant</button>
         </div>
       </div>}
 
-      {openSleep&&!openSleep.lightsOutAt&&<div className="bedtime-action">
-        <div><span className="eyebrow">AU LIT DEPUIS {clock(openSleep.bedAt)}</span><strong>Quand tu poses la télécommande…</strong><small>Appuie au moment où tu arrêtes vraiment tout.</small></div>
-        <button className="primary bedtime-button" onClick={lightsOutNow}>Je dors maintenant</button>
+      {openSleep&&!openSleep.lightsOutAt&&<div className="sleep-v6-focus">
+        <span>AU LIT DEPUIS {clock(openSleep.bedAt)}</span>
+        <strong>Dernière action : poser le téléphone.</strong>
+        <p>Quand tu éteins vraiment, enregistre l’heure. Après ça, l’app n’a plus rien à te demander.</p>
+        <button className="primary" onClick={lightsOutNow}>Lumières éteintes</button>
       </div>}
 
-      {openSleep&&openSleep.lightsOutAt&&<div className="sleep-plan">
-        <div className="wake-recommendation">
-          <div><span>RÉVEIL CONSEILLÉ</span><strong>{suggestedWakeAt?clock(suggestedWakeAt):"—"}</strong></div>
-          <p>Extinction à {clock(openSleep.lightsOutAt)}. Cette heure conserve ta cible de <b>{durationLabel(targetSleepMinutes)}</b>.</p>
-        </div>
-        <label className="time-card">
-          <span>TON RÉVEIL PRÉVU</span>
+      {openSleep&&openSleep.lightsOutAt&&<div className="sleep-v6-night">
+        <div className="sleep-v6-moon">☾</div>
+        <span>NUIT EN COURS</span>
+        <h3>Il est temps de dormir.</h3>
+        <p>Réveil conseillé <strong>{suggestedWakeAt?clock(suggestedWakeAt):"—"}</strong> pour conserver {durationLabel(targetSleepMinutes)}.</p>
+        <label>
+          <span>Réveil prévu</span>
           <input type="time" value={plannedWakeTime} onChange={e=>changeWakePlan(e.target.value)}/>
-          <small>{plannedSleepMinutes?durationLabel(plannedSleepMinutes):"—"} entre extinction et réveil prévu.</small>
-          {suggestedWakeAt&&<button className="secondary" type="button" onClick={()=>changeWakePlan(clock(suggestedWakeAt))}>Prendre le conseillé</button>}
         </label>
-        <button className="primary big wake" onClick={wakeNow}>Je suis réveillé</button>
+        <button className="ghost sleep-v6-wake" onClick={wakeNow}>Je suis réveillé</button>
       </div>}
 
-      {latestSleep?.wakeAt&&<div className="quality-card">
-        <div><strong>Comment tu te sens au réveil ?</strong><span>Une note rapide aide Nolan à contextualiser la séance.</span></div>
-        <div>{[1,2,3,4,5].map(q=><button key={q} className={latestSleep.quality===q?"active":""} onClick={()=>rateSleep(q)}>{q}</button>)}</div>
+      {latestSleep?.wakeAt&&<div className="sleep-v6-checkin">
+        <div className="sleep-v6-sectionhead">
+          <div><span>CE MATIN</span><strong>Check-in en 20 secondes</strong></div>
+          <b>{durationLabel(latestSleepMinutes)}</b>
+        </div>
+        <div className="sleep-v6-question">
+          <span>Énergie au réveil</span>
+          <div>{[1,2,3,4,5].map(q=><button key={q} className={latestSleep.energy===q?"active":""} onClick={()=>rateEnergy(q)}>{q}</button>)}</div>
+        </div>
+        <div className="sleep-v6-question">
+          <span>Qualité de la nuit</span>
+          <div>{[1,2,3,4,5].map(q=><button key={q} className={latestSleep.quality===q?"active":""} onClick={()=>rateSleep(q)}>{q}</button>)}</div>
+        </div>
+        <label className="sleep-v6-note">
+          <span>Note <small>optionnel</small></span>
+          <textarea value={morningNotes} onChange={e=>setMorningNotes(e.target.value)} onBlur={saveMorningNote} placeholder="Réveil facile, nuit coupée, jambes lourdes…"/>
+        </label>
       </div>}
 
-      <div className="section-title"><h3>Routine</h3><span>synchronisée</span></div>
-      <div className="recovery-grid">
-        <label className="time-card"><span>Préparation coucher</span><input type="time" value={prepTarget} onChange={e=>setPrepTarget(e.target.value)}/><small>Fin boulot, lumière basse.</small></label>
-        <label className="time-card"><span>Sommeil cible</span><input type="time" value={sleepTarget} onChange={e=>setSleepTarget(e.target.value)}/><small>Heure idéale d’endormissement.</small></label>
-        <label className="time-card"><span>Réveil cible</span><input type="time" value={wakeTarget} onChange={e=>setWakeTarget(e.target.value)}/><small>Base utilisée pour calculer la durée cible.</small></label>
-        <label className="time-card"><span>Durée cible</span><div className="big-value">{durationLabel(targetSleepMinutes)}</div><small>Calculée automatiquement.</small></label>
+      <div className="section-title"><h3>Réglages sommeil</h3><span>synchronisés</span></div>
+      <div className="sleep-v6-settings">
+        <label><span>Déconnexion</span><input type="time" value={disconnectTarget} onChange={e=>setDisconnectTarget(e.target.value)}/><small>Début du ralentissement.</small></label>
+        <label><span>Préparation</span><input type="time" value={prepTarget} onChange={e=>setPrepTarget(e.target.value)}/><small>Routine salle de bain / chambre.</small></label>
+        <label><span>Coucher cible</span><input type="time" value={sleepTarget} onChange={e=>setSleepTarget(e.target.value)}/><small>Heure idéale au lit.</small></label>
+        <label><span>Réveil cible</span><input type="time" value={wakeTarget} onChange={e=>setWakeTarget(e.target.value)}/><small>Heure de lever habituelle.</small></label>
+        <label className="sleep-v6-goal"><span>Objectif de sommeil</span><select value={sleepGoalMinutes} onChange={e=>setSleepGoalMinutes(Number(e.target.value))}>
+          <option value={450}>7 h 30</option>
+          <option value={480}>8 h 00</option>
+          <option value={510}>8 h 30</option>
+          <option value={540}>9 h 00</option>
+        </select><small>Utilisé pour le réveil conseillé.</small></label>
       </div>
 
       <div className="section-title"><h3>Mensurations</h3><span>optionnel</span></div>
