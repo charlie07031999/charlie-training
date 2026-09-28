@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { history, workouts } from "../lib/workouts";
 import type { CardioLog, Exercise, SetLog, SupersetPart, Workout } from "../lib/types";
 import {
@@ -215,6 +215,7 @@ export default function Home(){
   const [supersetDrafts,setSupersetDrafts]=useState<Record<string,SupersetDraft>>({});
   const [coachMode,setCoachMode]=useState<CoachMode>("normal");
   const [now,setNow]=useState(Date.now());
+  const wakeLockRef=useRef<any>(null);
 
   const [cardioDuration,setCardioDuration]=useState("30");
   const [cardioDistance,setCardioDistance]=useState("");
@@ -395,6 +396,61 @@ export default function Home(){
     return()=>clearInterval(t);
   },[rest]);
 
+  function pulse(pattern:number|number[]){
+    try{ (navigator as any).vibrate?.(pattern); }catch{}
+  }
+
+  useEffect(()=>{
+    let cancelled=false;
+
+    async function acquireWakeLock(){
+      if(!session||document.visibilityState!=="visible") return;
+      try{
+        const wakeLock=(navigator as any).wakeLock;
+        if(!wakeLock?.request) return;
+        const lock=await wakeLock.request("screen");
+        if(cancelled){
+          try{ await lock.release(); }catch{}
+          return;
+        }
+        wakeLockRef.current=lock;
+      }catch{}
+    }
+
+    function onVisibility(){
+      if(document.visibilityState==="visible"&&session) void acquireWakeLock();
+    }
+
+    if(session) void acquireWakeLock();
+    document.addEventListener("visibilitychange",onVisibility);
+
+    return()=>{
+      cancelled=true;
+      document.removeEventListener("visibilitychange",onVisibility);
+      const lock=wakeLockRef.current;
+      wakeLockRef.current=null;
+      if(lock) void lock.release().catch(()=>{});
+    };
+  },[Boolean(session)]);
+
+  function adjustWeightDraft(delta:number){
+    if(!currentExercise||currentExercise.unit==="PDC") return;
+    const base=Number(String(weight||recommendationFor(currentExercise).weight??0).replace(",","."));
+    const next=Math.max(0,Math.round((base+delta)*10)/10);
+    setWeight(String(next));
+    pulse(8);
+  }
+
+  function adjustSupersetWeight(part:SupersetPart,parent:Exercise,delta:number){
+    if(part.unit==="PDC") return;
+    const current=supersetDrafts[part.id]??{weight:"",reps:String(part.repMin),rir:"2",failed:false};
+    const ex=supersetPartAsExercise(part,parent);
+    const base=Number(String(current.weight||recommendationFor(ex).weight??0).replace(",","."));
+    const next=Math.max(0,Math.round((base+delta)*10)/10);
+    setSupersetDrafts(prev=>({...prev,[part.id]:{...current,weight:String(next)}}));
+    pulse(8);
+  }
+
   async function notify(title:string,body:string){
     if(!notificationsEnabled || typeof window==="undefined" || !("Notification" in window)) return;
     if(Notification.permission!=="granted") return;
@@ -407,6 +463,7 @@ export default function Home(){
   useEffect(()=>{
     if(rest===0&&restNotificationArmed){
       setRestNotificationArmed(false);
+      pulse([70,45,70]);
       void notify("Repos terminé","Prochaine série. Repars proprement.");
     }
   },[rest,restNotificationArmed]);
@@ -797,6 +854,7 @@ export default function Home(){
 
   function logSupersetRound(){
     if(!session||!currentExercise?.superset?.length) return;
+    pulse(18);
     const loggedAt=Date.now();
     const nextLogs={...session.logs};
     const partsPayload:Record<string,unknown>[]=[];
@@ -838,6 +896,7 @@ export default function Home(){
 
   function logSet(){
     if(!session||!currentExercise) return;
+    pulse(18);
     if(currentExercise.superset?.length){
       logSupersetRound();
       return;
@@ -1240,16 +1299,16 @@ export default function Home(){
   const authAnonymous=Boolean(authUser?.is_anonymous);
   const cloudLabel=cloudLoading?"Chargement":cloudStatus==="ok"?"Synchronisé":cloudStatus==="syncing"?"Synchro…":"À vérifier";
 
-  return <main className="app-shell">
-    <header className="topbar">
+  return <main className={`app-shell ${session?"gym-mode":""}`}>
+    <header className={`topbar ${session?"gym-topbar":""}`}>
       <div>
-        <div className="eyebrow">CHARLIE TRAINING · V5.2</div>
+        <div className="eyebrow">CHARLIE TRAINING · V5.3</div>
         <h1>{session?currentWorkout.title:"Training"}</h1>
       </div>
       <div className={`sync-pill ${cloudStatus}`}>{cloudLabel}</div>
     </header>
 
-    <nav className="tabs">
+    <nav className={`tabs ${session?"session-tabs-hidden":""}`}>
       {([
         ["today","Session"],["week","Semaine"],["history","Progrès"],
         ["recovery","Récup"],["coach","Coach"]
@@ -1502,7 +1561,13 @@ export default function Home(){
                 <div><strong>{part.name}</strong><small>{part.target} · {part.repMin}–{part.repMax} reps</small></div>
               </div>
               <div className="superset-fields">
-                <label>Charge<div className="input-wrap"><input value={draft.weight} onChange={e=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,weight:e.target.value}}))} inputMode="decimal" disabled={part.unit==="PDC"}/><span>{part.unit}</span></div></label>
+                <label>Charge
+                  <div className="input-wrap"><input value={draft.weight} onChange={e=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,weight:e.target.value}}))} inputMode="decimal" disabled={part.unit==="PDC"}/><span>{part.unit}</span></div>
+                  {part.unit!=="PDC"&&<div className="quick-load compact-load">
+                    <button type="button" onClick={()=>adjustSupersetWeight(part,currentExercise,-incrementFor(supersetPartAsExercise(part,currentExercise)))}>−</button>
+                    <button type="button" onClick={()=>adjustSupersetWeight(part,currentExercise,incrementFor(supersetPartAsExercise(part,currentExercise)))}>+</button>
+                  </div>}
+                </label>
                 <label>Reps<div className="stepper"><button onClick={()=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,reps:String(Math.max(0,Number(draft.reps)-1))}}))}>−</button><strong>{draft.reps}</strong><button onClick={()=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,reps:String(Number(draft.reps)+1)}}))}>+</button></div></label>
                 <label>RIR<div className="stepper compact"><button onClick={()=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,rir:String(Math.max(0,Number(draft.rir)-1))}}))}>−</button><strong>{draft.rir}</strong><button onClick={()=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,rir:String(Math.min(5,Number(draft.rir)+1))}}))}>+</button></div></label>
                 <label className="fail-toggle"><input type="checkbox" checked={draft.failed} onChange={e=>setSupersetDrafts(prev=>({...prev,[part.id]:{...draft,failed:e.target.checked}}))}/><span>Échec</span></label>
@@ -1522,6 +1587,10 @@ export default function Home(){
               <input value={weight} onChange={e=>setWeight(e.target.value)} inputMode="decimal" disabled={currentExercise?.unit==="PDC"}/>
               <span>{currentExercise?.unit}</span>
             </div>
+            {currentExercise&&currentExercise.unit!=="PDC"&&<div className="quick-load">
+              <button type="button" onClick={()=>adjustWeightDraft(-incrementFor(currentExercise))}>−{incrementFor(currentExercise)}</button>
+              <button type="button" onClick={()=>adjustWeightDraft(incrementFor(currentExercise))}>+{incrementFor(currentExercise)}</button>
+            </div>}
           </div>
           <div className="field"><label>Reps</label><div className="stepper"><button onClick={()=>setReps(String(Math.max(0,Number(reps)-1)))}>−</button><strong>{reps}</strong><button onClick={()=>setReps(String(Number(reps)+1))}>+</button></div></div>
           <div className="field"><label>RIR</label><div className="stepper compact"><button onClick={()=>setRir(String(Math.max(0,Number(rir)-1)))}>−</button><strong>{rir}</strong><button onClick={()=>setRir(String(Math.min(5,Number(rir)+1)))}>+</button></div></div>
@@ -1761,6 +1830,19 @@ export default function Home(){
       </div>
     </section>}
 
-    <footer><span>Cloud → données → décision.</span><span>V5.2</span></footer>
+    {session&&rest>0&&<div className="gym-rest-dock">
+      <div>
+        <span>REPOS</span>
+        <strong>{formatTimer(rest)}</strong>
+        <small>{currentExercise?.name??currentWorkout.title}</small>
+      </div>
+      <div>
+        <button onClick={()=>setRest(v=>Math.max(0,v-15))}>−15</button>
+        <button onClick={()=>setRest(v=>v+15)}>+15</button>
+        <button className="skip" onClick={()=>setRest(0)}>Go</button>
+      </div>
+    </div>}
+
+    <footer><span>Cloud → données → décision.</span><span>V5.3</span></footer>
   </main>;
 }
