@@ -435,7 +435,7 @@ export default function Home(){
 
   function adjustWeightDraft(delta:number){
     if(!currentExercise||currentExercise.unit==="PDC") return;
-    const base=Number(String(weight||recommendationFor(currentExercise).weight??0).replace(",","."));
+    const base=Number(String(weight||(recommendationFor(currentExercise).weight??0)).replace(",","."));
     const next=Math.max(0,Math.round((base+delta)*10)/10);
     setWeight(String(next));
     pulse(8);
@@ -445,7 +445,7 @@ export default function Home(){
     if(part.unit==="PDC") return;
     const current=supersetDrafts[part.id]??{weight:"",reps:String(part.repMin),rir:"2",failed:false};
     const ex=supersetPartAsExercise(part,parent);
-    const base=Number(String(current.weight||recommendationFor(ex).weight??0).replace(",","."));
+    const base=Number(String(current.weight||(recommendationFor(ex).weight??0)).replace(",","."));
     const next=Math.max(0,Math.round((base+delta)*10)/10);
     setSupersetDrafts(prev=>({...prev,[part.id]:{...current,weight:String(next)}}));
     pulse(8);
