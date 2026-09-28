@@ -1147,3 +1147,72 @@ body{
     bottom:16px;
   }
 }
+
+
+/* V6 — Sleep experience */
+.sleep-v6{padding-bottom:106px}
+.sleep-v6-hero{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:18px;
+  align-items:end;
+  min-height:190px;
+  padding:24px 20px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:28px;
+  background:
+    radial-gradient(circle at 88% 15%,rgba(96,92,255,.20),transparent 12rem),
+    linear-gradient(180deg,#151722,#0e1015);
+}
+.sleep-v6-hero h2{margin-top:8px;max-width:420px;font-size:34px;line-height:.98;letter-spacing:-.055em}
+.sleep-v6-hero p{margin-top:10px;color:#838a96;font-size:11px;line-height:1.5}
+.sleep-v6-score{min-width:112px;padding:13px;border:1px solid rgba(255,255,255,.08);border-radius:17px;background:rgba(5,7,12,.28)}
+.sleep-v6-score span,.sleep-v6-score small{display:block;color:#777f8c;font-size:8px;font-weight:800}
+.sleep-v6-score strong{display:block;margin:5px 0 3px;font-size:22px;letter-spacing:-.04em}
+.sleep-v6-tonight,.sleep-v6-checkin,.sleep-v6-focus{margin-top:10px;padding:18px;border:1px solid rgba(255,255,255,.075);border-radius:23px;background:#111318}
+.sleep-v6-sectionhead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.sleep-v6-sectionhead>div span{display:block;color:#686f7b;font-size:8px;font-weight:900;letter-spacing:.12em}
+.sleep-v6-sectionhead>div strong{display:block;margin-top:5px;font-size:16px}
+.sleep-v6-sectionhead>b{color:#9ca3ae;font-size:11px}
+.sleep-v6-timeline{margin:17px 0 15px;border-top:1px solid rgba(255,255,255,.06)}
+.sleep-v6-timeline>div{position:relative;display:grid;grid-template-columns:46px 1fr;gap:2px 12px;padding:13px 0 13px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sleep-v6-timeline i{position:absolute;left:1px;top:18px;width:7px;height:7px;border-radius:999px;background:#666eff;box-shadow:0 0 0 5px rgba(102,110,255,.08)}
+.sleep-v6-timeline span{grid-row:1/3;color:#7f8792;font-size:10px;font-weight:800}
+.sleep-v6-timeline strong{font-size:12px}
+.sleep-v6-timeline small{color:#666e79;font-size:9px}
+.sleep-v6-actions{display:grid;grid-template-columns:1fr 1.3fr;gap:8px}
+.sleep-v6-actions button,.sleep-v6-focus button{min-height:54px}
+.sleep-v6-focus span{color:#747c88;font-size:8px;font-weight:900;letter-spacing:.11em}
+.sleep-v6-focus strong{display:block;margin-top:8px;font-size:19px}
+.sleep-v6-focus p{margin:7px 0 17px;max-width:470px;color:#777f8a;font-size:10px;line-height:1.5}
+.sleep-v6-night{display:flex;flex-direction:column;align-items:center;margin-top:10px;padding:42px 20px 26px;text-align:center;border-radius:28px;background:linear-gradient(180deg,#0d1019,#090b10);border:1px solid rgba(111,105,255,.15)}
+.sleep-v6-moon{margin-bottom:16px;font-size:38px;color:#8484ff;text-shadow:0 0 30px rgba(100,100,255,.34)}
+.sleep-v6-night>span{color:#626978;font-size:8px;font-weight:900;letter-spacing:.14em}
+.sleep-v6-night h3{margin-top:8px;font-size:28px;letter-spacing:-.05em}
+.sleep-v6-night p{margin-top:7px;color:#747c88;font-size:10px}
+.sleep-v6-night label{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;width:min(100%,330px);margin-top:24px;padding:10px 12px;border-radius:15px;background:#12151c;color:#7f8792;font-size:9px;text-align:left}
+.sleep-v6-night input{width:100px;border:0;background:transparent;color:#f3f4f6;font-weight:800}
+.sleep-v6-wake{margin-top:17px;min-height:36px;color:#626a76}
+.sleep-v6-question{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:15px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.sleep-v6-question>span{color:#a4aab3;font-size:10px;font-weight:800}
+.sleep-v6-question>div{display:flex;gap:5px}
+.sleep-v6-question button{width:34px;height:34px;border:0;border-radius:11px;background:#191c22;color:#727a86;font-size:10px;font-weight:900}
+.sleep-v6-question button.active{background:#f0f1f3;color:#0d0f12}
+.sleep-v6-note{display:block;margin-top:14px}
+.sleep-v6-note>span{display:block;margin-bottom:7px;color:#7b838e;font-size:9px;font-weight:800}
+.sleep-v6-note small{font-weight:500;color:#555d68}
+.sleep-v6-note textarea{width:100%;min-height:76px;resize:vertical;padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:#0d0f13;color:#dfe2e5;font:inherit;font-size:10px}
+.sleep-v6-settings{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.sleep-v6-settings label{min-height:112px;padding:14px;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:#111318}
+.sleep-v6-settings label>span{display:block;color:#777f8a;font-size:9px;font-weight:800}
+.sleep-v6-settings input,.sleep-v6-settings select{display:block;width:100%;margin:9px 0 7px;border:0;background:transparent;color:#f0f2f4;font-size:22px;font-weight:850;letter-spacing:-.03em}
+.sleep-v6-settings small{color:#5f6772;font-size:8px;line-height:1.4}
+.sleep-v6-goal{grid-column:1/-1}
+.tabs button{font-size:9px}
+@media(max-width:480px){
+  .sleep-v6-hero{grid-template-columns:1fr;min-height:0}
+  .sleep-v6-score{display:grid;grid-template-columns:1fr auto;align-items:center}
+  .sleep-v6-score strong{grid-row:1/3;grid-column:2}
+  .sleep-v6-actions{grid-template-columns:1fr}
+  .sleep-v6-question{grid-template-columns:1fr}
+}
