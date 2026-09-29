@@ -2303,3 +2303,516 @@ body{
     margin-top:2px;
   }
 }
+
+
+/* V10 — iOS-scale UI system */
+:root{
+  --ios-bg:#090c12;
+  --ios-surface:#121722;
+  --ios-surface-2:#171d29;
+  --ios-border:rgba(255,255,255,.075);
+  --ios-text:#f4f6fb;
+  --ios-secondary:#949dad;
+  --ios-tertiary:#687284;
+  --ios-accent:#6574ff;
+  --ios-accent-2:#7c5cff;
+}
+html{
+  -webkit-text-size-adjust:100%;
+}
+body{
+  background:var(--ios-bg);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+.app-v7{
+  width:min(100%,560px);
+  margin:0 auto;
+  padding-left:20px;
+  padding-right:20px;
+  padding-bottom:128px;
+}
+
+/* Apple-like large titles */
+.v9-page-title{
+  padding:6px 2px 10px;
+}
+.v9-page-title span{
+  font-size:10px;
+  letter-spacing:.12em;
+}
+.v9-page-title h2{
+  margin-top:5px;
+  font-size:36px;
+  line-height:1.02;
+  font-weight:780;
+  letter-spacing:-.045em;
+}
+.v7-evening-title h2{
+  font-size:38px;
+  line-height:1.03;
+  font-weight:780;
+  letter-spacing:-.048em;
+}
+.v7-evening-title p{
+  margin-top:9px;
+  max-width:320px;
+  font-size:14px;
+  line-height:1.42;
+  color:#9ca6b7;
+}
+.v7-day-intro h2{
+  font-size:38px;
+  line-height:1.02;
+}
+.v7-day-intro p{
+  font-size:13px;
+  line-height:1.45;
+}
+
+/* Primary controls: min 44pt target, visually closer to iOS */
+.app-v7 button,
+.app-v7 summary,
+.app-v7 input,
+.app-v7 select,
+.app-v7 textarea{
+  touch-action:manipulation;
+}
+.app-v7 button{
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .12s ease,opacity .12s ease,background-color .15s ease,border-color .15s ease;
+}
+.app-v7 button:active{
+  transform:scale(.975);
+  opacity:.86;
+}
+.app-v7 button:focus-visible,
+.app-v7 summary:focus-visible,
+.app-v7 input:focus-visible,
+.app-v7 select:focus-visible,
+.app-v7 textarea:focus-visible{
+  outline:3px solid rgba(101,116,255,.42);
+  outline-offset:2px;
+}
+.app-v7 .primary,
+.app-v7 .secondary,
+.app-v7 .ghost{
+  min-height:50px;
+  border-radius:16px;
+  font-size:14px;
+  font-weight:720;
+}
+.app-v7 .primary{
+  background:linear-gradient(135deg,#5d70ff,#7658ff);
+  box-shadow:0 8px 24px rgba(91,103,255,.22);
+}
+.app-v7 .primary.big,
+.app-v7 .v7-full{
+  min-height:56px;
+  font-size:15px;
+  border-radius:18px;
+}
+.app-v7 .secondary{
+  border:1px solid rgba(255,255,255,.085);
+  background:#171c26;
+  color:#eef1f6;
+}
+
+/* Floating bottom navigation — iOS 26 inspired */
+.v7-tabs{
+  position:fixed!important;
+  z-index:100;
+  left:50%!important;
+  right:auto!important;
+  bottom:max(12px,env(safe-area-inset-bottom))!important;
+  width:min(calc(100% - 28px),532px)!important;
+  height:76px;
+  transform:translateX(-50%);
+  display:grid!important;
+  grid-template-columns:repeat(4,1fr)!important;
+  gap:4px;
+  padding:8px!important;
+  border:1px solid rgba(255,255,255,.10)!important;
+  border-radius:27px!important;
+  background:rgba(21,24,31,.82)!important;
+  -webkit-backdrop-filter:blur(26px) saturate(160%);
+  backdrop-filter:blur(26px) saturate(160%);
+  box-shadow:
+    0 20px 55px rgba(0,0,0,.38),
+    inset 0 1px 0 rgba(255,255,255,.05);
+}
+.v7-tabs button{
+  min-width:0;
+  min-height:58px!important;
+  padding:7px 4px!important;
+  border:0!important;
+  border-radius:20px!important;
+  background:transparent!important;
+  color:#737c8c!important;
+  font-size:10.5px!important;
+  line-height:1!important;
+  font-weight:680!important;
+}
+.v7-tabs button.active{
+  background:rgba(103,116,255,.13)!important;
+  color:#f4f6fb!important;
+}
+.v7-tab-icon{
+  font-size:21px!important;
+  line-height:1!important;
+  color:inherit;
+}
+.v7-tabs button.active .v7-tab-icon{
+  color:#7d88ff!important;
+}
+
+/* Evening screen */
+.v9-evening-card{
+  padding:20px;
+  border-radius:26px;
+  border-color:rgba(109,124,255,.16);
+}
+.v9-evening-goal{
+  padding-bottom:18px;
+}
+.v9-evening-goal span{
+  font-size:10px;
+}
+.v9-evening-goal strong{
+  margin-top:7px;
+  font-size:29px;
+  line-height:1;
+}
+.v9-evening-goal small{
+  padding:7px 11px;
+  font-size:10px;
+}
+.v9-routine-lines>div{
+  grid-template-columns:34px 54px 1fr;
+  min-height:64px;
+  gap:10px;
+}
+.v9-routine-lines i{
+  width:28px;
+  height:28px;
+  font-size:10px;
+}
+.v9-routine-lines span{
+  font-size:12px;
+}
+.v9-routine-lines strong{
+  font-size:14px;
+  font-weight:680;
+}
+.v9-evening-cta{
+  margin-top:16px;
+}
+.v9-tomorrow{
+  margin-top:13px;
+  font-size:11px;
+  line-height:1.35;
+}
+
+/* Tracking */
+.v8-switch{
+  padding:4px;
+  border-radius:17px;
+}
+.v8-switch button{
+  min-height:48px;
+  border-radius:14px;
+  font-size:13px;
+  font-weight:720;
+}
+.v8-section-head{
+  padding-top:10px;
+}
+.v8-section-head span{
+  font-size:10px;
+}
+.v8-section-head h2{
+  font-size:30px;
+}
+.v8-section-head>strong{
+  font-size:28px;
+}
+.v7-tracking-hero{
+  padding:20px;
+  border-radius:24px;
+}
+.v8-sleep-meta>span{
+  font-size:11px;
+}
+.v8-sleep-meta>strong{
+  margin-top:6px;
+  font-size:36px;
+}
+.v8-sleep-meta>small{
+  margin-top:5px;
+  font-size:11px;
+}
+.v7-sleep-bars{
+  height:136px;
+  gap:12px;
+  margin-top:24px;
+}
+.v7-sleep-bars i{
+  width:11px;
+  max-height:110px;
+}
+.v7-sleep-bars span{
+  font-size:10px;
+}
+.v7-insight-grid{
+  gap:10px;
+}
+.v7-insight-grid>div{
+  min-height:112px;
+  padding:17px;
+  border-radius:21px;
+}
+.v7-insight-grid span,
+.v7-insight-grid small{
+  font-size:10px;
+}
+.v7-insight-grid strong{
+  margin:7px 0 5px;
+  font-size:25px;
+}
+.v7-observations{
+  padding:18px;
+  border-radius:22px;
+}
+.v7-observations h3{
+  font-size:16px;
+}
+.v7-observations p{
+  grid-template-columns:26px 1fr;
+  gap:8px;
+  padding:12px 0;
+  font-size:12px;
+  line-height:1.48;
+}
+.v8-week-row{
+  grid-template-columns:44px 1fr auto;
+  min-height:68px;
+  padding:0 16px;
+}
+.v8-week-row>span{
+  font-size:11px;
+}
+.v8-week-row>strong{
+  font-size:14px;
+}
+.v8-week-row>small{
+  font-size:10px;
+}
+
+/* Routine settings */
+.v8-settings-list{
+  border-radius:24px;
+}
+.v8-settings-list>label{
+  min-height:82px;
+  padding:15px 17px;
+}
+.v8-settings-list strong{
+  font-size:15px;
+  font-weight:680;
+}
+.v8-settings-list small{
+  margin-top:4px;
+  font-size:11px;
+  line-height:1.35;
+}
+.v8-settings-list input,
+.v8-settings-list select{
+  width:118px;
+  min-height:44px;
+  font-size:18px;
+  font-weight:720;
+}
+.v8-settings-list select{
+  font-size:15px;
+}
+.v8-routine-cta{
+  min-height:58px!important;
+}
+.v8-settings-details>summary,
+.v8-history-details>summary{
+  min-height:52px;
+  padding:16px 18px;
+  font-size:13px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.v8-settings-details>summary:after,
+.v8-history-details>summary:after{
+  float:none;
+  font-size:20px;
+}
+
+/* Profile + generic cards */
+.v7-profile-card{
+  min-height:86px;
+  padding:18px;
+  border-radius:24px;
+}
+.v7-avatar{
+  width:54px;
+  height:54px;
+  border-radius:18px;
+  font-size:22px;
+}
+.v7-profile-card h2{
+  font-size:21px;
+}
+.v7-profile-card p{
+  font-size:11px;
+}
+.v7-profile-card>b{
+  padding:8px 10px;
+  font-size:9px;
+}
+.app-v7 .account-card,
+.app-v7 .integration-card,
+.app-v7 .metric-entry,
+.app-v7 .chart-card,
+.app-v7 .coach-card{
+  border-radius:22px;
+}
+.app-v7 .section-title h3{
+  font-size:18px;
+  letter-spacing:-.02em;
+}
+.app-v7 .section-title span{
+  font-size:11px;
+}
+
+/* Morning check-in */
+.v7-morning-card{
+  padding:42px 20px 32px;
+}
+.v7-morning-card>span{
+  font-size:10px;
+}
+.v7-morning-card h2{
+  margin-top:6px;
+  font-size:31px;
+}
+.v7-sleep-summary{
+  padding:18px;
+  border-radius:20px;
+}
+.v7-sleep-summary span,
+.v7-sleep-summary small{
+  font-size:11px;
+}
+.v7-sleep-summary strong{
+  font-size:33px;
+}
+.v7-morning-question>span{
+  font-size:13px;
+}
+.v7-morning-question button{
+  min-height:50px;
+  border-radius:15px;
+  font-size:14px;
+}
+.v7-morning-note>span{
+  font-size:13px;
+}
+.v7-morning-note textarea{
+  min-height:100px;
+  padding:14px;
+  border-radius:16px;
+  font-size:13px;
+}
+
+/* Day home */
+.v7-day-intro{
+  padding:24px 20px;
+  border-radius:26px;
+}
+.v7-day-intro>span{
+  font-size:10px;
+}
+.v7-main-cta{
+  min-height:58px!important;
+  font-size:15px!important;
+}
+.v7-day-stats{
+  gap:10px;
+  margin-top:10px;
+}
+.v7-day-stats button{
+  min-height:112px;
+  padding:17px;
+  border-radius:21px;
+}
+.v7-day-stats span,
+.v7-day-stats small{
+  font-size:10px;
+}
+.v7-day-stats strong{
+  font-size:26px;
+}
+.v7-coach-note{
+  padding:16px;
+  border-radius:0 16px 16px 0;
+}
+.v7-coach-note>span{
+  font-size:9px;
+}
+.v7-coach-note strong{
+  font-size:14px;
+}
+.v7-coach-note p{
+  margin-top:5px;
+  font-size:11px;
+  line-height:1.45;
+}
+
+/* Inputs and accessory controls */
+.app-v7 input,
+.app-v7 select,
+.app-v7 textarea{
+  font-family:inherit;
+}
+.app-v7 .time-card{
+  min-height:92px;
+}
+.app-v7 .time-card input{
+  min-height:44px;
+}
+.app-v7 .account-actions{
+  gap:8px;
+}
+.app-v7 .account-actions button{
+  min-height:48px;
+}
+
+/* Reduced motion */
+@media(prefers-reduced-motion:reduce){
+  .app-v7 button{
+    transition:none!important;
+  }
+}
+@media(max-width:699px){
+  .app-v7{
+    padding-left:18px;
+    padding-right:18px;
+    padding-bottom:126px;
+  }
+  .v7-evening-title{
+    margin-bottom:2px;
+  }
+  .v7-evening-title h2{
+    font-size:37px;
+  }
+  .v9-page-title h2{
+    font-size:34px;
+  }
+}
