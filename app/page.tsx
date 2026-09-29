@@ -1404,16 +1404,6 @@ export default function Home(){
   const todayWorkout=dueWorkoutId?workouts.find(w=>w.id===dueWorkoutId)??null:null;
   const weekDoneCount=doneWorkoutIds.size;
   const weekTrainingCount=schedule.filter(x=>x.workoutId).length;
-  const homeWeekDays=Array.from({length:7},(_,i)=>{
-    const d=new Date(nowDate);
-    const day=(nowDate.getDay()+6)%7;
-    d.setDate(nowDate.getDate()-day+i);
-    return {
-      short:d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".",""),
-      date:d.getDate(),
-      active:d.toDateString()===nowDate.toDateString()
-    };
-  });
 
   const plannedWakeAt=openSleep
     ? wakeDateForClock(openSleep.lightsOutAt??openSleep.bedAt,plannedWakeTime).getTime()
@@ -1486,6 +1476,16 @@ export default function Home(){
   const avgBedDeviation=bedtimeDeviations.length?bedtimeDeviations.reduce((a,b)=>a+b,0)/bedtimeDeviations.length:0;
   const sleepRegularity=sleep7.length?Math.max(0,Math.min(100,Math.round(100-(avgBedDeviation/120)*100))):0;
   const nowDate=new Date(now);
+  const homeWeekDays=Array.from({length:7},(_,i)=>{
+    const d=new Date(nowDate);
+    const day=(nowDate.getDay()+6)%7;
+    d.setDate(nowDate.getDate()-day+i);
+    return {
+      short:d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".",""),
+      date:d.getDate(),
+      active:d.toDateString()===nowDate.toDateString()
+    };
+  });
   const currentMinutes=nowDate.getHours()*60+nowDate.getMinutes();
   const disconnectParts=disconnectTarget.split(":").map(Number);
   const disconnectMinutes=disconnectParts[0]*60+disconnectParts[1];
