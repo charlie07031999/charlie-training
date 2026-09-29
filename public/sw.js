@@ -33,3 +33,39 @@ self.addEventListener("notificationclick",event=>{
     })
   );
 });
+
+
+const restTimers=new Map();
+
+self.addEventListener("message",event=>{
+  const data=event.data||{};
+  if(data.type==="CANCEL_REST"){
+    for(const timeout of restTimers.values()) clearTimeout(timeout);
+    restTimers.clear();
+    return;
+  }
+  if(data.type!=="SCHEDULE_REST"||!Number.isFinite(data.dueAt)) return;
+
+  for(const timeout of restTimers.values()) clearTimeout(timeout);
+  restTimers.clear();
+
+  const delay=Math.max(0,data.dueAt-Date.now());
+  const timeout=setTimeout(async()=>{
+    try{
+      const windows=await self.clients.matchAll({type:"window",includeUncontrolled:true});
+      const visible=windows.some(client=>client.visibilityState==="visible");
+      if(!visible){
+        await self.registration.showNotification("Repos terminé",{
+          body:"Prochaine série. Repars proprement.",
+          icon:"/icon.svg",
+          badge:"/icon.svg",
+          tag:"rest-finished",
+          data:{url:"/"}
+        });
+      }
+    }catch{}
+    restTimers.clear();
+  },delay);
+
+  restTimers.set("rest",timeout);
+});
