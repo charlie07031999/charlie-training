@@ -197,6 +197,14 @@ function MiniChart({values,suffix=""}:{values:number[];suffix?:string}){
   </div>;
 }
 
+function TabIcon({id}:{id:"today"|"tracking"|"routine"|"profile"}){
+  const common={width:22,height:22,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round" as const,strokeLinejoin:"round" as const,"aria-hidden":true};
+  if(id==="today") return <svg {...common}><path d="M21 12a9 9 0 1 1-9-9 7 7 0 0 0 9 9Z"/><path d="M16.5 3.8c.5.2 1 .5 1.4.8"/></svg>;
+  if(id==="tracking") return <svg {...common}><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19V3"/></svg>;
+  if(id==="routine") return <svg {...common}><path d="M8 6h12"/><path d="M8 12h12"/><path d="M8 18h12"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></svg>;
+  return <svg {...common}><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>;
+}
+
 export default function Home(){
   const [tab,setTab]=useState<"today"|"tracking"|"routine"|"profile">("today");
   const [trackingView,setTrackingView]=useState<"sleep"|"training">("sleep");
@@ -1386,7 +1394,7 @@ export default function Home(){
         ["profile","Profil"]
       ] as const).map(([id,label])=>
         <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>
-          <span className="v7-tab-icon" aria-hidden="true">{id==="today"?"◐":id==="tracking"?"⌁":id==="routine"?"☷":"○"}</span>
+          <span className="v7-tab-icon"><TabIcon id={id}/></span>
           <span>{label}</span>
         </button>
       )}
