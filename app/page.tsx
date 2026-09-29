@@ -477,7 +477,7 @@ export default function Home(){
   }
 
   function stopRestTimer(){
-    stopRestTimer();
+    setRest(0);
     setRestEndAt(null);
     setRestNotificationArmed(false);
     localStorage.removeItem("charlie-rest-end-at");
