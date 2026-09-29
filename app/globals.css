@@ -2816,3 +2816,226 @@ body{
     font-size:34px;
   }
 }
+
+
+/* V11 — workout previews, themes and HealthKit surface */
+.v11-workout-preview{
+  margin-top:12px;
+  padding:18px;
+  border:1px solid rgba(255,255,255,.075);
+  border-radius:24px;
+  background:#11151d;
+}
+.v11-workout-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  padding-bottom:12px;
+}
+.v11-workout-head span{
+  display:block;
+  color:#727c8e;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+.v11-workout-head strong{
+  display:block;
+  margin-top:4px;
+  font-size:18px;
+  letter-spacing:-.025em;
+}
+.v11-workout-head>small{
+  color:#7a8495;
+  font-size:10px;
+}
+.v11-exercise-list{
+  overflow:hidden;
+  border-top:1px solid rgba(255,255,255,.055);
+}
+.v11-exercise-preview{
+  display:grid;
+  grid-template-columns:48px 1fr;
+  gap:12px;
+  align-items:center;
+  min-height:72px;
+  padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.055);
+}
+.v11-exercise-preview:last-child{
+  border-bottom:0;
+}
+.v11-exercise-glyph{
+  display:grid;
+  place-items:center;
+  width:48px;
+  height:48px;
+  border-radius:15px;
+  background:#181e29;
+  color:#8791ff;
+}
+.v11-exercise-glyph svg{
+  width:34px;
+  height:34px;
+}
+.v11-exercise-preview>div:last-child{
+  min-width:0;
+}
+.v11-exercise-preview span{
+  display:block;
+  color:#687284;
+  font-size:8px;
+  font-weight:900;
+}
+.v11-exercise-preview strong{
+  display:block;
+  margin-top:2px;
+  font-size:13px;
+  line-height:1.25;
+}
+.v11-exercise-preview small{
+  display:block;
+  margin-top:3px;
+  color:#707a8a;
+  font-size:10px;
+  line-height:1.35;
+}
+.v11-start-workout{
+  width:100%;
+  min-height:54px!important;
+  margin-top:14px;
+}
+.v11-appearance-control{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:4px;
+  padding:4px;
+  border-radius:17px;
+  background:#11151d;
+  border:1px solid rgba(255,255,255,.06);
+}
+.v11-appearance-control button{
+  min-height:46px;
+  border:0;
+  border-radius:13px;
+  background:transparent;
+  color:#747d8d;
+  font-size:12px;
+  font-weight:720;
+}
+.v11-appearance-control button.active{
+  background:#f0f2f6;
+  color:#11151d;
+}
+.v11-health-card>b{
+  max-width:92px;
+  text-align:right;
+}
+
+/* Light mode */
+.theme-light{
+  --v7-card:#ffffff;
+  --v7-card-soft:#f4f6fa;
+  --v7-line:rgba(18,24,35,.08);
+  --v7-muted:#70798a;
+  color:#12151b;
+  background:#f4f6fa!important;
+}
+.theme-light .v7-tabs{
+  background:rgba(247,248,251,.88)!important;
+  border-color:rgba(18,24,35,.09)!important;
+  box-shadow:0 20px 55px rgba(41,48,65,.18),inset 0 1px 0 rgba(255,255,255,.85)!important;
+}
+.theme-light .v7-tabs button{
+  color:#7b8492!important;
+}
+.theme-light .v7-tabs button.active{
+  background:rgba(92,109,255,.10)!important;
+  color:#18202c!important;
+}
+.theme-light .v7-day-intro,
+.theme-light .v7-day-stats button,
+.theme-light .v7-coach-note,
+.theme-light .v8-switch,
+.theme-light .v7-tracking-hero,
+.theme-light .v7-insight-grid>div,
+.theme-light .v7-observations,
+.theme-light .v8-week-list,
+.theme-light .v8-history-details,
+.theme-light .v8-settings-details,
+.theme-light .v8-settings-list,
+.theme-light .v7-profile-card,
+.theme-light .v11-workout-preview,
+.theme-light .v11-appearance-control,
+.theme-light .account-card,
+.theme-light .integration-card,
+.theme-light .metric-entry,
+.theme-light .chart-card,
+.theme-light .coach-card{
+  background:#fff!important;
+  border-color:rgba(18,24,35,.08)!important;
+  color:#151922;
+}
+.theme-light .v7-day-intro p,
+.theme-light .v7-coach-note p,
+.theme-light .v8-sleep-meta>span,
+.theme-light .v7-insight-grid span,
+.theme-light .v7-insight-grid small,
+.theme-light .v7-observations p,
+.theme-light .v8-week-row>span,
+.theme-light .v8-week-row>small,
+.theme-light .v8-settings-list small,
+.theme-light .v7-profile-card p,
+.theme-light .v11-exercise-preview small,
+.theme-light .v11-workout-head>small{
+  color:#747e8d!important;
+}
+.theme-light .v7-day-intro h2,
+.theme-light .v8-section-head h2,
+.theme-light .v8-section-head>strong,
+.theme-light .v9-page-title h2,
+.theme-light .v7-profile-card h2,
+.theme-light .v11-workout-head strong,
+.theme-light .v11-exercise-preview strong,
+.theme-light .section-title h3{
+  color:#151922!important;
+}
+.theme-light .v8-switch button.active,
+.theme-light .v11-appearance-control button.active{
+  background:#151922;
+  color:white;
+}
+.theme-light .v11-exercise-glyph{
+  background:#f0f3f8;
+  color:#5868ff;
+}
+.theme-light .v8-settings-list input,
+.theme-light .v8-settings-list select{
+  color:#151922;
+}
+.theme-light .v8-week-row,
+.theme-light .v11-exercise-preview{
+  border-bottom-color:rgba(18,24,35,.07);
+}
+.theme-light .v7-sleep-bars span{
+  color:#758091;
+}
+.theme-light .v7-observations p{
+  border-top-color:rgba(18,24,35,.06);
+}
+
+/* Dark mode remains explicit */
+.theme-dark{
+  background:#090c12!important;
+  color:#f4f6fb;
+}
+
+@media(max-width:699px){
+  .v11-workout-preview{
+    padding:16px;
+  }
+  .v11-exercise-preview{
+    grid-template-columns:46px 1fr;
+  }
+}
