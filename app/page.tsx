@@ -197,12 +197,13 @@ function MiniChart({values,suffix=""}:{values:number[];suffix?:string}){
   </div>;
 }
 
-function TabIcon({id}:{id:"today"|"tracking"|"routine"|"profile"}){
+function TabIcon({id}:{id:"home"|"programs"|"exercises"|"analysis"|"more"}){
   const common={width:22,height:22,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round" as const,strokeLinejoin:"round" as const,"aria-hidden":true};
-  if(id==="today") return <svg {...common}><path d="M21 12a9 9 0 1 1-9-9 7 7 0 0 0 9 9Z"/><path d="M16.5 3.8c.5.2 1 .5 1.4.8"/></svg>;
-  if(id==="tracking") return <svg {...common}><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19V3"/></svg>;
-  if(id==="routine") return <svg {...common}><path d="M8 6h12"/><path d="M8 12h12"/><path d="M8 18h12"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></svg>;
-  return <svg {...common}><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>;
+  if(id==="home") return <svg {...common}><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V20h14v-9.5"/><path d="M9.5 20v-6h5v6"/></svg>;
+  if(id==="programs") return <svg {...common}><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/><circle cx="7" cy="5" r="1.5"/><circle cx="14" cy="12" r="1.5"/><circle cx="10" cy="19" r="1.5"/></svg>;
+  if(id==="exercises") return <svg {...common}><path d="M5 9v6"/><path d="M19 9v6"/><path d="M8 7v10"/><path d="M16 7v10"/><path d="M8 12h8"/></svg>;
+  if(id==="analysis") return <svg {...common}><path d="M4 19V10"/><path d="M9 19V6"/><path d="M14 19v-4"/><path d="M19 19V3"/></svg>;
+  return <svg {...common}><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>;
 }
 
 function ExerciseGlyph({exercise}:{exercise:Exercise}){
@@ -216,8 +217,10 @@ function ExerciseGlyph({exercise}:{exercise:Exercise}){
 }
 
 export default function Home(){
-  const [tab,setTab]=useState<"today"|"tracking"|"routine"|"profile">("today");
-  const [trackingView,setTrackingView]=useState<"sleep"|"training">("sleep");
+  const [tab,setTab]=useState<"home"|"programs"|"exercises"|"analysis"|"more">("home");
+  const [trackingView,setTrackingView]=useState<"sleep"|"training">("training");
+  const [exerciseSearch,setExerciseSearch]=useState("");
+  const [exerciseFilter,setExerciseFilter]=useState("Tous");
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
   const [session,setSession]=useState<SessionState|null>(null);
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
@@ -840,7 +843,7 @@ export default function Home(){
     setCoachMode(mode);
     setSession(nextSession);
     pushLiveSession(nextSession,"session_started");
-    setTab("today");
+    setTab("home");
   }
 
   function nextExerciseIndex(s:SessionState,completedIds:string[],deferredIds:string[]){
@@ -1454,11 +1457,36 @@ export default function Home(){
     nowDate.getHours()<13
   );
 
+  const exerciseLibrary=useMemo(()=>{
+    const seen=new Set<string>();
+    return workouts.flatMap(w=>w.exercises).filter(ex=>{
+      if(seen.has(ex.id)) return false;
+      seen.add(ex.id);
+      return true;
+    });
+  },[]);
+  const exerciseCategories=["Tous","Pectoraux","Dos","Jambes","Épaules","Bras","Abdos"];
+  const exerciseCategory=(ex:Exercise)=>{
+    const key=(ex.id+" "+ex.name+" "+ex.target).toLowerCase();
+    if(/pec|bench|chest|développé couché|incline/.test(key)) return "Pectoraux";
+    if(/dos|row|pull|lat|traction/.test(key)) return "Dos";
+    if(/squat|leg|rdl|fente|mollet|ischio|quad/.test(key)) return "Jambes";
+    if(/shoulder|lateral|élévation|épaule/.test(key)) return "Épaules";
+    if(/curl|triceps|biceps|bras/.test(key)) return "Bras";
+    if(/crunch|abs|gainage/.test(key)) return "Abdos";
+    return "Autres";
+  };
+  const filteredExerciseLibrary=exerciseLibrary.filter(ex=>{
+    const matchesSearch=(ex.name+" "+ex.target).toLowerCase().includes(exerciseSearch.trim().toLowerCase());
+    const matchesFilter=exerciseFilter==="Tous"||exerciseCategory(ex)===exerciseFilter;
+    return matchesSearch&&matchesFilter;
+  });
+
   const authAnonymous=Boolean(authUser?.is_anonymous);
   const cloudLabel=cloudLoading?"Chargement":cloudStatus==="ok"?"Synchronisé":cloudStatus==="syncing"?"Synchro…":"À vérifier";
 
   const resolvedAppearance=appearanceMode==="auto"?(isEvening?"dark":"light"):appearanceMode;
-  const activeAppearance=session?"dark":resolvedAppearance;
+  const activeAppearance=resolvedAppearance;
 
   useEffect(()=>{
     document.documentElement.dataset.appTheme=activeAppearance;
@@ -1480,20 +1508,21 @@ export default function Home(){
 
   return <main className={"app-shell app-v7 theme-"+activeAppearance+" "+(session?"gym-mode ":"")+(isEvening?"evening-ui":"day-ui")}>
     {!session&&<>
-      <header className="topbar v7-topbar">
+      <header className="v14-app-header">
         <div>
-          <div className="eyebrow">CHARLIE</div>
-          <h1>{tab==="today"?"Aujourd’hui":tab==="tracking"?"Suivi":tab==="routine"?"Routine":"Profil"}</h1>
+          <span>CHARLIE TRAINING</span>
+          <strong>{tab==="home"?"Bonjour Charlie 👋":tab==="programs"?"Programmes":tab==="exercises"?"Exercices":tab==="analysis"?"Analyse":"Plus"}</strong>
         </div>
-        <div className={"sync-pill v9-global-sync "+cloudStatus}>{cloudLabel}</div>
+        <button className="v14-header-action" onClick={()=>setTab("more")} aria-label="Ouvrir Plus">+</button>
       </header>
 
-      <nav className="tabs v7-tabs">
+      <nav className="tabs v7-tabs v14-tabs">
         {([
-          ["today","Aujourd’hui"],
-          ["tracking","Suivi"],
-          ["routine","Routine"],
-          ["profile","Profil"]
+          ["home","Accueil"],
+          ["programs","Programmes"],
+          ["exercises","Exercices"],
+          ["analysis","Analyse"],
+          ["more","Plus"]
         ] as const).map(([id,label])=>
           <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>
             <span className="v7-tab-icon"><TabIcon id={id}/></span>
@@ -1503,7 +1532,7 @@ export default function Home(){
       </nav>
     </>}
 
-    {tab==="today"&&<section className={session?"today-v5 session-v5":"today-v5 home-v5"}>
+    {tab==="home"&&<section className={session?"today-v5 session-v5":"today-v5 home-v5"}>
       {!session?<>
         {openSleep?.lightsOutAt?
           <div className="v7-night-minimal">
@@ -1515,7 +1544,7 @@ export default function Home(){
           </div>
         :openSleep?
           <div className="v7-routine-focus">
-            <div className="v7-focus-head"><button className="v7-close" onClick={()=>setTab("today")}>×</button><span>2 / 3</span></div>
+            <div className="v7-focus-head"><button className="v7-close" onClick={()=>setTab("home")}>×</button><span>2 / 3</span></div>
             <h2>Préparation</h2>
             <p>Tu es au lit depuis {clock(openSleep.bedAt)}.</p>
             <div className="v7-checklist">
@@ -1581,7 +1610,7 @@ export default function Home(){
                 </div>
               </div>
 
-              <button className="primary v7-full v9-evening-cta" onClick={()=>setTab("routine")}>
+              <button className="primary v7-full v9-evening-cta" onClick={()=>setTab("programs")}>
                 {currentMinutes>=targetBedMinutes?"Aller dormir":"Ouvrir ma routine"}
               </button>
               <div className="v9-tomorrow">Demain · réveil {wakeTarget} · objectif {durationLabel(targetSleepMinutes)}</div>
@@ -1600,12 +1629,12 @@ export default function Home(){
               </div>
 
               <div className="v12-quick-stats">
-                <button onClick={()=>setTab("tracking")}>
+                <button onClick={()=>setTab("analysis")}>
                   <span>Sommeil</span>
                   <strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong>
                   <small>{latestSleep?.energy?"Énergie "+latestSleep.energy+"/5":"Dernière nuit"}</small>
                 </button>
-                <button onClick={()=>{setTrackingView("training");setTab("tracking");}}>
+                <button onClick={()=>{setTrackingView("training");setTab("analysis");}}>
                   <span>Semaine</span>
                   <strong>{weekDoneCount}/{weekTrainingCount}</strong>
                   <small>séances</small>
@@ -1624,7 +1653,7 @@ export default function Home(){
               <button className="primary v12-start-workout" onClick={()=>startWorkout(todayWorkout)}>Démarrer la séance</button>
             </div>}
 
-            <button className="v12-nolan" onClick={()=>setTab("profile")}>
+            <button className="v12-nolan" onClick={()=>setTab("more")}>
               <span>NOLAN</span>
               <div><strong>{autoCoachMode==="tired"?"On allège aujourd’hui.":"Plan normal."}</strong><small>{autoCoachText}</small></div>
               <b>›</b>
@@ -1836,8 +1865,8 @@ export default function Home(){
       </>}
     </section>}
 
-    {tab==="tracking"&&<section className="v8-tracking">
-      <div className="v9-page-title"><span>SUIVI</span><h2>Ton évolution</h2></div>
+    {tab==="analysis"&&<section className="v8-tracking">
+      <div className="v14-page-title"><span>ANALYSE</span><h2>Ta progression</h2><p>Visualise les tendances qui comptent vraiment.</p></div>
       <div className="v8-switch">
         <button className={trackingView==="sleep"?"active":""} onClick={()=>setTrackingView("sleep")}>Sommeil</button>
         <button className={trackingView==="training"?"active":""} onClick={()=>setTrackingView("training")}>Training</button>
@@ -1934,8 +1963,52 @@ export default function Home(){
       </>}
     </section>}
 
-    {tab==="routine"&&<section className="v8-routine">
-      <div className="v9-page-title"><span>ROUTINE</span><h2>Sommeil</h2></div>
+    {tab==="exercises"&&<section className="v14-exercises-screen">
+      <div className="v14-page-title">
+        <span>BIBLIOTHÈQUE</span>
+        <h2>Exercices</h2>
+        <p>Trouve rapidement un mouvement et vois les muscles ciblés.</p>
+      </div>
+
+      <label className="v14-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input value={exerciseSearch} onChange={e=>setExerciseSearch(e.target.value)} placeholder="Rechercher un exercice…"/>
+      </label>
+
+      <div className="v14-chips">
+        {exerciseCategories.map(cat=><button key={cat} className={exerciseFilter===cat?"active":""} onClick={()=>setExerciseFilter(cat)}>{cat}</button>)}
+      </div>
+
+      <div className="v14-exercise-library">
+        {filteredExerciseLibrary.map(ex=><article key={ex.id} className="v14-exercise-card">
+          <div className="v14-exercise-visual"><ExerciseGlyph exercise={ex}/></div>
+          <div className="v14-exercise-copy">
+            <strong>{ex.name}</strong>
+            <span>{exerciseCategory(ex)} · {ex.target}</span>
+            <small>{ex.cue}</small>
+          </div>
+          <button aria-label={"Voir "+ex.name}>›</button>
+        </article>)}
+      </div>
+    </section>}
+
+    {tab==="programs"&&<section className="v14-programs-screen">
+      <div className="v14-page-title">
+        <span>PROGRAMME ACTUEL</span>
+        <h2>Ta semaine</h2>
+        <p>Ton plan d’entraînement et ta récupération au même endroit.</p>
+      </div>
+      <div className="v14-program-week">
+        {schedule.map((item,i)=>{
+          const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
+          const active=i===todayIndex;
+          return <button key={item.label} className={(done?"done ":"")+(active?"active":"")} disabled={!item.workoutId} onClick={()=>item.workoutId&&setSelectedWorkoutId(item.workoutId)}>
+            <span>{item.label}</span><strong>{item.name}</strong><small>{done?"Fait":active?"Aujourd’hui":item.workoutId?"À venir":"Repos"}</small>
+          </button>;
+        })}
+      </div>
+      {todayWorkout&&<button className="primary v14-program-cta" onClick={()=>startWorkout(todayWorkout)}>Démarrer {todayWorkout.title}</button>}
+      <div className="v14-subsection-title"><span>RÉCUPÉRATION</span><strong>Routine sommeil</strong></div>
       <div className="v8-section-head v8-routine-title">
         <div><span>MA ROUTINE</span><h2>Sommeil</h2></div>
         <strong>{durationLabel(targetSleepMinutes)}</strong>
@@ -1989,8 +2062,8 @@ export default function Home(){
       </details>
     </section>}
 
-    {tab==="profile"&&<section className="v7-profile">
-      <div className="v9-page-title"><span>PROFIL</span><h2>Réglages</h2></div>
+    {tab==="more"&&<section className="v7-profile">
+      <div className="v14-page-title"><span>PLUS</span><h2>Réglages & santé</h2><p>Compte, apparence, données et intégrations.</p></div>
       <div className="v7-profile-card">
         <div className="v7-avatar">C</div>
         <div><span>PROFIL</span><h2>Charlie</h2><p>{authAnonymous?"Compte local anonyme":"Compte synchronisé"}</p></div>
