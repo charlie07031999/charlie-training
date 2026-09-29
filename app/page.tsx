@@ -205,6 +205,16 @@ function TabIcon({id}:{id:"today"|"tracking"|"routine"|"profile"}){
   return <svg {...common}><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>;
 }
 
+function ExerciseGlyph({exercise}:{exercise:Exercise}){
+  const key=(exercise.id+" "+exercise.name).toLowerCase();
+  const common={viewBox:"0 0 64 64",fill:"none",stroke:"currentColor",strokeWidth:3,strokeLinecap:"round" as const,strokeLinejoin:"round" as const,"aria-hidden":true};
+  if(/row|pulldown|curl|pull|lat/.test(key)) return <svg {...common}><circle cx="32" cy="12" r="5"/><path d="M31 18v16l-9 12"/><path d="M32 25l14-7"/><path d="M19 18h28"/><path d="M32 34l10 13"/></svg>;
+  if(/squat|press|leg|rdl|fente/.test(key)) return <svg {...common}><circle cx="30" cy="11" r="5"/><path d="M29 17l-4 16 12 7"/><path d="M25 33l-10 11"/><path d="M37 40l8 11"/><path d="M16 23h29"/><path d="M20 20v6M41 20v6"/></svg>;
+  if(/cardio|run|foot|course/.test(key)) return <svg {...common}><circle cx="34" cy="10" r="5"/><path d="M31 17l-7 12 10 6"/><path d="M27 22l12 5 9-6"/><path d="M34 35l-12 14"/><path d="M34 35l13 10"/></svg>;
+  if(/crunch|abs|gainage/.test(key)) return <svg {...common}><circle cx="18" cy="35" r="5"/><path d="M23 35h15l8-10"/><path d="M37 35l10 12"/><path d="M12 48h40"/></svg>;
+  return <svg {...common}><circle cx="32" cy="11" r="5"/><path d="M32 17v18"/><path d="M20 24h24"/><path d="M20 20v8M44 20v8"/><path d="M32 35l-10 15"/><path d="M32 35l10 15"/></svg>;
+}
+
 export default function Home(){
   const [tab,setTab]=useState<"today"|"tracking"|"routine"|"profile">("today");
   const [trackingView,setTrackingView]=useState<"sleep"|"training">("sleep");
@@ -219,6 +229,7 @@ export default function Home(){
   const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error">("idle");
 
   const [rest,setRest]=useState(0);
+  const [restEndAt,setRestEndAt]=useState<number|null>(null);
   const [restNotificationArmed,setRestNotificationArmed]=useState(false);
   const [reps,setReps]=useState("8");
   const [weight,setWeight]=useState("");
@@ -245,6 +256,7 @@ export default function Home(){
   const [pushReady,setPushReady]=useState(false);
   const [workoutReminderTime,setWorkoutReminderTime]=useState("08:00");
   const [creatineReminderTime,setCreatineReminderTime]=useState("12:00");
+  const [appearanceMode,setAppearanceMode]=useState<"auto"|"light"|"dark">("auto");
   const [prefsLoaded,setPrefsLoaded]=useState(false);
 
   const [metricWeight,setMetricWeight]=useState("");
@@ -315,6 +327,7 @@ export default function Home(){
       setPrepTarget(state.preferences.prep_target.slice(0,5));
       setDisconnectTarget((state.preferences.disconnect_target??"22:00").slice(0,5));
       setSleepGoalMinutes(Number(state.preferences.sleep_goal_minutes??510));
+      setAppearanceMode((state.preferences.appearance_mode??"auto") as "auto"|"light"|"dark");
       setNotificationsEnabled(Boolean(state.preferences.notifications_enabled));
       setWorkoutReminderTime(state.preferences.workout_reminder_time.slice(0,5));
       setCreatineReminderTime(state.preferences.creatine_reminder_time.slice(0,5));
@@ -400,6 +413,7 @@ export default function Home(){
         prep_target:prepTarget,
         disconnect_target:disconnectTarget,
         sleep_goal_minutes:sleepGoalMinutes,
+        appearance_mode:appearanceMode,
         notifications_enabled:notificationsEnabled,
         workout_reminder_time:workoutReminderTime,
         creatine_reminder_time:creatineReminderTime
@@ -407,15 +421,82 @@ export default function Home(){
     },500);
     return()=>clearTimeout(t);
   },[
-    prefsLoaded,sleepTarget,wakeTarget,prepTarget,disconnectTarget,sleepGoalMinutes,notificationsEnabled,
+    prefsLoaded,sleepTarget,wakeTarget,prepTarget,disconnectTarget,sleepGoalMinutes,appearanceMode,notificationsEnabled,
     workoutReminderTime,creatineReminderTime
   ]);
 
   useEffect(()=>{
-    if(rest<=0) return;
-    const t=setInterval(()=>setRest(v=>Math.max(0,v-1)),1000);
-    return()=>clearInterval(t);
-  },[rest]);
+    const saved=Number(localStorage.getItem("charlie-rest-end-at")||0);
+    if(saved>Date.now()){
+      setRestEndAt(saved);
+      setRest(Math.max(0,Math.ceil((saved-Date.now())/1000)));
+      setRestNotificationArmed(true);
+    }else{
+      localStorage.removeItem("charlie-rest-end-at");
+    }
+  },[]);
+
+  useEffect(()=>{
+    if(!restEndAt) return;
+    localStorage.setItem("charlie-rest-end-at",String(restEndAt));
+    const tick=()=>{
+      const remaining=Math.max(0,Math.ceil((restEndAt-Date.now())/1000));
+      setRest(remaining);
+      if(remaining<=0){
+        setRestEndAt(null);
+        localStorage.removeItem("charlie-rest-end-at");
+      }
+    };
+    tick();
+    const t=setInterval(tick,250);
+    document.addEventListener("visibilitychange",tick);
+    return()=>{
+      clearInterval(t);
+      document.removeEventListener("visibilitychange",tick);
+    };
+  },[restEndAt]);
+
+  function scheduleRestNotification(dueAt:number){
+    if(!notificationsEnabled || typeof navigator==="undefined" || !("serviceWorker" in navigator)) return;
+    void navigator.serviceWorker.ready.then(reg=>{
+      reg.active?.postMessage({type:"SCHEDULE_REST",dueAt});
+    }).catch(()=>{});
+  }
+
+  function startRestTimer(seconds:number){
+    const safe=Math.max(0,Math.round(seconds));
+    if(!safe){
+      stopRestTimer();
+      return;
+    }
+    const dueAt=Date.now()+safe*1000;
+    setRest(safe);
+    setRestEndAt(dueAt);
+    setRestNotificationArmed(true);
+    scheduleRestNotification(dueAt);
+  }
+
+  function stopRestTimer(){
+    stopRestTimer();
+    setRestEndAt(null);
+    setRestNotificationArmed(false);
+    localStorage.removeItem("charlie-rest-end-at");
+    if(typeof navigator!=="undefined"&&"serviceWorker" in navigator){
+      void navigator.serviceWorker.ready.then(reg=>reg.active?.postMessage({type:"CANCEL_REST"})).catch(()=>{});
+    }
+  }
+
+  function adjustActiveRest(delta:number){
+    if(!restEndAt) return;
+    const dueAt=Math.max(Date.now(),restEndAt+delta*1000);
+    if(dueAt<=Date.now()){
+      stopRestTimer();
+      return;
+    }
+    setRestEndAt(dueAt);
+    setRest(Math.max(0,Math.ceil((dueAt-Date.now())/1000)));
+    scheduleRestNotification(dueAt);
+  }
 
   function pulse(pattern:number|number[]){
     try{ (navigator as any).vibrate?.(pattern); }catch{}
@@ -793,7 +874,7 @@ export default function Home(){
     setCompletedSessions(next);
     localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
     setSession(null);
-    setRest(0);
+    stopRestTimer();
     setCloudStatus("syncing");
 
     void (async()=>{
@@ -843,8 +924,7 @@ export default function Home(){
     const restTarget=session.restOverrides[currentExercise.id]??currentExercise.restSeconds;
 
     if(restTarget>0){
-      setRest(restTarget);
-      setRestNotificationArmed(true);
+      startRestTimer(restTarget);
     }
 
     if(nextSet>=target.sets){
@@ -1018,7 +1098,7 @@ export default function Home(){
     }else{
       deleteSet(latest.exId,latest.index);
     }
-    setRest(0);
+    stopRestTimer();
   }
 
   function skipMachine(){
@@ -1035,7 +1115,7 @@ export default function Home(){
     };
     setSession(nextSession);
     pushLiveSession(nextSession,"exercise_deferred");
-    setRest(0);
+    stopRestTimer();
   }
 
   function changeRestTarget(delta:number){
@@ -1047,7 +1127,7 @@ export default function Home(){
       restOverrides:{...session.restOverrides,[currentExercise.id]:next}
     };
     setSession(nextSession);
-    if(rest>0) setRest(next);
+    if(rest>0) startRestTimer(next);
   }
 
   function setExactRestTarget(seconds:number){
@@ -1058,14 +1138,14 @@ export default function Home(){
       restOverrides:{...session.restOverrides,[currentExercise.id]:next}
     };
     setSession(nextSession);
-    if(rest>0) setRest(next);
+    if(rest>0) startRestTimer(next);
   }
 
   function abandonWorkout(){
     if(!session) return;
     const id=session.clientSessionId;
     setSession(null);
-    setRest(0);
+    stopRestTimer();
     void clearLiveWorkout(id).then(result=>setCloudStatus(result.ok?"ok":"error"));
   }
 
@@ -1377,7 +1457,9 @@ export default function Home(){
   const authAnonymous=Boolean(authUser?.is_anonymous);
   const cloudLabel=cloudLoading?"Chargement":cloudStatus==="ok"?"Synchronisé":cloudStatus==="syncing"?"Synchro…":"À vérifier";
 
-  return <main className={"app-shell app-v7 "+(session?"gym-mode ":"")+(isEvening?"evening-ui":"day-ui")}>
+  const resolvedAppearance=appearanceMode==="auto"?(isEvening?"dark":"light"):appearanceMode;
+
+  return <main className={"app-shell app-v7 theme-"+resolvedAppearance+" "+(session?"gym-mode ":"")+(isEvening?"evening-ui":"day-ui")}>
     <header className={"topbar v7-topbar "+(session?"gym-topbar":"")}>
       <div>
         <div className="eyebrow">CHARLIE</div>
@@ -1501,6 +1583,17 @@ export default function Home(){
             <div className="v7-coach-note">
               <span>NOLAN</span><strong>{autoCoachMode==="tired"?"On allège aujourd’hui.":"Plan normal."}</strong><p>{autoCoachText}</p>
             </div>
+
+            {todayWorkout&&<div className="v11-workout-preview">
+              <div className="v11-workout-head"><div><span>SÉANCE DU JOUR</span><strong>{todayWorkout.title}</strong></div><small>{todayWorkout.exercises.length} exercices</small></div>
+              <div className="v11-exercise-list">
+                {todayWorkout.exercises.map((ex,i)=><div className="v11-exercise-preview" key={ex.id}>
+                  <div className="v11-exercise-glyph"><ExerciseGlyph exercise={ex}/></div>
+                  <div><span>{String(i+1).padStart(2,"0")}</span><strong>{ex.name}</strong><small>{ex.target}</small></div>
+                </div>)}
+              </div>
+              <button className="primary v11-start-workout" onClick={()=>startWorkout(todayWorkout)}>Démarrer cette séance</button>
+            </div>}
 
             <div className="section-title"><h3>Cette semaine</h3><span>{weekDoneCount}/{weekTrainingCount}</span></div>
             <div className="week-mini-strip">
@@ -1905,6 +1998,19 @@ export default function Home(){
         <div className="chart-card"><strong>Tour de taille</strong><MiniChart values={waistSeries} suffix=" cm"/></div>
       </div>
 
+      <div className="section-title"><h3>Affichage</h3><span>interface</span></div>
+      <div className="v11-appearance-control">
+        {(["auto","light","dark"] as const).map(mode=><button key={mode} className={appearanceMode===mode?"active":""} onClick={()=>setAppearanceMode(mode)}>
+          {mode==="auto"?"Auto":mode==="light"?"Jour":"Nuit"}
+        </button>)}
+      </div>
+
+      <div className="section-title"><h3>Apple Santé</h3><span>HealthKit</span></div>
+      <div className="integration-card v11-health-card">
+        <div><strong>Synchronisation Santé</strong><span>Lecture/écriture sommeil, poids, fréquence cardiaque, entraînements et énergie dès que l’app iPhone native est installée.</span></div>
+        <b>Native requise</b>
+      </div>
+
       <div className="section-title"><h3>App & données</h3><span>Supabase</span></div>
       <div className={"integration-card "+(isCloudConfigured?"connected":"")}>
         <div><strong>Cloud privé</strong><span>Séances, nuits, mensurations et préférences sont synchronisées à l’ouverture.</span></div>
@@ -1936,9 +2042,9 @@ export default function Home(){
         <small>{currentExercise?.name??currentWorkout.title}</small>
       </div>
       <div>
-        <button onClick={()=>setRest(v=>Math.max(0,v-15))}>−15</button>
-        <button onClick={()=>setRest(v=>v+15)}>+15</button>
-        <button className="skip" onClick={()=>setRest(0)}>Go</button>
+        <button onClick={()=>adjustActiveRest(-15)}>−15</button>
+        <button onClick={()=>adjustActiveRest(15)}>+15</button>
+        <button className="skip" onClick={stopRestTimer}>Go</button>
       </div>
     </div>}
 
