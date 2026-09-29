@@ -1459,6 +1459,24 @@ export default function Home(){
 
   const resolvedAppearance=appearanceMode==="auto"?(isEvening?"dark":"light"):appearanceMode;
 
+  useEffect(()=>{
+    document.documentElement.dataset.appTheme=resolvedAppearance;
+    document.documentElement.style.colorScheme=resolvedAppearance;
+    document.body.dataset.appTheme=resolvedAppearance;
+    const color=resolvedAppearance==="light"?"#f4f6fa":"#090c12";
+    let meta=document.querySelector('meta[name="theme-color"]') as HTMLMetaElement|null;
+    if(!meta){
+      meta=document.createElement("meta");
+      meta.name="theme-color";
+      document.head.appendChild(meta);
+    }
+    meta.content=color;
+    return()=>{
+      delete document.documentElement.dataset.appTheme;
+      delete document.body.dataset.appTheme;
+    };
+  },[resolvedAppearance]);
+
   return <main className={"app-shell app-v7 theme-"+resolvedAppearance+" "+(session?"gym-mode ":"")+(isEvening?"evening-ui":"day-ui")}>
     <header className={"topbar v7-topbar "+(session?"gym-topbar":"")}>
       <div>
@@ -1567,46 +1585,49 @@ export default function Home(){
             </div>
           </div>
         :
-          <div className="v7-day-home">
-            <div className="v7-day-intro">
-              <span>BONJOUR CHARLIE</span>
-              <h2>{todayWorkout?todayWorkout.title:"Récupération"}</h2>
-              <p>{todayWorkout?todayWorkout.subtitle:"Pas de séance obligatoire aujourd’hui."}</p>
-              {todayWorkout&&<button className="primary v7-main-cta" onClick={()=>startWorkout(todayWorkout)}>Démarrer la séance</button>}
+          <div className="v12-day-home">
+            <div className="v12-day-summary">
+              <span className="v12-greeting">BONJOUR CHARLIE</span>
+              <div className="v12-title-row">
+                <div>
+                  <h2>{todayWorkout?todayWorkout.title:"Récupération"}</h2>
+                  <p>{todayWorkout?todayWorkout.subtitle:"Pas de séance obligatoire aujourd’hui."}</p>
+                </div>
+                {todayWorkout&&<span className="v12-exercise-count">{todayWorkout.exercises.length}<small>exos</small></span>}
+              </div>
+
+              <div className="v12-quick-stats">
+                <button onClick={()=>setTab("tracking")}>
+                  <span>Sommeil</span>
+                  <strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong>
+                  <small>{latestSleep?.energy?"Énergie "+latestSleep.energy+"/5":"Dernière nuit"}</small>
+                </button>
+                <button onClick={()=>{setTrackingView("training");setTab("tracking");}}>
+                  <span>Semaine</span>
+                  <strong>{weekDoneCount}/{weekTrainingCount}</strong>
+                  <small>séances</small>
+                </button>
+              </div>
             </div>
 
-            <div className="v7-day-stats">
-              <button onClick={()=>setTab("tracking")}><span>Sommeil</span><strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong><small>{latestSleep?.energy?"Énergie "+latestSleep.energy+"/5":"Dernière nuit"}</small></button>
-              <button onClick={()=>setTab("tracking")}><span>Semaine</span><strong>{weekDoneCount}/{weekTrainingCount}</strong><small>séances réalisées</small></button>
-            </div>
-
-            <div className="v7-coach-note">
-              <span>NOLAN</span><strong>{autoCoachMode==="tired"?"On allège aujourd’hui.":"Plan normal."}</strong><p>{autoCoachText}</p>
-            </div>
-
-            {todayWorkout&&<div className="v11-workout-preview">
-              <div className="v11-workout-head"><div><span>SÉANCE DU JOUR</span><strong>{todayWorkout.title}</strong></div><small>{todayWorkout.exercises.length} exercices</small></div>
+            {todayWorkout&&<div className="v12-workout-card">
+              <div className="v12-workout-label"><span>SÉANCE DU JOUR</span><small>{todayWorkout.title}</small></div>
               <div className="v11-exercise-list">
                 {todayWorkout.exercises.map((ex,i)=><div className="v11-exercise-preview" key={ex.id}>
                   <div className="v11-exercise-glyph"><ExerciseGlyph exercise={ex}/></div>
                   <div><span>{String(i+1).padStart(2,"0")}</span><strong>{ex.name}</strong><small>{ex.target}</small></div>
                 </div>)}
               </div>
-              <button className="primary v11-start-workout" onClick={()=>startWorkout(todayWorkout)}>Démarrer cette séance</button>
+              <button className="primary v12-start-workout" onClick={()=>startWorkout(todayWorkout)}>Démarrer la séance</button>
             </div>}
 
-            <div className="section-title"><h3>Cette semaine</h3><span>{weekDoneCount}/{weekTrainingCount}</span></div>
-            <div className="week-mini-strip">
-              {schedule.filter(item=>item.workoutId).map(item=>{
-                const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
-                const active=item.workoutId===todayWorkout?.id;
-                return <div key={item.label} className={"week-mini-day "+(done?"done ":"")+(active?"active":"")}>
-                  <span>{item.label}</span><i/>
-                </div>;
-              })}
-            </div>
+            <button className="v12-nolan" onClick={()=>setTab("profile")}>
+              <span>NOLAN</span>
+              <div><strong>{autoCoachMode==="tired"?"On allège aujourd’hui.":"Plan normal."}</strong><small>{autoCoachText}</small></div>
+              <b>›</b>
+            </button>
 
-            <details className="workout-switcher v7-switcher">
+            <details className="workout-switcher v12-switcher">
               <summary>Changer de séance</summary>
               <div className="workout-switcher-body">
                 <select value={selectedWorkoutId} onChange={e=>setSelectedWorkoutId(e.target.value)}>
