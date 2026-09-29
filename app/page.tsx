@@ -216,6 +216,38 @@ function ExerciseGlyph({exercise}:{exercise:Exercise}){
   return <svg {...common}><circle cx="32" cy="11" r="5"/><path d="M32 17v18"/><path d="M20 24h24"/><path d="M20 20v8M44 20v8"/><path d="M32 35l-10 15"/><path d="M32 35l10 15"/></svg>;
 }
 
+function ExerciseArt({exercise,large=false}:{exercise:Exercise;large?:boolean}){
+  const key=(exercise.id+" "+exercise.name+" "+exercise.target).toLowerCase();
+  const chest=/pec|bench|chest|développé|incline/.test(key);
+  const back=/dos|row|pull|lat|traction/.test(key);
+  const legs=/squat|leg|rdl|fente|ischio|quad/.test(key);
+  const shoulders=/shoulder|lateral|élévation|épaule/.test(key);
+  const arms=/curl|triceps|biceps|bras/.test(key);
+  return <svg className={large?"exercise-art large":"exercise-art"} viewBox="0 0 320 220" role="img" aria-label={"Illustration "+exercise.name}>
+    <defs>
+      <linearGradient id={"skin-"+exercise.id} x1="0" x2="1"><stop stopColor="#d3d8df"/><stop offset="1" stopColor="#9fa8b5"/></linearGradient>
+      <linearGradient id={"accent-"+exercise.id} x1="0" x2="1"><stop stopColor="#ff765e"/><stop offset="1" stopColor="#ee4339"/></linearGradient>
+    </defs>
+    <rect x="34" y="163" width="248" height="10" rx="5" fill="#c6ccd4"/>
+    <rect x="68" y="173" width="8" height="28" rx="4" fill="#aeb6c1"/>
+    <rect x="244" y="173" width="8" height="28" rx="4" fill="#aeb6c1"/>
+    <circle cx="163" cy="62" r="18" fill={"url(#skin-"+exercise.id+")"}/>
+    <path d="M148 81 C136 100 135 126 145 153 L179 153 C187 125 185 101 176 82 Z" fill={"url(#skin-"+exercise.id+")"}/>
+    <path d="M146 94 L105 117 L111 128 L152 112" fill={"url(#skin-"+exercise.id+")"}/>
+    <path d="M178 94 L219 117 L213 128 L174 112" fill={"url(#skin-"+exercise.id+")"}/>
+    <path d="M151 151 L126 186 L139 191 L163 160" fill={"url(#skin-"+exercise.id+")"}/>
+    <path d="M176 151 L197 187 L184 192 L160 160" fill={"url(#skin-"+exercise.id+")"}/>
+    {chest&&<path d="M147 91 Q162 82 178 91 L175 111 Q162 119 149 111 Z" fill={"url(#accent-"+exercise.id+")"} opacity=".95"/>}
+    {back&&<path d="M144 91 Q162 78 180 91 L175 129 Q161 138 147 127 Z" fill={"url(#accent-"+exercise.id+")"} opacity=".95"/>}
+    {legs&&<><path d="M148 145 L163 155 L140 188 L127 184 Z" fill={"url(#accent-"+exercise.id+")"}/><path d="M174 145 L160 157 L184 190 L198 185 Z" fill={"url(#accent-"+exercise.id+")"}/></>}
+    {shoulders&&<><circle cx="144" cy="95" r="9" fill={"url(#accent-"+exercise.id+")"}/><circle cx="180" cy="95" r="9" fill={"url(#accent-"+exercise.id+")"}/></>}
+    {arms&&<><path d="M137 100 L106 117 L112 130 L145 113 Z" fill={"url(#accent-"+exercise.id+")"}/><path d="M188 101 L218 117 L212 130 L179 113 Z" fill={"url(#accent-"+exercise.id+")"}/></>}
+    <path d="M87 113 H235" stroke="#343b46" strokeWidth="7" strokeLinecap="round"/>
+    <circle cx="83" cy="113" r="20" fill="#262c35"/><circle cx="239" cy="113" r="20" fill="#262c35"/>
+    <circle cx="83" cy="113" r="12" fill="#4a515b"/><circle cx="239" cy="113" r="12" fill="#4a515b"/>
+  </svg>;
+}
+
 export default function Home(){
   const [tab,setTab]=useState<"home"|"programs"|"exercises"|"analysis"|"more">("home");
   const [trackingView,setTrackingView]=useState<"sleep"|"training">("training");
@@ -1372,6 +1404,16 @@ export default function Home(){
   const todayWorkout=dueWorkoutId?workouts.find(w=>w.id===dueWorkoutId)??null:null;
   const weekDoneCount=doneWorkoutIds.size;
   const weekTrainingCount=schedule.filter(x=>x.workoutId).length;
+  const homeWeekDays=Array.from({length:7},(_,i)=>{
+    const d=new Date(nowDate);
+    const day=(nowDate.getDay()+6)%7;
+    d.setDate(nowDate.getDate()-day+i);
+    return {
+      short:d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".",""),
+      date:d.getDate(),
+      active:d.toDateString()===nowDate.toDateString()
+    };
+  });
 
   const plannedWakeAt=openSleep
     ? wakeDateForClock(openSleep.lightsOutAt??openSleep.bedAt,plannedWakeTime).getTime()
@@ -1485,7 +1527,7 @@ export default function Home(){
   const authAnonymous=Boolean(authUser?.is_anonymous);
   const cloudLabel=cloudLoading?"Chargement":cloudStatus==="ok"?"Synchronisé":cloudStatus==="syncing"?"Synchro…":"À vérifier";
 
-  const resolvedAppearance=appearanceMode==="auto"?(isEvening?"dark":"light"):appearanceMode;
+  const resolvedAppearance=appearanceMode==="dark"?"dark":"light";
   const activeAppearance=resolvedAppearance;
 
   useEffect(()=>{
@@ -1617,57 +1659,51 @@ export default function Home(){
             </div>
           </div>
         :
-          <div className="v12-day-home">
-            <div className="v12-day-summary">
-              <span className="v12-greeting">BONJOUR CHARLIE</span>
-              <div className="v12-title-row">
-                <div>
-                  <h2>{todayWorkout?todayWorkout.title:"Récupération"}</h2>
-                  <p>{todayWorkout?todayWorkout.subtitle:"Pas de séance obligatoire aujourd’hui."}</p>
-                </div>
-                {todayWorkout&&<span className="v12-exercise-count">{todayWorkout.exercises.length}<small>exos</small></span>}
-              </div>
+          <div className="v15-home">
+            <div className="v15-calendar">
+              {homeWeekDays.map(day=><div key={day.short} className={day.active?"active":""}><span>{day.short}</span><strong>{day.date}</strong></div>)}
+            </div>
 
-              <div className="v12-quick-stats">
-                <button onClick={()=>setTab("analysis")}>
-                  <span>Sommeil</span>
-                  <strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong>
-                  <small>{latestSleep?.energy?"Énergie "+latestSleep.energy+"/5":"Dernière nuit"}</small>
-                </button>
-                <button onClick={()=>{setTrackingView("training");setTab("analysis");}}>
-                  <span>Semaine</span>
-                  <strong>{weekDoneCount}/{weekTrainingCount}</strong>
-                  <small>séances</small>
-                </button>
+            <div className="v15-workout-hero">
+              <div className="v15-hero-copy">
+                <span>SÉANCE DU JOUR</span>
+                <h2>{todayWorkout?.title??"Récupération"}</h2>
+                <p>{todayWorkout?.subtitle??"Repos et récupération aujourd’hui."}</p>
+                {todayWorkout&&<div className="v15-hero-meta"><span>◷ ~45 min</span><span>⌁ {todayWorkout.exercises.length} exercices</span></div>}
+              </div>
+              {todayWorkout&&<div className="v15-hero-art"><ExerciseArt exercise={todayWorkout.exercises[0]} large/></div>}
+              {todayWorkout&&<button className="v15-hero-arrow" onClick={()=>startWorkout(todayWorkout)}>→</button>}
+            </div>
+
+            <div className="v15-health-row">
+              <button onClick={()=>{setTrackingView("sleep");setTab("analysis");}}>
+                <div><span>Sommeil</span><strong>{latestSleepMinutes?durationLabel(latestSleepMinutes):"—"}</strong><small>{latestSleep?.energy?"+ énergie "+latestSleep.energy+"/5":"Dernière nuit"}</small></div>
+                <i>☾</i>
+              </button>
+              <button onClick={()=>{setTrackingView("training");setTab("analysis");}}>
+                <div><span>Séances</span><strong>{weekDoneCount}/{weekTrainingCount}</strong><small>cette semaine</small></div>
+                <i>↗</i>
+              </button>
+            </div>
+
+            <div className="v15-progress-card">
+              <div className="v15-progress-head"><strong>Progression hebdo</strong><span>{weekDoneCount}/{weekTrainingCount}<small> séances</small></span></div>
+              <div className="v15-week-bars">
+                {schedule.filter(x=>x.workoutId).map((item,i)=>{
+                  const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
+                  const active=item.workoutId===todayWorkout?.id;
+                  return <div key={item.label}><i className={(done?"done ":"")+(active?"active":"")}/><span>{item.label.charAt(0)}</span></div>;
+                })}
               </div>
             </div>
 
-            {todayWorkout&&<div className="v12-workout-card">
-              <div className="v12-workout-label"><span>SÉANCE DU JOUR</span><small>{todayWorkout.title}</small></div>
-              <div className="v11-exercise-list">
-                {todayWorkout.exercises.map((ex,i)=><div className="v11-exercise-preview" key={ex.id}>
-                  <div className="v11-exercise-glyph"><ExerciseGlyph exercise={ex}/></div>
-                  <div><span>{String(i+1).padStart(2,"0")}</span><strong>{ex.name}</strong><small>{ex.target}</small></div>
-                </div>)}
-              </div>
-              <button className="primary v12-start-workout" onClick={()=>startWorkout(todayWorkout)}>Démarrer la séance</button>
-            </div>}
+            {todayWorkout&&<button className="primary v15-main-cta" onClick={()=>startWorkout(todayWorkout)}>Démarrer la séance <span>→</span></button>}
 
-            <button className="v12-nolan" onClick={()=>setTab("more")}>
-              <span>NOLAN</span>
-              <div><strong>{autoCoachMode==="tired"?"On allège aujourd’hui.":"Plan normal."}</strong><small>{autoCoachText}</small></div>
-              <b>›</b>
+            <button className="v15-coach-strip" onClick={()=>setTab("more")}>
+              <div className="v15-coach-logo">C</div>
+              <div><strong>Coach Charlie</strong><small>{autoCoachMode==="tired"?"On allège aujourd’hui.":autoCoachText}</small></div>
+              <span>›</span>
             </button>
-
-            <details className="workout-switcher v12-switcher">
-              <summary>Changer de séance</summary>
-              <div className="workout-switcher-body">
-                <select value={selectedWorkoutId} onChange={e=>setSelectedWorkoutId(e.target.value)}>
-                  {workouts.map(w=><option key={w.id} value={w.id}>{w.title}</option>)}
-                </select>
-                <button className="secondary" onClick={()=>startWorkout(selectedWorkout)}>Démarrer</button>
-              </div>
-            </details>
           </div>
         }
       </>:currentWorkout.id==="cardio"?<>
@@ -1685,27 +1721,33 @@ export default function Home(){
           <button className="ghost danger" onClick={()=>confirm("Annuler cette séance ?")&&abandonWorkout()}>Annuler</button>
         </div>
       </>:<>
-        <div className="session-head">
-          <div>
-            <div className="eyebrow">{currentWorkout.title} · {session.coachMode.toUpperCase()}</div>
-            <h2>{currentExercise?.name}</h2>
-            <p>{currentExercise?.target}</p>
-          </div>
-          <div className="session-progress">{session.exerciseIndex+1}/{currentWorkout.exercises.length}</div>
+        <div className="v15-session-top">
+          <button className="v15-back" onClick={()=>confirm("Quitter la séance ?")&&abandonWorkout()}>‹</button>
+          <strong>{currentExercise?.name}</strong>
+          <button className="v15-menu">•••</button>
         </div>
 
-        <div className="session-track" aria-label="Progression de la séance">
-          <i style={{width:sessionProgress+"%"}}/>
+        <div className="v15-session-tabs">
+          <button className="active">Série {session.setIndex+1}/{effectiveTarget().sets}</button>
+          <button>Historique</button>
+          <button>Notes</button>
         </div>
 
-        <div className="live-strip">
-          <div><span>Temps</span><strong>{formatTimer(elapsed)}</strong></div>
-          <div><span>Finis</span><strong>{session.completedIds.length}</strong></div>
-          <div><span>En attente</span><strong>{session.deferredIds.length}</strong></div>
-        </div>
-        <div className="live-cloud-note">LIVE · chaque série validée est envoyée à Supabase pour Nolan.</div>
+        {currentExercise&&<div className="v15-exercise-stage">
+          <ExerciseArt exercise={currentExercise} large/>
+          <div className="v15-muscle-chips"><span>{currentExercise.target}</span><span>{currentWorkout.title}</span></div>
+        </div>}
 
-        {currentExercise&&<div className="target-card">
+        <div className="v15-session-cue">{currentExercise?.cue}</div>
+
+        <div className="v15-session-metrics">
+          <span><small>Temps</small><strong>{formatTimer(elapsed)}</strong></span>
+          <span><small>Exercice</small><strong>{session.exerciseIndex+1}/{currentWorkout.exercises.length}</strong></span>
+          <span><small>Repos</small><strong>{formatTimer(currentRestTarget)}</strong></span>
+        </div>
+
+        {currentExercise&&<div className="target-card v15-target-card">
+          <div className="v15-target-title"><span>OBJECTIF DE LA SÉRIE</span><strong>{effectiveTarget().repMin}–{effectiveTarget().repMax} répétitions</strong></div>
           <div className="target-grid">
             <div><span>Série</span><strong>{session.setIndex+1}/{effectiveTarget().sets}</strong></div>
             <div><span>Objectif</span><strong>{effectiveTarget().repMin}–{effectiveTarget().repMax}</strong></div>
