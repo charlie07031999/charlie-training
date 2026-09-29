@@ -90,6 +90,7 @@ export type CloudPreferences = {
   sleep_goal_minutes:number;
   weekend_sleep_target?:string|null;
   weekend_wake_target?:string|null;
+  appearance_mode:"auto"|"light"|"dark";
   notifications_enabled:boolean;
   workout_reminder_time:string;
   creatine_reminder_time:string;
@@ -134,7 +135,7 @@ export async function loadCloudState() {
       .limit(120),
     supabase
       .from("user_preferences")
-      .select("sleep_target,wake_target,prep_target,disconnect_target,sleep_goal_minutes,weekend_sleep_target,weekend_wake_target,notifications_enabled,workout_reminder_time,creatine_reminder_time")
+      .select("sleep_target,wake_target,prep_target,disconnect_target,sleep_goal_minutes,weekend_sleep_target,weekend_wake_target,appearance_mode,notifications_enabled,workout_reminder_time,creatine_reminder_time")
       .eq("user_id",user.id)
       .maybeSingle(),
     supabase
@@ -478,7 +479,11 @@ export async function secureAnonymousAccount(email:string){
   const user=await ensureUser();
   if(!user) return {ok:false,reason:"auth_failed" as const};
 
-  const {error}=await supabase.auth.updateUser({email});
+  const redirectTo=typeof window!=="undefined"?window.location.origin:undefined;
+  const {error}=await (supabase.auth as any).updateUser(
+    {email},
+    redirectTo?{emailRedirectTo:redirectTo}:undefined
+  );
   return error?{ok:false,reason:error.message}:{ok:true};
 }
 
