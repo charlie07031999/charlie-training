@@ -1458,12 +1458,13 @@ export default function Home(){
   const cloudLabel=cloudLoading?"Chargement":cloudStatus==="ok"?"Synchronisé":cloudStatus==="syncing"?"Synchro…":"À vérifier";
 
   const resolvedAppearance=appearanceMode==="auto"?(isEvening?"dark":"light"):appearanceMode;
+  const activeAppearance=session?"dark":resolvedAppearance;
 
   useEffect(()=>{
-    document.documentElement.dataset.appTheme=resolvedAppearance;
-    document.documentElement.style.colorScheme=resolvedAppearance;
-    document.body.dataset.appTheme=resolvedAppearance;
-    const color=resolvedAppearance==="light"?"#f4f6fa":"#090c12";
+    document.documentElement.dataset.appTheme=activeAppearance;
+    document.documentElement.style.colorScheme=activeAppearance;
+    document.body.dataset.appTheme=activeAppearance;
+    const color=activeAppearance==="light"?"#f4f6fa":"#090c12";
     let meta=document.querySelector('meta[name="theme-color"]') as HTMLMetaElement|null;
     if(!meta){
       meta=document.createElement("meta");
@@ -1475,30 +1476,32 @@ export default function Home(){
       delete document.documentElement.dataset.appTheme;
       delete document.body.dataset.appTheme;
     };
-  },[resolvedAppearance]);
+  },[activeAppearance]);
 
-  return <main className={"app-shell app-v7 theme-"+resolvedAppearance+" "+(session?"gym-mode ":"")+(isEvening?"evening-ui":"day-ui")}>
-    <header className={"topbar v7-topbar "+(session?"gym-topbar":"")}>
-      <div>
-        <div className="eyebrow">CHARLIE</div>
-        <h1>{session?currentWorkout.title:tab==="today"?"Aujourd’hui":tab==="tracking"?"Suivi":tab==="routine"?"Routine":"Profil"}</h1>
-      </div>
-      <div className={"sync-pill v9-global-sync "+cloudStatus}>{cloudLabel}</div>
-    </header>
+  return <main className={"app-shell app-v7 theme-"+activeAppearance+" "+(session?"gym-mode ":"")+(isEvening?"evening-ui":"day-ui")}>
+    {!session&&<>
+      <header className="topbar v7-topbar">
+        <div>
+          <div className="eyebrow">CHARLIE</div>
+          <h1>{tab==="today"?"Aujourd’hui":tab==="tracking"?"Suivi":tab==="routine"?"Routine":"Profil"}</h1>
+        </div>
+        <div className={"sync-pill v9-global-sync "+cloudStatus}>{cloudLabel}</div>
+      </header>
 
-    <nav className={"tabs v7-tabs "+(session?"session-tabs-hidden":"")}>
-      {([
-        ["today","Aujourd’hui"],
-        ["tracking","Suivi"],
-        ["routine","Routine"],
-        ["profile","Profil"]
-      ] as const).map(([id,label])=>
-        <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>
-          <span className="v7-tab-icon"><TabIcon id={id}/></span>
-          <span>{label}</span>
-        </button>
-      )}
-    </nav>
+      <nav className="tabs v7-tabs">
+        {([
+          ["today","Aujourd’hui"],
+          ["tracking","Suivi"],
+          ["routine","Routine"],
+          ["profile","Profil"]
+        ] as const).map(([id,label])=>
+          <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>
+            <span className="v7-tab-icon"><TabIcon id={id}/></span>
+            <span>{label}</span>
+          </button>
+        )}
+      </nav>
+    </>}
 
     {tab==="today"&&<section className={session?"today-v5 session-v5":"today-v5 home-v5"}>
       {!session?<>
