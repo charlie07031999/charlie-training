@@ -1956,6 +1956,12 @@ export default function Home(){
     setOnboardingCompleted(false);
   }
 
+  function cancelOnboarding(){
+    setOnboardingCompleted(true);
+    setOnboardingStep(0);
+    void savePreferences({onboarding_completed:true});
+  }
+
   const currentSetLogs=currentExercise&&session?session.logs[currentExercise.id]??[]:[];
   const currentPrevious=currentExercise?latestExerciseLogs(currentExercise.id):null;
   const currentPreviousBest=currentPrevious?.logs.reduce<SetLog|null>((best,set)=>{
@@ -2280,7 +2286,10 @@ export default function Home(){
       <div className="v21-onboarding-shell">
         <div className="v21-onboarding-top">
           <div className="v21-brand"><i>C</i><div><strong>Charlie Training</strong><span>Coach personnel</span></div></div>
-          {onboardingStep>0&&<button onClick={()=>setOnboardingStep(v=>Math.max(0,v-1))}>← Retour</button>}
+          <div className="v21-onboarding-actions">
+            {onboardingStep>0&&<button onClick={()=>setOnboardingStep(v=>Math.max(0,v-1))}>← Retour</button>}
+            {planStartedAt&&<button className="close" onClick={cancelOnboarding}>✕</button>}
+          </div>
         </div>
 
         <div className="v21-progress"><i style={{width:progress+"%"}}/></div>
@@ -2889,6 +2898,18 @@ export default function Home(){
         <div className="v8-section-head">
           <div><span>7 DERNIERS JOURS</span><h2>Sommeil</h2></div>
           <strong>{avgSleep7?durationLabel(avgSleep7):"—"}</strong>
+        </div>
+
+        <div className="v23-readiness-detail">
+          <div className="v23-readiness-score" style={{"--score":readinessScore+"%"} as React.CSSProperties}>
+            <strong>{readinessScore}</strong><span>Disponibilité</span>
+          </div>
+          <div className="v23-readiness-factors">
+            <div><span>Sommeil</span><i><b style={{width:(sleepScore/50*100)+"%"}}/></i><strong>{sleepScore}/50</strong></div>
+            <div><span>Énergie</span><i><b style={{width:(energyScore/25*100)+"%"}}/></i><strong>{energyScore}/25</strong></div>
+            <div><span>FC repos</span><i><b style={{width:(healthScore/20*100)+"%"}}/></i><strong>{healthScore}/20</strong></div>
+            <div><span>Régularité</span><i><b style={{width:(completionScore/5*100)+"%"}}/></i><strong>{completionScore}/5</strong></div>
+          </div>
         </div>
 
         <div className="v7-tracking-hero v8-sleep-hero">
