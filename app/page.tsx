@@ -1755,6 +1755,50 @@ export default function Home(){
     stopRestTimer();
   }
 
+  function selectExerciseVariant(variant:ExerciseVariant){
+    if(!session||!currentBaseExercise) return;
+    const nextSession:SessionState={
+      ...session,
+      exerciseVariants:{
+        ...session.exerciseVariants,
+        [currentBaseExercise.id]:variant.id
+      }
+    };
+    setSession(nextSession);
+    setExerciseSwapOpen(false);
+    setWeight("");
+    pushLiveSession(nextSession,"exercise_variant_changed",{
+      exercise_id:currentBaseExercise.id,
+      variant_id:variant.id,
+      variant_name:variant.name,
+      equipment:variant.equipment
+    });
+    pulse(12);
+  }
+
+  function jumpToExercise(index:number){
+    if(!session||index<0||index>=currentWorkout.exercises.length) return;
+    const base=currentWorkout.exercises[index];
+    const nextSession:SessionState={
+      ...session,
+      exerciseIndex:index,
+      setIndex:loggedRoundCount(base,session.logs)
+    };
+    setSession(nextSession);
+    setSessionMenuOpen(false);
+    stopRestTimer();
+    pushLiveSession(nextSession,"exercise_jump");
+  }
+
+  function updateSessionCoachMode(mode:CoachMode){
+    if(!session) return;
+    const nextSession:SessionState={...session,coachMode:mode};
+    setSession(nextSession);
+    setCoachMode(mode);
+    setSessionMenuOpen(false);
+    pushLiveSession(nextSession,"coach_mode_changed",{mode});
+  }
+
   function changeRestTarget(delta:number){
     if(!session||!currentExercise) return;
     const current=session.restOverrides[currentExercise.id]??currentExercise.restSeconds;
@@ -2168,6 +2212,15 @@ export default function Home(){
     return best;
   },null)??null;
   const currentPreviousReps=currentPrevious?.logs.reduce((sum,set)=>sum+set.reps,0)??0;
+  const recentVariantWeights=currentExercise
+    ? Array.from(new Set(
+        recentExerciseLogs(currentExercise.id,4,currentExercise.variantId)
+          .flatMap(entry=>entry.logs)
+          .map(set=>set.weight)
+          .filter((value):value is number=>value!=null)
+      )).slice(0,4)
+    : [];
+  const recommendedWeight=currentExercise?recommendationFor(currentExercise).weight:undefined;
   const currentRestTarget=currentExercise&&session
     ? session.restOverrides[currentExercise.id]??currentExercise.restSeconds
     : 0;
