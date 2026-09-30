@@ -30,6 +30,17 @@ import {
   type CloudJourneyEvent
 } from "../lib/cloud";
 import {
+  finishNativeRun,
+  getNativeRunStatus,
+  nativeRunAvailable,
+  pauseNativeRun,
+  prepareNativeRun,
+  resetNativeRun,
+  resumeNativeRun,
+  startNativeRun,
+  type NativeRunSnapshot
+} from "../lib/run-native";
+import {
   getNativeHealthStatus,
   nativeHealthAvailable,
   pullNativeHealthSnapshot,
@@ -440,6 +451,7 @@ export default function Home(){
   const [runPauseStartedAt,setRunPauseStartedAt]=useState<number|null>(null);
   const [runLocationError,setRunLocationError]=useState("");
   const [runGpsAccuracy,setRunGpsAccuracy]=useState<number|null>(null);
+  const [nativeRunMode,setNativeRunMode]=useState(false);
   const runWatchIdRef=useRef<number|null>(null);
 
   const [sleepTarget,setSleepTarget]=useState("23:00");
@@ -1669,11 +1681,29 @@ export default function Home(){
     if(rest>0) startRestTimer(next);
   }
 
+  function applyNativeRunSnapshot(snapshot:NativeRunSnapshot){
+    setNativeRunMode(true);
+    setRunStatus(snapshot.status);
+    setRunStartedAt(snapshot.startedAt??null);
+    setRunFinishedAt(snapshot.finishedAt??null);
+    setRunPausedMs(snapshot.pausedMs??0);
+    setRunPauseStartedAt(snapshot.pauseStartedAt??null);
+    setRunGpsAccuracy(snapshot.gpsAccuracy??null);
+    setRunPoints(Array.isArray(snapshot.points)?snapshot.points:[]);
+
+    if(snapshot.authorization==="denied"||snapshot.authorization==="restricted"){
+      setRunLocationError("Localisation refusée. Autorise Charlie Training dans Réglages > Confidentialité > Localisation.");
+    }else{
+      setRunLocationError("");
+    }
+  }
+
   function resetRunTracking(){
     if(runWatchIdRef.current!=null&&navigator.geolocation){
       navigator.geolocation.clearWatch(runWatchIdRef.current);
       runWatchIdRef.current=null;
     }
+    if(nativeRunAvailable()) void resetNativeRun().catch(()=>{});
     setRunStatus("idle");
     setRunPoints([]);
     setRunStartedAt(null);
@@ -1694,7 +1724,20 @@ export default function Home(){
     void clearLiveWorkout(id).then(result=>setCloudStatus(result.ok?"ok":"error"));
   }
 
-  function prepareRun(){
+  async function prepareRun(){
+    if(nativeRunAvailable()){
+      setNativeRunMode(true);
+      setRunStatus("locating");
+      setRunLocationError("");
+      try{
+        applyNativeRunSnapshot(await prepareNativeRun());
+      }catch{
+        setRunStatus("idle");
+        setRunLocationError("Impossible d’activer le GPS natif pour le moment.");
+      }
+      return;
+    }
+
     if(!navigator.geolocation){
       setRunLocationError("Le GPS n’est pas disponible sur cet appareil.");
       return;
@@ -1727,7 +1770,18 @@ export default function Home(){
     });
   }
 
-  function startRun(){
+  async function startRun(){
+    if(nativeRunAvailable()){
+      try{
+        applyNativeRunSnapshot(await startNativeRun());
+        pulse([50,30,50]);
+        return;
+      }catch{
+        setRunLocationError("Le tracking natif n’a pas pu démarrer.");
+        return;
+      }
+    }
+
     const started=Date.now();
     setRunStartedAt(started);
     setRunFinishedAt(null);
@@ -1738,15 +1792,25 @@ export default function Home(){
     pulse([50,30,50]);
   }
 
-  function pauseRun(){
+  async function pauseRun(){
     if(runStatus!=="running") return;
+    if(nativeRunAvailable()){
+      try{ applyNativeRunSnapshot(await pauseNativeRun()); }catch{}
+      pulse(35);
+      return;
+    }
     setRunPauseStartedAt(Date.now());
     setRunStatus("paused");
     pulse(35);
   }
 
-  function resumeRun(){
+  async function resumeRun(){
     if(runStatus!=="paused") return;
+    if(nativeRunAvailable()){
+      try{ applyNativeRunSnapshot(await resumeNativeRun()); }catch{}
+      pulse(35);
+      return;
+    }
     const t=Date.now();
     if(runPauseStartedAt) setRunPausedMs(v=>v+(t-runPauseStartedAt));
     setRunPauseStartedAt(null);
@@ -1754,8 +1818,16 @@ export default function Home(){
     pulse(35);
   }
 
-  function finishRun(){
+  async function finishRun(){
     if(!runStartedAt) return;
+    if(nativeRunAvailable()){
+      try{
+        applyNativeRunSnapshot(await finishNativeRun());
+        pulse([70,45,70]);
+        return;
+      }catch{}
+    }
+
     const t=Date.now();
     let pausedMs=runPausedMs;
     if(runStatus==="paused"&&runPauseStartedAt) pausedMs+=t-runPauseStartedAt;
