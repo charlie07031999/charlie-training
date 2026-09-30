@@ -3802,32 +3802,46 @@ export default function Home(){
       </div>
     </div>}
 
-    {!session&&selectedExerciseDetail&&<div className="v19-sheet-backdrop" onClick={()=>setSelectedExerciseDetailId(null)}>
+    {!session&&selectedExerciseDetail&&selectedExercisePreferred&&<div className="v19-sheet-backdrop" onClick={()=>setSelectedExerciseDetailId(null)}>
       <div className="v19-sheet v19-exercise-sheet" onClick={e=>e.stopPropagation()}>
         <div className="v19-sheet-handle"/>
         <div className="v19-sheet-head compact">
-          <div><span>{exerciseCategory(selectedExerciseDetail)}</span><h3>{selectedExerciseDetail.name}</h3></div>
+          <div><span>{exerciseCategory(selectedExerciseDetail)} · {selectedExercisePreferred.equipment??equipmentLabel(selectedExercisePreferred)}</span><h3>{selectedExercisePreferred.name}</h3></div>
           <button onClick={()=>setSelectedExerciseDetailId(null)}>×</button>
         </div>
 
-        <div className="v19-exercise-art"><ExerciseArt exercise={selectedExerciseDetail} large/></div>
+        <div className="v19-exercise-art"><ExerciseArt exercise={selectedExercisePreferred} large/></div>
 
         <div className="v19-exercise-tags">
-          <span>{selectedExerciseDetail.target}</span>
-          <span>{selectedExerciseDetail.unit}</span>
+          <span>{selectedExercisePreferred.target}</span>
+          <span>{selectedExercisePreferred.unit}</span>
           {selectedExerciseDetail.priority&&<span className="priority">Prioritaire</span>}
         </div>
 
-        <p className="v19-exercise-cue">{selectedExerciseDetail.cue}</p>
+        <p className="v19-exercise-cue">{selectedExercisePreferred.cue}</p>
 
         <div className="v19-exercise-specs">
           <div><span>Séries</span><strong>{selectedExerciseDetail.sets}</strong></div>
           <div><span>Répétitions</span><strong>{selectedExerciseDetail.repMin}–{selectedExerciseDetail.repMax}</strong></div>
           <div><span>Repos</span><strong>{Math.round(selectedExerciseDetail.restSeconds/60*10)/10} min</strong></div>
-          <div><span>Charge</span><strong>{selectedExerciseDetail.suggestedWeight!=null?selectedExerciseDetail.suggestedWeight+" "+selectedExerciseDetail.unit:"Au ressenti"}</strong></div>
+          <div><span>Charge repère</span><strong>{selectedExercisePreferred.suggestedWeight!=null?selectedExercisePreferred.suggestedWeight+" "+selectedExercisePreferred.unit:"Au ressenti"}</strong></div>
         </div>
 
-        {selectedExerciseDetail.alternatives?.length&&<div className="v19-alternatives">
+        {selectedExerciseVariants.length>1&&<div className="v27-library-variants">
+          <div className="v27-library-variants-head"><span>VARIANTES</span><small>Ta sélection devient le choix par défaut.</small></div>
+          <div>
+            {selectedExerciseVariants.map(variant=>{
+              const active=(preferredExerciseVariants[selectedExerciseDetail.id]??selectedExerciseVariants[0]?.id)===variant.id;
+              return <button key={variant.id} className={active?"active":""} onClick={()=>setPreferredExerciseVariants(prev=>({...prev,[selectedExerciseDetail.id]:variant.id}))}>
+                <i>{variant.equipment.slice(0,1)}</i>
+                <div><strong>{variant.name}</strong><span>{variant.equipment} · {variant.unit}</span></div>
+                <b>{active?"✓":"›"}</b>
+              </button>;
+            })}
+          </div>
+        </div>}
+
+        {!selectedExerciseVariants.length&&selectedExerciseDetail.alternatives?.length&&<div className="v19-alternatives">
           <span>ALTERNATIVES</span>
           <div>{selectedExerciseDetail.alternatives.map(alt=><b key={alt}>{alt}</b>)}</div>
         </div>}
