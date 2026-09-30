@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { history, workouts } from "../lib/workouts";
-import type { CardioLog, CardioRoutePoint, CardioSplit, Exercise, SetLog, SupersetPart, Workout } from "../lib/types";
+import { exerciseVariants, history, workouts } from "../lib/workouts";
+import type { CardioLog, CardioRoutePoint, CardioSplit, Exercise, ExerciseVariant, SetLog, SupersetPart, Workout } from "../lib/types";
 import {
   clearLiveWorkout,
   finishSleepSession,
@@ -74,6 +74,7 @@ type SessionState = {
   deferredIds:string[];
   coachMode:CoachMode;
   restOverrides:Record<string,number>;
+  exerciseVariants:Record<string,string>;
 };
 
 type CompletedSession = {
@@ -86,6 +87,7 @@ type CompletedSession = {
   cardio?:CardioLog|null;
   coachMode?:string|null;
   notes?:string|null;
+  exerciseVariants?:Record<string,string>;
 };
 
 type SleepSession = {
@@ -409,6 +411,8 @@ export default function Home(){
   const [quickMenuOpen,setQuickMenuOpen]=useState(false);
   const [lastWorkoutSummary,setLastWorkoutSummary]=useState<WorkoutFinishSummary|null>(null);
   const [selectedHistoryKey,setSelectedHistoryKey]=useState<string|null>(null);
+  const [exerciseSwapOpen,setExerciseSwapOpen]=useState(false);
+  const [sessionMenuOpen,setSessionMenuOpen]=useState(false);
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
   const [session,setSession]=useState<SessionState|null>(null);
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
