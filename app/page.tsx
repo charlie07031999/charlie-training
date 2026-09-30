@@ -567,7 +567,8 @@ export default function Home(){
       logs:(s.logs??{}) as Record<string,SetLog[]>,
       cardio:(s.cardio??null) as CardioLog|null,
       coachMode:s.coach_mode,
-      notes:s.notes
+      notes:s.notes,
+      exerciseVariants:(s.exercise_variants??{}) as Record<string,string>
     })).sort((a,b)=>a.finishedAt-b.finishedAt);
 
     setCompletedSessions(mapped);
@@ -636,7 +637,8 @@ export default function Home(){
           deferredIds:parsed.deferredIds??[],
           clientSessionId:parsed.clientSessionId??`legacy-${parsed.startedAt}`,
           coachMode:parsed.coachMode??"normal",
-          restOverrides:parsed.restOverrides??{}
+          restOverrides:parsed.restOverrides??{},
+          exerciseVariants:parsed.exerciseVariants??{}
         };
         restoredLocal=restored;
         setSession(restored);
@@ -659,7 +661,8 @@ export default function Home(){
           coachMode:(["normal","tired","short","crowded"] as CoachMode[]).includes(live.coach_mode as CoachMode)
             ? live.coach_mode as CoachMode
             : "normal",
-          restOverrides:{}
+          restOverrides:{},
+          exerciseVariants:(live.exercise_variants??{}) as Record<string,string>
         };
         setSession(restored);
       });
@@ -1276,9 +1279,12 @@ export default function Home(){
     lastSet?:Record<string,unknown>|null
   ){
     const workout=workouts.find(w=>w.id===liveSession.workoutId);
-    const exercise=workout?.id==="cardio"
+    const baseExercise=workout?.id==="cardio"
       ? null
       : workout?.exercises[liveSession.exerciseIndex]??null;
+    const exercise=baseExercise
+      ? resolveExerciseVariant(baseExercise,liveSession.exerciseVariants?.[baseExercise.id])
+      : null;
 
     setCloudStatus("syncing");
     void syncLiveWorkout({
@@ -1292,6 +1298,7 @@ export default function Home(){
       completedIds:liveSession.completedIds,
       deferredIds:liveSession.deferredIds,
       logs:liveSession.logs,
+      exerciseVariants:liveSession.exerciseVariants,
       coachMode:liveSession.coachMode,
       lastSet:lastSet??null,
       lastAction:action
@@ -1421,7 +1428,8 @@ export default function Home(){
       completedIds:[],
       deferredIds:[],
       coachMode:mode,
-      restOverrides:{}
+      restOverrides:{},
+      exerciseVariants:{}
     };
     setCoachMode(mode);
     setSession(nextSession);
@@ -1454,7 +1462,8 @@ export default function Home(){
       finishedAt:Date.now(),
       logs,
       cardio:cardio??null,
-      coachMode:session.coachMode
+      coachMode:session.coachMode,
+      exerciseVariants:session.exerciseVariants
     };
     const workout=workouts.find(w=>w.id===item.workoutId);
     const summarySets=Object.values(logs).reduce((sum,entries)=>sum+entries.length,0);
@@ -1513,7 +1522,8 @@ export default function Home(){
         finishedAt:item.finishedAt,
         logs:item.logs,
         cardio:item.cardio as Record<string,unknown>|null,
-        coachMode:item.coachMode
+        coachMode:item.coachMode,
+        exerciseVariants:item.exerciseVariants??{}
       });
 
       if(result.ok){
