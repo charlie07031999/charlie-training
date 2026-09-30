@@ -1837,7 +1837,7 @@ export default function Home(){
 
     if(target.id){
       setCloudStatus("syncing");
-      const result=await updateWorkoutLogs(target.id,nextLogs,target.cardio as Record<string,unknown>|null);
+      const result=await updateWorkoutLogs(target.id,nextLogs,target.cardio as Record<string,unknown>|null,nextVariants);
       setCloudStatus(result.ok?"ok":"error");
       if(result.ok) await refreshCloud();
     }else{
