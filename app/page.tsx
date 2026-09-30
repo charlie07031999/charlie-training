@@ -337,10 +337,19 @@ export default function Home(){
   const [now,setNow]=useState(Date.now());
   const wakeLockRef=useRef<any>(null);
 
-  const [cardioDuration,setCardioDuration]=useState("30");
+  const [cardioDuration,setCardioDuration]=useState("45");
   const [cardioDistance,setCardioDistance]=useState("");
   const [cardioHr,setCardioHr]=useState("");
   const [cardioRpe,setCardioRpe]=useState("4");
+
+  const [runStatus,setRunStatus]=useState<"idle"|"locating"|"ready"|"running"|"paused"|"finished">("idle");
+  const [runPoints,setRunPoints]=useState<CardioRoutePoint[]>([]);
+  const [runStartedAt,setRunStartedAt]=useState<number|null>(null);
+  const [runPausedMs,setRunPausedMs]=useState(0);
+  const [runPauseStartedAt,setRunPauseStartedAt]=useState<number|null>(null);
+  const [runLocationError,setRunLocationError]=useState("");
+  const [runGpsAccuracy,setRunGpsAccuracy]=useState<number|null>(null);
+  const runWatchIdRef=useRef<number|null>(null);
 
   const [sleepTarget,setSleepTarget]=useState("23:00");
   const [prepTarget,setPrepTarget]=useState("22:15");
