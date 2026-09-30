@@ -129,6 +129,7 @@ export type CloudPreferences = {
   training_days:number;
   onboarding_completed:boolean;
   plan_started_at?:string|null;
+  preferred_exercise_variants:Record<string,string>;
 };
 
 async function ensureUser():Promise<User|null> {
@@ -170,7 +171,7 @@ export async function loadCloudState() {
       .limit(120),
     supabase
       .from("user_preferences")
-      .select("sleep_target,wake_target,prep_target,disconnect_target,sleep_goal_minutes,weekend_sleep_target,weekend_wake_target,appearance_mode,notifications_enabled,workout_reminder_time,creatine_reminder_time,display_name,fitness_goal,experience_level,training_days,onboarding_completed,plan_started_at")
+      .select("sleep_target,wake_target,prep_target,disconnect_target,sleep_goal_minutes,weekend_sleep_target,weekend_wake_target,appearance_mode,notifications_enabled,workout_reminder_time,creatine_reminder_time,display_name,fitness_goal,experience_level,training_days,onboarding_completed,plan_started_at,preferred_exercise_variants")
       .eq("user_id",user.id)
       .maybeSingle(),
     supabase
