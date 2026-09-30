@@ -950,14 +950,38 @@ export default function Home(){
     else if(!openSleep) setPlannedWakeTime(wakeTarget);
   },[openSleep?.id,wakeTarget]);
 
-  const autoCoachMode:CoachMode=latestSleepMinutes>0&&latestSleepHours<6.5?"tired":"normal";
+  const latestHealthDayForCoach=healthDaily[0]??null;
+  const recentRestingHr=healthDaily
+    .slice(0,7)
+    .map(x=>Number(x.resting_heart_rate_bpm))
+    .filter(Number.isFinite);
+  const restingHrBaseline=recentRestingHr.length
+    ? recentRestingHr.reduce((a,b)=>a+b,0)/recentRestingHr.length
+    : 0;
+  const currentRestingHr=latestHealthDayForCoach?.resting_heart_rate_bpm!=null
+    ? Number(latestHealthDayForCoach.resting_heart_rate_bpm)
+    : 0;
+
+  const sleepScore=latestSleepMinutes
+    ? Math.max(0,Math.min(50,Math.round((latestSleepMinutes/Math.max(360,targetSleepMinutes))*50)))
+    : 30;
+  const energyScore=latestSleep?.energy!=null
+    ? Math.round((latestSleep.energy/5)*25)
+    : 16;
+  const hrPenalty=currentRestingHr&&restingHrBaseline
+    ? Math.max(0,Math.min(15,Math.round((currentRestingHr-restingHrBaseline)*2)))
+    : 0;
+  const healthScore=20-hrPenalty;
+  const completionScore=Math.min(5,weekSessions.length);
+  const readinessScore=Math.max(25,Math.min(100,sleepScore+energyScore+healthScore+completionScore));
+  const readinessLabel=readinessScore>=82?"Prêt à performer":readinessScore>=68?"Bonne disponibilité":readinessScore>=55?"Journée normale":"Récupération prioritaire";
+
+  const autoCoachMode:CoachMode=readinessScore<55||latestSleepHours>0&&latestSleepHours<6.5?"tired":"normal";
   const autoCoachText=latestSleepMinutes===0
-    ?"Pas encore assez de sommeil enregistré : plan normal par défaut."
-    : latestSleepHours<6.5
-      ? `Dernière nuit ${durationLabel(latestSleepMinutes)} : volume réduit, pas d’échec.`
-      : latestSleepHours<7.25
-        ? `Dernière nuit ${durationLabel(latestSleepMinutes)} : séance normale, garde 2 RIR sur les gros mouvements.`
-        : `Dernière nuit ${durationLabel(latestSleepMinutes)} : récupération compatible avec le plan normal.`;
+    ?`Disponibilité ${readinessScore}/100 · commence normalement et ajuste au ressenti.`
+    : autoCoachMode==="tired"
+      ?`Disponibilité ${readinessScore}/100 · réduis le volume et garde 2–3 RIR.`
+      :`Disponibilité ${readinessScore}/100 · ${readinessLabel.toLowerCase()}.`;
 
   function recentExerciseLogs(exerciseId:string,limit=3){
     const ids=exerciseAliases[exerciseId]??[exerciseId];
@@ -2153,7 +2177,7 @@ export default function Home(){
     return matchesSearch&&matchesFilter;
   });
 
-  const latestHealthDay=healthDaily[0]??null;
+  const latestHealthDay=latestHealthDayForCoach;
   const healthNativeReady=Boolean(nativeHealthStatus?.available);
   const healthConnected=Boolean(healthSyncState?.enabled);
   const healthLastSyncLabel=healthSyncState?.last_pull_at
