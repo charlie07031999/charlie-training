@@ -1017,6 +1017,7 @@ export default function Home(){
   }
 
   function startWorkout(w:Workout){
+    if(w.id==="cardio") resetRunTracking();
     const mode=coachMode==="normal"?autoCoachMode:coachMode;
     const nextSession:SessionState={
       clientSessionId:crypto.randomUUID(),
@@ -1718,6 +1719,27 @@ export default function Home(){
       : runGpsAccuracy<=30
         ?"GPS prêt"
         :"GPS moyen";
+
+  function saveGpsRun(){
+    if(!session||session.workoutId!=="cardio"||!runStartedAt||runElapsedSeconds<=0) return;
+    const cardio:CardioLog={
+      durationMinutes:Math.round((runElapsedSeconds/60)*10)/10,
+      durationSeconds:runElapsedSeconds,
+      distanceKm:Math.round((runDistanceMeters/1000)*1000)/1000,
+      avgHr:cardioHr?Number(cardioHr):undefined,
+      rpe:cardioRpe?Number(cardioRpe):undefined,
+      avgSpeedKmh:Math.round(runAvgSpeedKmh*100)/100,
+      avgPaceSecondsPerKm:runAvgPace?Math.round(runAvgPace):undefined,
+      elevationGainM:runElevationGain,
+      route:runPoints,
+      splits:runSplits,
+      source:"gps"
+    };
+    setCardioDuration(String(cardio.durationMinutes));
+    setCardioDistance(cardio.distanceKm?.toFixed(2)??"");
+    resetRunTracking();
+    finishWorkout({},cardio);
+  }
 
   const todayWorkout=dueWorkoutId?workouts.find(w=>w.id===dueWorkoutId)??null:null;
   const weekDoneCount=doneWorkoutIds.size;
