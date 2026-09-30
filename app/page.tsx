@@ -963,7 +963,7 @@ export default function Home(){
     : 0;
 
   const sleepScore=latestSleepMinutes
-    ? Math.max(0,Math.min(50,Math.round((latestSleepMinutes/Math.max(360,targetSleepMinutes))*50)))
+    ? Math.max(0,Math.min(50,Math.round((latestSleepMinutes/Math.max(360,sleepGoalMinutes||sleepWindowMinutes(sleepTarget,wakeTarget)))*50)))
     : 30;
   const energyScore=latestSleep?.energy!=null
     ? Math.round((latestSleep.energy/5)*25)
