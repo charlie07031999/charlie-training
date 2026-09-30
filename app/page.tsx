@@ -740,6 +740,7 @@ export default function Home(){
   },[runStatus,runStartedAt,runFinishedAt,runPausedMs,runPauseStartedAt,runPoints]);
 
   useEffect(()=>{
+    if(nativeRunMode) return;
     if(runStatus!=="running"||!runStartedAt||!navigator.geolocation) return;
     const watchId=navigator.geolocation.watchPosition(position=>{
       const accuracy=position.coords.accuracy??999;
@@ -782,7 +783,39 @@ export default function Home(){
       navigator.geolocation.clearWatch(watchId);
       if(runWatchIdRef.current===watchId) runWatchIdRef.current=null;
     };
-  },[runStatus,runStartedAt,runPausedMs]);
+  },[runStatus,runStartedAt,runPausedMs,nativeRunMode]);
+
+  useEffect(()=>{
+    if(!nativeRunAvailable()) return;
+
+    let cancelled=false;
+    let timer:number|null=null;
+
+    const sync=async()=>{
+      try{
+        const snapshot=await getNativeRunStatus();
+        if(!cancelled&&(snapshot.status!=="idle"||runStatus!=="idle")){
+          applyNativeRunSnapshot(snapshot);
+        }
+      }catch{}
+    };
+
+    const onVisibility=()=>{
+      if(document.visibilityState==="visible") void sync();
+    };
+
+    void sync();
+    if(runStatus==="running"||runStatus==="paused"||runStatus==="locating"||runStatus==="ready"){
+      timer=window.setInterval(sync,2000);
+    }
+    document.addEventListener("visibilitychange",onVisibility);
+
+    return()=>{
+      cancelled=true;
+      if(timer!=null) window.clearInterval(timer);
+      document.removeEventListener("visibilitychange",onVisibility);
+    };
+  },[runStatus,nativeRunMode]);
 
   useEffect(()=>{
     if(!prefsLoaded) return;
@@ -1690,6 +1723,9 @@ export default function Home(){
     setRunPauseStartedAt(snapshot.pauseStartedAt??null);
     setRunGpsAccuracy(snapshot.gpsAccuracy??null);
     setRunPoints(Array.isArray(snapshot.points)?snapshot.points:[]);
+    if(snapshot.elapsedSeconds>0&&snapshot.status!=="idle"){
+      setNow(Date.now());
+    }
 
     if(snapshot.authorization==="denied"||snapshot.authorization==="restricted"){
       setRunLocationError("Localisation refusée. Autorise Charlie Training dans Réglages > Confidentialité > Localisation.");
