@@ -24,6 +24,7 @@ import {
   loadHealthSyncState,
   markHealthPush,
   updateSleepPlan,
+  updateWorkoutLogs,
   VAPID_PUBLIC_KEY,
   type CloudHealthDailyMetric,
   type CloudHealthSyncState,
@@ -442,6 +443,7 @@ export default function Home(){
   const [quickMenuOpen,setQuickMenuOpen]=useState(false);
   const [lastWorkoutSummary,setLastWorkoutSummary]=useState<WorkoutFinishSummary|null>(null);
   const [selectedHistoryKey,setSelectedHistoryKey]=useState<string|null>(null);
+  const [historyVariantEdit,setHistoryVariantEdit]=useState<{sessionKey:string;exerciseId:string}|null>(null);
   const [exerciseSwapOpen,setExerciseSwapOpen]=useState(false);
   const [sessionMenuOpen,setSessionMenuOpen]=useState(false);
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
@@ -1808,6 +1810,48 @@ export default function Home(){
     setCoachMode(mode);
     setSessionMenuOpen(false);
     pushLiveSession(nextSession,"coach_mode_changed",{mode});
+  }
+
+  async function correctHistoryVariant(exerciseId:string,variant:ExerciseVariant){
+    const key=historyVariantEdit?.sessionKey;
+    if(!key) return;
+    const target=completedSessions.find(item=>(item.id??item.clientSessionId)===key);
+    if(!target) return;
+
+    const nextLogs={
+      ...target.logs,
+      [exerciseId]:(target.logs[exerciseId]??[]).map(set=>({
+        ...set,
+        variantId:variant.id,
+        variantName:variant.name,
+        equipment:variant.equipment
+      }))
+    };
+    const nextVariants={...(target.exerciseVariants??{}),[exerciseId]:variant.id};
+    const nextTarget={...target,logs:nextLogs,exerciseVariants:nextVariants};
+
+    setCompletedSessions(prev=>prev.map(item=>
+      (item.id??item.clientSessionId)===key?nextTarget:item
+    ));
+    setHistoryVariantEdit(null);
+
+    if(target.id){
+      setCloudStatus("syncing");
+      const result=await updateWorkoutLogs(target.id,nextLogs,target.cardio as Record<string,unknown>|null);
+      setCloudStatus(result.ok?"ok":"error");
+      if(result.ok) await refreshCloud();
+    }else{
+      void syncWorkoutSession({
+        clientSessionId:target.clientSessionId,
+        workoutId:target.workoutId,
+        startedAt:target.startedAt,
+        finishedAt:target.finishedAt,
+        logs:nextLogs,
+        cardio:target.cardio as Record<string,unknown>|null,
+        coachMode:target.coachMode,
+        exerciseVariants:nextVariants
+      }).then(result=>setCloudStatus(result.ok?"ok":"error"));
+    }
   }
 
   function changeRestTarget(delta:number){
