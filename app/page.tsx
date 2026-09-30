@@ -1267,6 +1267,7 @@ export default function Home(){
 
       if(result.ok){
         await clearLiveWorkout(item.clientSessionId);
+        await pushWorkoutToAppleHealth(item);
         setCloudStatus("ok");
         await refreshCloud();
       }else{
@@ -1650,10 +1651,15 @@ export default function Home(){
 
   async function wakeNow(){
     if(!openSleep) return;
+    const endAt=Date.now();
+    const startAt=openSleep.lightsOutAt??openSleep.bedAt;
     setCloudStatus("syncing");
-    const res=await finishSleepSession(openSleep.id,new Date().toISOString());
+    const res=await finishSleepSession(openSleep.id,new Date(endAt).toISOString());
     setCloudStatus(res.ok?"ok":"error");
-    if(res.ok) await refreshCloud();
+    if(res.ok){
+      await pushSleepToAppleHealth(startAt,endAt,openSleep.id);
+      await refreshCloud();
+    }
   }
 
   async function changeWakePlan(time:string){
@@ -1693,10 +1699,14 @@ export default function Home(){
     const weightKg=metricWeight?Number(metricWeight.replace(",",".")):null;
     const waistCm=metricWaist?Number(metricWaist.replace(",",".")):null;
     if(weightKg==null&&waistCm==null) return;
+    const recordedAt=Date.now();
     setCloudStatus("syncing");
     const res=await saveBodyMetric({weightKg,waistCm});
     setCloudStatus(res.ok?"ok":"error");
     if(res.ok){
+      if(weightKg!=null){
+        await pushWeightToAppleHealth(weightKg,recordedAt,`metric-${recordedAt}`);
+      }
       setMetricWeight("");
       setMetricWaist("");
       await refreshCloud();
