@@ -6,11 +6,34 @@ export type SetLog = {
   loggedAt?:number;
 };
 
+export type CardioRoutePoint = {
+  lat:number;
+  lng:number;
+  altitude?:number|null;
+  accuracy?:number|null;
+  speedMps?:number|null;
+  timestamp:number;
+};
+
+export type CardioSplit = {
+  km:number;
+  elapsedSeconds:number;
+  splitSeconds:number;
+  paceSecondsPerKm:number;
+};
+
 export type CardioLog = {
   durationMinutes:number;
+  durationSeconds?:number;
   distanceKm?:number;
   avgHr?:number;
   rpe?:number;
+  avgSpeedKmh?:number;
+  avgPaceSecondsPerKm?:number;
+  elevationGainM?:number;
+  route?:CardioRoutePoint[];
+  splits?:CardioSplit[];
+  source?:"gps"|"manual";
 };
 
 export type SupersetPart = {
