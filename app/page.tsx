@@ -158,6 +158,17 @@ function levelLabel(level:ExperienceLevel){
   return "Intermédiaire";
 }
 
+function estimatedWorkoutMinutes(workout:Workout){
+  if(workout.id==="cardio") return 35;
+  const seconds=workout.exercises.reduce((total,exercise)=>{
+    const rounds=Math.max(1,exercise.sets);
+    const work=rounds*42;
+    const rest=Math.max(0,rounds-1)*exercise.restSeconds;
+    return total+work+rest+45;
+  },0);
+  return Math.max(25,Math.min(90,Math.round(seconds/300)*5));
+}
+
 function formatTimer(s:number){
   const m=Math.floor(s/60).toString().padStart(2,"0");
   const sec=(s%60).toString().padStart(2,"0");
@@ -2524,10 +2535,10 @@ export default function Home(){
 
             <div className="v15-workout-hero">
               <div className="v15-hero-copy">
-                <span>SÉANCE DU JOUR</span>
+                <span>{activeHomeDayIndex===todayIndex?"SÉANCE DU JOUR":activeHomeSchedule.label.toUpperCase()+" · PROGRAMME"}</span>
                 <h2>{activeHomeWorkout?.title??activeHomeSchedule.name}</h2>
                 <p>{activeHomeWorkout?.subtitle??(activeHomeSchedule.name==="Repos"?"Repos complet aujourd’hui.":"Récupération et mobilité.")}</p>
-                {activeHomeWorkout&&<div className="v15-hero-meta"><span>◷ ~45 min</span><span>⌁ {activeHomeWorkout.exercises.length} exercices</span></div>}
+                {activeHomeWorkout&&<div className="v15-hero-meta"><span>◷ ~{estimatedWorkoutMinutes(activeHomeWorkout)} min</span><span>⌁ {activeHomeWorkout.exercises.length} exercices</span></div>}
               </div>
               {activeHomeWorkout&&<div className="v15-hero-art"><ExerciseArt exercise={activeHomeWorkout.exercises[0]} large/></div>}
               {activeHomeWorkout&&<button className="v15-hero-arrow" onClick={()=>startWorkout(activeHomeWorkout)}>→</button>}
