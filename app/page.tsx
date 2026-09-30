@@ -41,6 +41,9 @@ import {
 } from "../lib/health";
 
 type CoachMode = "normal"|"tired"|"short"|"crowded";
+type FitnessGoal = "muscle"|"strength"|"fitness"|"recomposition";
+type ExperienceLevel = "beginner"|"intermediate"|"advanced";
+type PlanDay = {label:string;name:string;workoutId:string|null};
 
 type SupersetDraft = {
   weight:string;
@@ -95,15 +98,48 @@ type BodyMetric = {
 const STORAGE_KEY="charlie-training-v4-cache";
 const SESSION_KEY="charlie-training-live-v4";
 
-const schedule=[
-  {label:"Lun",name:"Push",workoutId:"push"},
-  {label:"Mar",name:"Pull",workoutId:"pull"},
-  {label:"Mer",name:"Cardio",workoutId:"cardio"},
-  {label:"Jeu",name:"Legs",workoutId:"legs"},
-  {label:"Ven",name:"Récup",workoutId:null},
-  {label:"Sam",name:"Upper",workoutId:"upper"},
-  {label:"Dim",name:"Repos",workoutId:null}
-] as const;
+const dayLabels=["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+
+function buildPersonalSchedule(trainingDays:number):PlanDay[]{
+  const days:PlanDay[]=dayLabels.map(label=>({label,name:"Repos",workoutId:null}));
+
+  if(trainingDays<=3){
+    days[0]={label:"Lun",name:"Push",workoutId:"push"};
+    days[2]={label:"Mer",name:"Pull",workoutId:"pull"};
+    days[5]={label:"Sam",name:"Legs",workoutId:"legs"};
+    return days;
+  }
+
+  if(trainingDays===4){
+    days[0]={label:"Lun",name:"Push",workoutId:"push"};
+    days[1]={label:"Mar",name:"Pull",workoutId:"pull"};
+    days[3]={label:"Jeu",name:"Legs",workoutId:"legs"};
+    days[5]={label:"Sam",name:"Upper",workoutId:"upper"};
+    return days;
+  }
+
+  days[0]={label:"Lun",name:"Push",workoutId:"push"};
+  days[1]={label:"Mar",name:"Pull",workoutId:"pull"};
+  days[2]={label:"Mer",name:"Cardio",workoutId:"cardio"};
+  days[3]={label:"Jeu",name:"Legs",workoutId:"legs"};
+  days[4]={label:"Ven",name:"Récup",workoutId:null};
+  days[5]={label:"Sam",name:"Upper",workoutId:"upper"};
+  days[6]={label:"Dim",name:"Repos",workoutId:null};
+  return days;
+}
+
+function goalLabel(goal:FitnessGoal){
+  if(goal==="strength") return "Force";
+  if(goal==="fitness") return "Forme";
+  if(goal==="recomposition") return "Recomposition";
+  return "Prise de muscle";
+}
+
+function levelLabel(level:ExperienceLevel){
+  if(level==="beginner") return "Débutant";
+  if(level==="advanced") return "Avancé";
+  return "Intermédiaire";
+}
 
 function formatTimer(s:number){
   const m=Math.floor(s/60).toString().padStart(2,"0");
@@ -392,11 +428,22 @@ export default function Home(){
   const [selectedHomeDayIndex,setSelectedHomeDayIndex]=useState<number|null>(null);
   const [prefsLoaded,setPrefsLoaded]=useState(false);
 
+  const [displayName,setDisplayName]=useState("Charlie");
+  const [fitnessGoal,setFitnessGoal]=useState<FitnessGoal>("muscle");
+  const [experienceLevel,setExperienceLevel]=useState<ExperienceLevel>("intermediate");
+  const [trainingDays,setTrainingDays]=useState(5);
+  const [onboardingCompleted,setOnboardingCompleted]=useState(true);
+  const [onboardingStep,setOnboardingStep]=useState(0);
+  const [planStartedAt,setPlanStartedAt]=useState<string|null>(null);
+  const [profileLoaded,setProfileLoaded]=useState(false);
+
   const [metricWeight,setMetricWeight]=useState("");
   const [metricWaist,setMetricWaist]=useState("");
   const [accountEmail,setAccountEmail]=useState("");
   const [accountMessage,setAccountMessage]=useState("");
   const [chartExerciseId,setChartExerciseId]=useState("incline-bench");
+
+  const schedule=useMemo(()=>buildPersonalSchedule(trainingDays),[trainingDays]);
 
   const selectedWorkout=useMemo(
     ()=>workouts.find(w=>w.id===selectedWorkoutId)??workouts[0],
@@ -476,7 +523,16 @@ export default function Home(){
       setNotificationsEnabled(Boolean(state.preferences.notifications_enabled));
       setWorkoutReminderTime(state.preferences.workout_reminder_time.slice(0,5));
       setCreatineReminderTime(state.preferences.creatine_reminder_time.slice(0,5));
+      setDisplayName(state.preferences.display_name||"Charlie");
+      setFitnessGoal((state.preferences.fitness_goal||"muscle") as FitnessGoal);
+      setExperienceLevel((state.preferences.experience_level||"intermediate") as ExperienceLevel);
+      setTrainingDays(Math.max(3,Math.min(5,Number(state.preferences.training_days??5))));
+      setOnboardingCompleted(Boolean(state.preferences.onboarding_completed));
+      setPlanStartedAt(state.preferences.plan_started_at??null);
+    }else{
+      setOnboardingCompleted(false);
     }
+    setProfileLoaded(true);
     setPrefsLoaded(true);
     setCloudStatus(state.errors.length?"error":"ok");
     setCloudLoading(false);
@@ -699,13 +755,20 @@ export default function Home(){
         appearance_mode:appearanceMode,
         notifications_enabled:notificationsEnabled,
         workout_reminder_time:workoutReminderTime,
-        creatine_reminder_time:creatineReminderTime
+        creatine_reminder_time:creatineReminderTime,
+        display_name:displayName,
+        fitness_goal:fitnessGoal,
+        experience_level:experienceLevel,
+        training_days:trainingDays,
+        onboarding_completed:onboardingCompleted,
+        plan_started_at:planStartedAt
       }).then(r=>setCloudStatus(r.ok?"ok":"error"));
     },500);
     return()=>clearTimeout(t);
   },[
     prefsLoaded,sleepTarget,wakeTarget,prepTarget,disconnectTarget,sleepGoalMinutes,appearanceMode,notificationsEnabled,
-    workoutReminderTime,creatineReminderTime
+    workoutReminderTime,creatineReminderTime,
+    displayName,fitnessGoal,experienceLevel,trainingDays,onboardingCompleted,planStartedAt
   ]);
 
   useEffect(()=>{
