@@ -511,6 +511,7 @@ export default function Home(){
   const [onboardingCompleted,setOnboardingCompleted]=useState(true);
   const [onboardingStep,setOnboardingStep]=useState(0);
   const [planStartedAt,setPlanStartedAt]=useState<string|null>(null);
+  const [preferredExerciseVariants,setPreferredExerciseVariants]=useState<Record<string,string>>({});
   const [profileLoaded,setProfileLoaded]=useState(false);
 
   const [metricWeight,setMetricWeight]=useState("");
@@ -612,6 +613,7 @@ export default function Home(){
       setTrainingDays(Math.max(3,Math.min(5,Number(state.preferences.training_days??5))));
       setOnboardingCompleted(Boolean(state.preferences.onboarding_completed));
       setPlanStartedAt(state.preferences.plan_started_at??null);
+      setPreferredExerciseVariants((state.preferences.preferred_exercise_variants??{}) as Record<string,string>);
     }else{
       setOnboardingCompleted(false);
     }
@@ -879,14 +881,15 @@ export default function Home(){
         experience_level:experienceLevel,
         training_days:trainingDays,
         onboarding_completed:onboardingCompleted,
-        plan_started_at:planStartedAt
+        plan_started_at:planStartedAt,
+        preferred_exercise_variants:preferredExerciseVariants
       }).then(r=>setCloudStatus(r.ok?"ok":"error"));
     },500);
     return()=>clearTimeout(t);
   },[
     prefsLoaded,sleepTarget,wakeTarget,prepTarget,disconnectTarget,sleepGoalMinutes,appearanceMode,notificationsEnabled,
     workoutReminderTime,creatineReminderTime,
-    displayName,fitnessGoal,experienceLevel,trainingDays,onboardingCompleted,planStartedAt
+    displayName,fitnessGoal,experienceLevel,trainingDays,onboardingCompleted,planStartedAt,preferredExerciseVariants
   ]);
 
   useEffect(()=>{
@@ -1439,7 +1442,7 @@ export default function Home(){
       deferredIds:[],
       coachMode:mode,
       restOverrides:{},
-      exerciseVariants:{}
+      exerciseVariants:{...preferredExerciseVariants}
     };
     setCoachMode(mode);
     setSession(nextSession);
@@ -1765,6 +1768,7 @@ export default function Home(){
       }
     };
     setSession(nextSession);
+    setPreferredExerciseVariants(prev=>({...prev,[currentBaseExercise.id]:variant.id}));
     setExerciseSwapOpen(false);
     setWeight("");
     pushLiveSession(nextSession,"exercise_variant_changed",{
