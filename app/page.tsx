@@ -3587,6 +3587,87 @@ export default function Home(){
       </div>
     </section>}
 
+    {session&&exerciseSwapOpen&&currentBaseExercise&&<div className="v19-sheet-backdrop v27-session-sheet-backdrop" onClick={()=>setExerciseSwapOpen(false)}>
+      <div className="v19-sheet v27-swap-sheet" onClick={e=>e.stopPropagation()}>
+        <div className="v19-sheet-handle"/>
+        <div className="v19-sheet-head">
+          <div><span>MÊME MUSCLE · AUTRE MATÉRIEL</span><h3>Changer de variante</h3></div>
+          <button onClick={()=>setExerciseSwapOpen(false)}>×</button>
+        </div>
+        <p className="v27-sheet-intro">Choisis ce qui est disponible dans la salle. Tes charges sont mémorisées séparément pour chaque variante.</p>
+        <div className="v27-variant-list">
+          {currentVariantOptions.map(variant=>{
+            const last=latestExerciseLogs(currentBaseExercise.id,variant.id);
+            const lastSet=last?.logs.at(-1);
+            const active=currentExercise?.variantId===variant.id;
+            return <button key={variant.id} className={active?"active":""} onClick={()=>selectExerciseVariant(variant)}>
+              <div className="v27-variant-symbol">{variant.equipment.slice(0,1)}</div>
+              <div className="v27-variant-copy">
+                <strong>{variant.name}</strong>
+                <span>{variant.equipment} · {variant.unit}</span>
+                <small>{lastSet
+                  ? "Dernière fois : "+(lastSet.weight!=null?lastSet.weight+" "+variant.unit+" × ":"")+lastSet.reps+" reps"
+                  : variant.suggestedWeight!=null
+                    ? "Repère de départ : "+variant.suggestedWeight+" "+variant.unit
+                    : "Calibre la charge au ressenti"}</small>
+              </div>
+              <b>{active?"✓":"›"}</b>
+            </button>;
+          })}
+        </div>
+        <div className="v27-swap-note">
+          <i>↔</i><span>Changer de variante ne remet pas ta séance à zéro. Les séries déjà validées restent enregistrées.</span>
+        </div>
+      </div>
+    </div>}
+
+    {session&&sessionMenuOpen&&<div className="v19-sheet-backdrop v27-session-sheet-backdrop" onClick={()=>setSessionMenuOpen(false)}>
+      <div className="v19-sheet v27-session-menu" onClick={e=>e.stopPropagation()}>
+        <div className="v19-sheet-handle"/>
+        <div className="v19-sheet-head">
+          <div><span>{currentWorkout.title}</span><h3>Ta séance</h3></div>
+          <button onClick={()=>setSessionMenuOpen(false)}>×</button>
+        </div>
+
+        <div className="v27-session-progress">
+          <div><strong>{session.completedIds.length}</strong><span>terminés</span></div>
+          <i><b style={{width:Math.round((session.completedIds.length/currentWorkout.exercises.length)*100)+"%"}}/></i>
+          <small>{currentWorkout.exercises.length} exercices</small>
+        </div>
+
+        <div className="v27-session-exercise-list">
+          {currentWorkout.exercises.map((base,index)=>{
+            const resolved=resolveExerciseVariant(base,session.exerciseVariants?.[base.id]);
+            const done=session.completedIds.includes(base.id);
+            const deferred=session.deferredIds.includes(base.id);
+            const active=index===session.exerciseIndex;
+            return <button key={base.id} className={(active?"active ":"")+(done?"done ":"")+(deferred?"deferred":"")} onClick={()=>jumpToExercise(index)}>
+              <span>{done?"✓":index+1}</span>
+              <div><strong>{resolved.name}</strong><small>{resolved.equipment??equipmentLabel(resolved)} · {loggedRoundCount(base,session.logs)}/{effectiveTarget(resolved).sets} séries</small></div>
+              <b>{active?"En cours":done?"Fait":deferred?"Plus tard":"›"}</b>
+            </button>;
+          })}
+        </div>
+
+        <div className="v27-session-actions">
+          {currentVariantOptions.length>1&&<button onClick={()=>{setSessionMenuOpen(false);setExerciseSwapOpen(true);}}><i>↔</i><div><strong>Changer la variante</strong><span>Poulie, haltères, machine…</span></div></button>}
+          <button onClick={()=>{setSessionMenuOpen(false);skipMachine();}}><i>⇥</i><div><strong>Faire plus tard</strong><span>Machine occupée ou exercice indisponible</span></div></button>
+          <button onClick={()=>{setSessionMenuOpen(false);undoLastSet();}}><i>↶</i><div><strong>Annuler la dernière série</strong><span>Corriger une validation</span></div></button>
+        </div>
+
+        <div className="v27-mode-switch">
+          <span>Format de séance</span>
+          <div>
+            <button className={session.coachMode==="normal"?"active":""} onClick={()=>updateSessionCoachMode("normal")}>Normal</button>
+            <button className={session.coachMode==="short"?"active":""} onClick={()=>updateSessionCoachMode("short")}>Express</button>
+            <button className={session.coachMode==="tired"?"active":""} onClick={()=>updateSessionCoachMode("tired")}>Fatigué</button>
+          </div>
+        </div>
+
+        <button className="v27-abandon" onClick={()=>confirm("Terminer sans enregistrer ?")&&abandonWorkout()}>Abandonner la séance</button>
+      </div>
+    </div>}
+
     {!session&&selectedHistorySession&&<div className="v19-sheet-backdrop" onClick={()=>setSelectedHistoryKey(null)}>
       <div className="v19-sheet v24-history-sheet" onClick={e=>e.stopPropagation()}>
         <div className="v19-sheet-handle"/>
@@ -3620,8 +3701,8 @@ export default function Home(){
               <div className="v24-history-sets">
                 {sets.map((set,index)=><div key={index}>
                   <span>{index+1}</span>
-                  <strong>{set.weight!=null?set.weight+" "+(exercise?.unit??"kg"):"PDC"} × {set.reps}</strong>
-                  <small>{set.rir!=null?"RIR "+set.rir:""}{set.failed?" · échec":""}</small>
+                  <strong>{set.weight!=null?set.weight+" "+(set.variantId?exerciseVariants[exerciseId]?.find(v=>v.id===set.variantId)?.unit??exercise?.unit??"kg":exercise?.unit??"kg"):"PDC"} × {set.reps}</strong>
+                  <small>{set.variantName?set.variantName+" · ":""}{set.rir!=null?"RIR "+set.rir:""}{set.failed?" · échec":""}</small>
                 </div>)}
               </div>
             </div>;
