@@ -360,15 +360,19 @@ export async function clearLiveWorkout(clientSessionId:string){
 export async function updateWorkoutLogs(
   id:string,
   logs:Record<string,unknown>,
-  cardio?:Record<string,unknown>|null
+  cardio?:Record<string,unknown>|null,
+  exerciseVariants?:Record<string,string>
 ){
   if(!supabase) return {ok:false,reason:"not_configured" as const};
   const user=await ensureUser();
   if(!user) return {ok:false,reason:"auth_failed" as const};
 
+  const payload:Record<string,unknown>={logs,cardio:cardio ?? null};
+  if(exerciseVariants) payload.exercise_variants=exerciseVariants;
+
   const {error}=await supabase
     .from("workout_sessions")
-    .update({logs,cardio:cardio ?? null})
+    .update(payload)
     .eq("id",id)
     .eq("user_id",user.id);
 
