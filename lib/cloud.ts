@@ -1,4 +1,5 @@
 import { createClient, type User } from "@supabase/supabase-js";
+import type { NativeHealthSnapshot } from "./health";
 
 const url =
   process.env.NEXT_PUBLIC_SUPABASE_URL ??
@@ -26,6 +27,9 @@ export type CloudWorkoutSession = {
   id:string;
   client_session_id?:string|null;
   workout_id:string;
+  source?:string|null;
+  external_id?:string|null;
+  health_metadata?:Record<string,any>|null;
   started_at?:string|null;
   finished_at:string;
   logs:Record<string, any[]>;
@@ -55,6 +59,7 @@ export type CloudLiveWorkout = {
 export type CloudSleepSession = {
   id:string;
   bed_at:string;
+  external_id?:string|null;
   lights_out_at?:string|null;
   planned_wake_at?:string|null;
   wake_at?:string|null;
@@ -69,6 +74,17 @@ export type CloudBodyMetric = {
   recorded_at:string;
   weight_kg?:number|null;
   waist_cm?:number|null;
+  source?:string|null;
+  external_id?:string|null;
+};
+
+export type CloudHealthSyncState = {
+  enabled:boolean;
+  device_id?:string|null;
+  permissions:Record<string,any>;
+  last_pull_at?:string|null;
+  last_push_at?:string|null;
+  last_error?:string|null;
 };
 
 export type CloudJourneyEvent = {
@@ -117,19 +133,19 @@ export async function loadCloudState() {
   const [workoutsRes,sleepRes,metricsRes,prefsRes,journeyRes] = await Promise.all([
     supabase
       .from("workout_sessions")
-      .select("id,client_session_id,workout_id,started_at,finished_at,logs,cardio,coach_mode,notes")
+      .select("id,client_session_id,workout_id,started_at,finished_at,logs,cardio,coach_mode,notes,source,external_id,health_metadata")
       .eq("user_id",user.id)
       .order("finished_at",{ascending:false})
       .limit(120),
     supabase
       .from("sleep_sessions")
-      .select("id,bed_at,lights_out_at,planned_wake_at,wake_at,quality,energy,notes,source")
+      .select("id,bed_at,lights_out_at,planned_wake_at,wake_at,quality,energy,notes,source,external_id")
       .eq("user_id",user.id)
       .order("bed_at",{ascending:false})
       .limit(60),
     supabase
       .from("body_metrics")
-      .select("id,recorded_at,weight_kg,waist_cm")
+      .select("id,recorded_at,weight_kg,waist_cm,source,external_id")
       .eq("user_id",user.id)
       .order("recorded_at",{ascending:false})
       .limit(120),
@@ -523,4 +539,172 @@ export async function savePushSubscription(input:{
     },{onConflict:"endpoint"});
 
   return error?{ok:false,reason:error.message}:{ok:true};
+}
+
+
+export async function loadHealthSyncState():Promise<CloudHealthSyncState|null>{
+  if(!supabase) return null;
+  const user=await ensureUser();
+  if(!user) return null;
+
+  const {data,error}=await supabase
+    .from("health_sync_state")
+    .select("enabled,device_id,permissions,last_pull_at,last_push_at,last_error")
+    .eq("user_id",user.id)
+    .maybeSingle();
+
+  if(error) return null;
+  return (data ?? null) as CloudHealthSyncState|null;
+}
+
+export async function setHealthSyncState(input:Partial<CloudHealthSyncState>){
+  if(!supabase) return {ok:false,reason:"not_configured" as const};
+  const user=await ensureUser();
+  if(!user) return {ok:false,reason:"auth_failed" as const};
+
+  const {error}=await supabase
+    .from("health_sync_state")
+    .upsert({
+      user_id:user.id,
+      ...input,
+      updated_at:new Date().toISOString()
+    },{onConflict:"user_id"});
+
+  return error?{ok:false,reason:error.message}:{ok:true};
+}
+
+function healthWorkoutId(activityName:string){
+  const name=activityName.toLowerCase();
+  if(name.includes("running")||name.includes("course")) return "health-running";
+  if(name.includes("walking")||name.includes("marche")) return "health-walking";
+  if(name.includes("strength")||name.includes("training")||name.includes("musculation")) return "health-strength";
+  if(name.includes("cycling")||name.includes("vélo")) return "health-cycling";
+  return "health-workout";
+}
+
+export async function syncAppleHealthSnapshot(
+  snapshot:NativeHealthSnapshot,
+  input:{deviceId:string;permissions?:Record<string,unknown>}
+){
+  if(!supabase) return {ok:false,reason:"not_configured" as const};
+  const user=await ensureUser();
+  if(!user) return {ok:false,reason:"auth_failed" as const};
+
+  const errors:string[]=[];
+
+  if(snapshot.weights.length){
+    const {error}=await supabase.from("body_metrics").upsert(
+      snapshot.weights.map(item=>({
+        user_id:user.id,
+        recorded_at:item.recordedAt,
+        weight_kg:item.kilograms,
+        waist_cm:null,
+        source:"apple_health",
+        external_id:item.externalId
+      })),
+      {onConflict:"user_id,source,external_id"}
+    );
+    if(error) errors.push(error.message);
+  }
+
+  if(snapshot.sleepSessions.length){
+    const {error}=await supabase.from("sleep_sessions").upsert(
+      snapshot.sleepSessions.map(item=>({
+        user_id:user.id,
+        bed_at:item.start,
+        lights_out_at:item.start,
+        planned_wake_at:null,
+        wake_at:item.end,
+        quality:null,
+        energy:null,
+        notes:null,
+        source:"apple_health",
+        external_id:item.externalId,
+        updated_at:new Date().toISOString()
+      })),
+      {onConflict:"user_id,source,external_id"}
+    );
+    if(error) errors.push(error.message);
+  }
+
+  const externalWorkouts=snapshot.workouts.filter(item=>!item.clientSessionId);
+  if(externalWorkouts.length){
+    const {error}=await supabase.from("workout_sessions").upsert(
+      externalWorkouts.map(item=>({
+        user_id:user.id,
+        client_session_id:null,
+        workout_id:healthWorkoutId(item.activityName),
+        started_at:item.start,
+        finished_at:item.end,
+        logs:{},
+        cardio:{
+          durationMinutes:Math.round((item.durationSeconds/60)*10)/10,
+          durationSeconds:item.durationSeconds,
+          distanceKm:item.distanceMeters==null?undefined:Math.round((item.distanceMeters/1000)*1000)/1000,
+          source:"apple_health"
+        },
+        coach_mode:null,
+        notes:"Importé depuis Apple Santé",
+        source:"apple_health",
+        external_id:item.externalId,
+        health_metadata:{
+          activityType:item.activityType,
+          activityName:item.activityName,
+          activeEnergyKcal:item.activeEnergyKcal ?? null,
+          distanceMeters:item.distanceMeters ?? null
+        }
+      })),
+      {onConflict:"user_id,source,external_id"}
+    );
+    if(error) errors.push(error.message);
+  }
+
+  if(snapshot.daily.length){
+    const {error}=await supabase.from("health_daily_metrics").upsert(
+      snapshot.daily.map(item=>({
+        user_id:user.id,
+        metric_date:item.date,
+        steps:item.steps ?? null,
+        active_energy_kcal:item.activeEnergyKcal ?? null,
+        avg_heart_rate_bpm:item.averageHeartRateBpm ?? null,
+        resting_heart_rate_bpm:item.restingHeartRateBpm ?? null,
+        source:"apple_health",
+        updated_at:new Date().toISOString()
+      })),
+      {onConflict:"user_id,metric_date,source"}
+    );
+    if(error) errors.push(error.message);
+  }
+
+  const pulledAt=new Date().toISOString();
+  const state=await setHealthSyncState({
+    enabled:errors.length===0,
+    device_id:input.deviceId,
+    permissions:input.permissions ?? {},
+    last_pull_at:pulledAt,
+    last_error:errors.length?errors.join(" · "):null
+  });
+  if(!state.ok) errors.push(String(state.reason));
+
+  return errors.length
+    ? {ok:false,reason:errors.join(" · ")}
+    : {
+        ok:true,
+        imported:{
+          weights:snapshot.weights.length,
+          sleep:snapshot.sleepSessions.length,
+          workouts:externalWorkouts.length,
+          daily:snapshot.daily.length
+        },
+        pulledAt
+      };
+}
+
+export async function markHealthPush(input:{deviceId?:string|null;error?:string|null}){
+  return setHealthSyncState({
+    enabled:!input.error,
+    device_id:input.deviceId ?? undefined,
+    last_push_at:new Date().toISOString(),
+    last_error:input.error ?? null
+  });
 }
