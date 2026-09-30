@@ -7509,3 +7509,120 @@ body[data-app-theme="dark"],
   background:#1d2734;
   color:#9ca9ba;
 }
+
+
+/* V25 — weekly coach review */
+.v25-coach-review{
+  overflow:hidden;
+  border:1px solid #dfe9fa;
+  border-radius:21px;
+  background:linear-gradient(145deg,#f4f8ff,#fff);
+}
+.v25-coach-review-head{
+  display:grid;
+  grid-template-columns:42px 1fr auto;
+  gap:10px;
+  align-items:center;
+  padding:13px 14px;
+}
+.v25-coach-review-logo{
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  background:linear-gradient(145deg,#0d315f,#2369f6);
+  color:#fff;
+  font-size:17px;
+  font-weight:950;
+}
+.v25-coach-review-head span,
+.v25-coach-review-head strong{
+  display:block;
+}
+.v25-coach-review-head span{
+  color:#5f7da9;
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.12em;
+}
+.v25-coach-review-head strong{
+  margin-top:3px;
+  color:#14213a;
+  font-size:13px;
+}
+.v25-coach-review-head>b{
+  padding:7px 9px;
+  border-radius:999px;
+  background:#e9f1ff;
+  color:#2369f6;
+  font-size:9px;
+}
+.v25-coach-review-notes{
+  border-top:1px solid #e7edf7;
+}
+.v25-coach-review-notes>div{
+  display:grid;
+  grid-template-columns:24px 1fr;
+  gap:8px;
+  align-items:center;
+  min-height:42px;
+  padding:0 14px;
+  border-bottom:1px solid #edf1f7;
+}
+.v25-coach-review-notes i{
+  display:grid;
+  place-items:center;
+  width:20px;
+  height:20px;
+  border-radius:7px;
+  background:#edf3ff;
+  color:#4776c4;
+  font-style:normal;
+  font-size:7px;
+  font-weight:900;
+}
+.v25-coach-review-notes span{
+  color:#657286;
+  font-size:9px;
+  line-height:1.35;
+}
+.v25-coach-review>button{
+  width:calc(100% - 24px);
+  min-height:46px;
+  margin:11px 12px 12px;
+  border:0;
+  border-radius:14px;
+  background:#17243a;
+  color:#fff;
+  font-size:10px;
+  font-weight:850;
+}
+.v25-coach-review>button span{
+  margin-left:5px;
+}
+.theme-dark .v25-coach-review{
+  border-color:#203653;
+  background:#111d2c;
+}
+.theme-dark .v25-coach-review-head strong{
+  color:#eaf1fb;
+}
+.theme-dark .v25-coach-review-head>b{
+  background:#172c4a;
+  color:#86a9ff;
+}
+.theme-dark .v25-coach-review-notes{
+  border-color:rgba(255,255,255,.06);
+}
+.theme-dark .v25-coach-review-notes>div{
+  border-color:rgba(255,255,255,.05);
+}
+.theme-dark .v25-coach-review-notes i{
+  background:#172a47;
+  color:#83a7ff;
+}
+.theme-dark .v25-coach-review>button{
+  background:#edf2f8;
+  color:#121820;
+}
