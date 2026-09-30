@@ -543,6 +543,43 @@ export default function Home(){
   },[]);
 
   useEffect(()=>{
+    if(!authUser?.id||healthBootstrappedRef.current) return;
+    healthBootstrappedRef.current=true;
+
+    if(!nativeHealthAvailable()){
+      setNativeHealthStatus(null);
+      return;
+    }
+
+    void (async()=>{
+      try{
+        const status=await getNativeHealthStatus();
+        setNativeHealthStatus(status);
+        if(status.authorizationRequested){
+          setHealthSyncing(true);
+          const snapshot=await pullNativeHealthSnapshot(45);
+          const synced=await syncAppleHealthSnapshot(snapshot,{
+            deviceId:status.deviceId,
+            permissions:status.writeAuthorization
+          });
+          if(synced.ok){
+            setHealthMessage("Apple Santé synchronisé.");
+            await refreshCloud();
+          }else{
+            setHealthMessage("Synchro Apple Santé à vérifier.");
+          }
+        }
+      }catch(error:any){
+        setHealthMessage(error?.message==="native_health_unavailable"
+          ?"Apple Santé est disponible dans l’app iPhone native."
+          :"Apple Santé indisponible pour le moment.");
+      }finally{
+        setHealthSyncing(false);
+      }
+    })();
+  },[authUser?.id]);
+
+  useEffect(()=>{
     const media=window.matchMedia("(prefers-color-scheme: dark)");
     const sync=()=>setSystemDark(media.matches);
     sync();
@@ -1049,6 +1086,101 @@ export default function Home(){
       failed:Boolean(log.failed),
       logged_at:log.loggedAt?new Date(log.loggedAt).toISOString():new Date().toISOString()
     };
+  }
+
+  async function syncAppleHealthNow(requestPermission=false){
+    if(!nativeHealthAvailable()){
+      setHealthMessage("Apple Santé nécessite l’app iPhone native Charlie Training.");
+      return;
+    }
+
+    setHealthSyncing(true);
+    setHealthMessage(requestPermission?"Autorisation Apple Santé…":"Synchronisation Apple Santé…");
+
+    try{
+      const status=requestPermission
+        ? await requestNativeHealthAuthorization()
+        : await getNativeHealthStatus();
+
+      setNativeHealthStatus(status);
+
+      const snapshot=await pullNativeHealthSnapshot(45);
+      const synced=await syncAppleHealthSnapshot(snapshot,{
+        deviceId:status.deviceId,
+        permissions:status.writeAuthorization
+      });
+
+      if(!synced.ok) throw new Error(String(synced.reason));
+
+      setHealthMessage(
+        `Synchronisé : ${synced.imported.sleep} nuit(s), ${synced.imported.weights} poids, ${synced.imported.workouts} entraînement(s).`
+      );
+      await refreshCloud();
+    }catch(error:any){
+      const message=String(error?.message??"");
+      setHealthMessage(
+        message.includes("native_health_unavailable")
+          ?"Ouvre Charlie Training depuis l’app iPhone native pour connecter Santé."
+          :"Impossible de synchroniser Apple Santé pour le moment."
+      );
+    }finally{
+      setHealthSyncing(false);
+    }
+  }
+
+  async function pushWorkoutToAppleHealth(item:CompletedSession){
+    if(!nativeHealthAvailable()||nativeHealthStatus?.writeAuthorization.workouts!=="sharingAuthorized") return;
+
+    try{
+      await writeNativeHealthWorkout({
+        start:new Date(item.startedAt??item.finishedAt).toISOString(),
+        end:new Date(item.finishedAt).toISOString(),
+        workoutKind:item.workoutId==="cardio"?"running":"strength",
+        clientSessionId:item.clientSessionId,
+        distanceMeters:item.cardio?.distanceKm!=null?item.cardio.distanceKm*1000:null,
+        activeEnergyKcal:null
+      });
+      await markHealthPush({deviceId:nativeHealthStatus.deviceId});
+    }catch(error:any){
+      await markHealthPush({
+        deviceId:nativeHealthStatus.deviceId,
+        error:String(error?.message??"health_write_failed")
+      });
+    }
+  }
+
+  async function pushWeightToAppleHealth(kilograms:number,recordedAt:number,sourceId:string){
+    if(!nativeHealthAvailable()||nativeHealthStatus?.writeAuthorization.weight!=="sharingAuthorized") return;
+    try{
+      await writeNativeHealthWeight({
+        kilograms,
+        recordedAt:new Date(recordedAt).toISOString(),
+        sourceId
+      });
+      await markHealthPush({deviceId:nativeHealthStatus.deviceId});
+    }catch(error:any){
+      await markHealthPush({
+        deviceId:nativeHealthStatus.deviceId,
+        error:String(error?.message??"health_weight_write_failed")
+      });
+    }
+  }
+
+  async function pushSleepToAppleHealth(start:number,end:number,sourceId:string){
+    if(!nativeHealthAvailable()||nativeHealthStatus?.writeAuthorization.sleep!=="sharingAuthorized") return;
+    try{
+      await writeNativeHealthSleep({
+        start:new Date(start).toISOString(),
+        end:new Date(end).toISOString(),
+        sourceId
+      });
+      await markHealthPush({deviceId:nativeHealthStatus.deviceId});
+    }catch(error:any){
+      await markHealthPush({
+        deviceId:nativeHealthStatus.deviceId,
+        error:String(error?.message??"health_sleep_write_failed")
+      });
+    }
   }
 
   function startWorkout(w:Workout){
