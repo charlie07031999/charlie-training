@@ -345,6 +345,7 @@ export default function Home(){
   const [runStatus,setRunStatus]=useState<"idle"|"locating"|"ready"|"running"|"paused"|"finished">("idle");
   const [runPoints,setRunPoints]=useState<CardioRoutePoint[]>([]);
   const [runStartedAt,setRunStartedAt]=useState<number|null>(null);
+  const [runFinishedAt,setRunFinishedAt]=useState<number|null>(null);
   const [runPausedMs,setRunPausedMs]=useState(0);
   const [runPauseStartedAt,setRunPauseStartedAt]=useState<number|null>(null);
   const [runLocationError,setRunLocationError]=useState("");
