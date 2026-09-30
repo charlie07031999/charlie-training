@@ -95,6 +95,15 @@ type BodyMetric = {
   waistCm?:number|null;
 };
 
+type WorkoutFinishSummary = {
+  title:string;
+  durationSeconds:number;
+  sets:number;
+  volumeKg:number;
+  personalRecords:number;
+  cardio?:CardioLog|null;
+};
+
 const STORAGE_KEY="charlie-training-v4-cache";
 const SESSION_KEY="charlie-training-live-v4";
 
@@ -368,6 +377,7 @@ export default function Home(){
   const [exerciseFilter,setExerciseFilter]=useState("Tous");
   const [selectedExerciseDetailId,setSelectedExerciseDetailId]=useState<string|null>(null);
   const [quickMenuOpen,setQuickMenuOpen]=useState(false);
+  const [lastWorkoutSummary,setLastWorkoutSummary]=useState<WorkoutFinishSummary|null>(null);
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
   const [session,setSession]=useState<SessionState|null>(null);
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
@@ -1338,6 +1348,32 @@ export default function Home(){
       cardio:cardio??null,
       coachMode:session.coachMode
     };
+    const workout=workouts.find(w=>w.id===item.workoutId);
+    const summarySets=Object.values(logs).reduce((sum,entries)=>sum+entries.length,0);
+    const summaryVolume=Math.round(
+      Object.values(logs).flat().reduce((sum,set)=>sum+(set.weight??0)*set.reps,0)
+    );
+    const personalRecords=Object.entries(logs).reduce((count,[exerciseId,entries])=>{
+      const currentBest=Math.max(0,...entries.filter(x=>x.weight!=null).map(x=>Number(x.weight)));
+      if(currentBest<=0) return count;
+      const previousBest=Math.max(
+        0,
+        ...completedSessions.flatMap(s=>(s.logs?.[exerciseId]??[]))
+          .filter(x=>x.weight!=null)
+          .map(x=>Number(x.weight))
+      );
+      return previousBest>0&&currentBest>previousBest+0.1?count+1:count;
+    },0);
+
+    setLastWorkoutSummary({
+      title:workout?.title??item.workoutId,
+      durationSeconds:Math.max(1,Math.round((item.finishedAt-(item.startedAt??item.finishedAt))/1000)),
+      sets:summarySets,
+      volumeKg:summaryVolume,
+      personalRecords,
+      cardio:item.cardio??null
+    });
+
     const next=[...completedSessions,item].sort((a,b)=>a.finishedAt-b.finishedAt);
     setCompletedSessions(next);
     localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
@@ -3196,6 +3232,34 @@ export default function Home(){
         </div>
       </div>
     </section>}
+
+    {!session&&lastWorkoutSummary&&<div className="v22-finish-backdrop">
+      <div className="v22-finish-card">
+        <div className="v22-finish-check">✓</div>
+        <span>SÉANCE TERMINÉE</span>
+        <h2>{lastWorkoutSummary.title}</h2>
+        <p>{lastWorkoutSummary.cardio?"Course enregistrée.":"Séance enregistrée et progression mise à jour."}</p>
+
+        {lastWorkoutSummary.cardio?<div className="v22-finish-grid">
+          <div><span>Temps</span><strong>{formatTimer(lastWorkoutSummary.durationSeconds)}</strong></div>
+          <div><span>Distance</span><strong>{lastWorkoutSummary.cardio.distanceKm!=null?lastWorkoutSummary.cardio.distanceKm.toFixed(2)+" km":"—"}</strong></div>
+          <div><span>Allure</span><strong>{lastWorkoutSummary.cardio.avgPaceSecondsPerKm?formatPace(lastWorkoutSummary.cardio.avgPaceSecondsPerKm):"—"}</strong></div>
+          <div><span>RPE</span><strong>{lastWorkoutSummary.cardio.rpe??"—"}<small>/10</small></strong></div>
+        </div>:<div className="v22-finish-grid">
+          <div><span>Durée</span><strong>{Math.max(1,Math.round(lastWorkoutSummary.durationSeconds/60))}<small> min</small></strong></div>
+          <div><span>Séries</span><strong>{lastWorkoutSummary.sets}</strong></div>
+          <div><span>Volume</span><strong>{lastWorkoutSummary.volumeKg>=1000?(lastWorkoutSummary.volumeKg/1000).toFixed(1)+"k":lastWorkoutSummary.volumeKg}<small> kg</small></strong></div>
+          <div className={lastWorkoutSummary.personalRecords>0?"pr":""}><span>Records</span><strong>{lastWorkoutSummary.personalRecords}</strong></div>
+        </div>}
+
+        {lastWorkoutSummary.personalRecords>0&&<div className="v22-pr-banner">
+          <i>↗</i><div><strong>Nouveau record personnel</strong><span>{lastWorkoutSummary.personalRecords} progression{lastWorkoutSummary.personalRecords>1?"s":""} détectée{lastWorkoutSummary.personalRecords>1?"s":""}.</span></div>
+        </div>}
+
+        <button className="v22-finish-primary" onClick={()=>setLastWorkoutSummary(null)}>Terminer</button>
+        <button className="v22-finish-secondary" onClick={()=>{setLastWorkoutSummary(null);setTrackingView("training");setTab("analysis");}}>Voir ma progression</button>
+      </div>
+    </div>}
 
     {!session&&quickMenuOpen&&<div className="v19-sheet-backdrop" onClick={()=>setQuickMenuOpen(false)}>
       <div className="v19-sheet v19-quick-sheet" onClick={e=>e.stopPropagation()}>
