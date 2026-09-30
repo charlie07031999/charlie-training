@@ -18,12 +18,27 @@ import {
   setSleepQuality,
   saveSleepCheckin,
   startSleepSession,
+  syncAppleHealthSnapshot,
   syncLiveWorkout,
   syncWorkoutSession,
+  loadHealthSyncState,
+  markHealthPush,
   updateSleepPlan,
   VAPID_PUBLIC_KEY,
+  type CloudHealthDailyMetric,
+  type CloudHealthSyncState,
   type CloudJourneyEvent
 } from "../lib/cloud";
+import {
+  getNativeHealthStatus,
+  nativeHealthAvailable,
+  pullNativeHealthSnapshot,
+  requestNativeHealthAuthorization,
+  writeNativeHealthSleep,
+  writeNativeHealthWeight,
+  writeNativeHealthWorkout,
+  type NativeHealthStatus
+} from "../lib/health";
 
 type CoachMode = "normal"|"tired"|"short"|"crowded";
 
