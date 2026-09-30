@@ -315,6 +315,8 @@ export default function Home(){
   const [trackingView,setTrackingView]=useState<"sleep"|"training">("training");
   const [exerciseSearch,setExerciseSearch]=useState("");
   const [exerciseFilter,setExerciseFilter]=useState("Tous");
+  const [selectedExerciseDetailId,setSelectedExerciseDetailId]=useState<string|null>(null);
+  const [quickMenuOpen,setQuickMenuOpen]=useState(false);
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
   const [session,setSession]=useState<SessionState|null>(null);
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
@@ -377,6 +379,16 @@ export default function Home(){
   const selectedWorkout=useMemo(
     ()=>workouts.find(w=>w.id===selectedWorkoutId)??workouts[0],
     [selectedWorkoutId]
+  );
+  const selectedExerciseDetail=useMemo(
+    ()=>workouts.flatMap(w=>w.exercises).find(ex=>ex.id===selectedExerciseDetailId)??null,
+    [selectedExerciseDetailId]
+  );
+  const selectedExerciseWorkout=useMemo(
+    ()=>selectedExerciseDetail
+      ? workouts.find(w=>w.exercises.some(ex=>ex.id===selectedExerciseDetail.id))??null
+      : null,
+    [selectedExerciseDetail]
   );
   const currentWorkout=session
     ? workouts.find(w=>w.id===session.workoutId)??selectedWorkout
@@ -1796,6 +1808,26 @@ export default function Home(){
     .slice(-12);
 
   const recentSessions=[...completedSessions].sort((a,b)=>b.finishedAt-a.finishedAt).slice(0,8);
+  const monthStart=now-30*86400000;
+  const monthSessions=completedSessions.filter(s=>s.finishedAt>=monthStart);
+  const monthStrengthSessions=monthSessions.filter(s=>!s.cardio);
+  const monthCardioSessions=monthSessions.filter(s=>Boolean(s.cardio));
+  const monthVolume=Math.round(monthStrengthSessions.reduce((sum,s)=>sum+
+    Object.values(s.logs).flat().reduce((n,x)=>n+(x.weight??0)*x.reps,0),0));
+  const latestCardio=[...completedSessions]
+    .filter(s=>Boolean(s.cardio))
+    .sort((a,b)=>b.finishedAt-a.finishedAt)[0]?.cardio??null;
+  const currentStreak=(()=>{
+    const days=new Set(completedSessions.map(s=>new Date(s.finishedAt).toDateString()));
+    let streak=0;
+    const cursor=new Date();
+    for(let i=0;i<30;i++){
+      if(days.has(cursor.toDateString())) streak++;
+      else if(i>0) break;
+      cursor.setDate(cursor.getDate()-1);
+    }
+    return streak;
+  })();
 
   const validSleeps=[...sleepSessions]
     .filter(s=>{
