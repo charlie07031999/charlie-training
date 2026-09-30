@@ -13,6 +13,7 @@ export type CardioRoutePoint = {
   accuracy?:number|null;
   speedMps?:number|null;
   timestamp:number;
+  elapsedSeconds?:number;
 };
 
 export type CardioSplit = {
