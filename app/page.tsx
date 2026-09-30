@@ -2401,7 +2401,7 @@ export default function Home(){
       {tab==="home"&&<header className="v14-app-header">
         <div>
           <span>CHARLIE TRAINING</span>
-          <strong>Bonjour Charlie 👋</strong>
+          <strong>Bonjour {displayName} 👋</strong>
         </div>
         <button className="v14-header-action" onClick={()=>setQuickMenuOpen(true)} aria-label="Actions rapides">+</button>
       </header>}
@@ -2472,7 +2472,7 @@ export default function Home(){
           <div className="v7-evening-home">
             <div className="v7-evening-title">
               <div>
-                <h2>Bonsoir Charlie</h2>
+                <h2>Bonsoir {displayName}</h2>
                 <p>{currentMinutes>targetBedMinutes
   ?"Ton heure cible est passée. On coupe maintenant."
   :minutesUntilDisconnect>0
@@ -3148,8 +3148,8 @@ export default function Home(){
     {tab==="more"&&<section className="v7-profile">
       <div className="v14-page-title"><span>PLUS</span><h2>Réglages & santé</h2><p>Compte, apparence, données et intégrations.</p></div>
       <div className="v7-profile-card">
-        <div className="v7-avatar">C</div>
-        <div><span>PROFIL</span><h2>Charlie</h2><p>{authAnonymous?"Compte local anonyme":"Compte synchronisé"}</p></div>
+        <div className="v7-avatar">{(displayName.trim()[0]||"C").toUpperCase()}</div>
+        <div><span>PROFIL</span><h2>{displayName}</h2><p>{authAnonymous?"Compte local anonyme":"Compte synchronisé"}</p></div>
         <b className={cloudStatus==="ok"?"ok":""}>{cloudStatus==="ok"?"Cloud actif":"Sync…"}</b>
       </div>
 
