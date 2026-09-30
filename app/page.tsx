@@ -2456,6 +2456,15 @@ export default function Home(){
   const selectedHistorySession=selectedHistoryKey
     ? completedSessions.find(s=>(s.id??s.clientSessionId)===selectedHistoryKey)??null
     : null;
+  const historyVariantSession=historyVariantEdit
+    ? completedSessions.find(s=>(s.id??s.clientSessionId)===historyVariantEdit.sessionKey)??null
+    : null;
+  const historyVariantExercise=historyVariantEdit
+    ? allTrackableExercises.find(ex=>ex.id===historyVariantEdit.exerciseId)??null
+    : null;
+  const historyVariantOptions=historyVariantExercise
+    ? (exerciseVariants[historyVariantExercise.id]??[])
+    : [];
   const monthStart=now-30*86400000;
   const monthSessions=completedSessions.filter(s=>s.finishedAt>=monthStart);
   const monthStrengthSessions=monthSessions.filter(s=>!s.cardio);
