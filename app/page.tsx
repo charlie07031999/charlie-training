@@ -386,6 +386,7 @@ export default function Home(){
   const [selectedExerciseDetailId,setSelectedExerciseDetailId]=useState<string|null>(null);
   const [quickMenuOpen,setQuickMenuOpen]=useState(false);
   const [lastWorkoutSummary,setLastWorkoutSummary]=useState<WorkoutFinishSummary|null>(null);
+  const [selectedHistoryKey,setSelectedHistoryKey]=useState<string|null>(null);
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
   const [session,setSession]=useState<SessionState|null>(null);
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
@@ -2161,6 +2162,9 @@ export default function Home(){
     .slice(-12);
 
   const recentSessions=[...completedSessions].sort((a,b)=>b.finishedAt-a.finishedAt).slice(0,8);
+  const selectedHistorySession=selectedHistoryKey
+    ? completedSessions.find(s=>(s.id??s.clientSessionId)===selectedHistoryKey)??null
+    : null;
   const monthStart=now-30*86400000;
   const monthSessions=completedSessions.filter(s=>s.finishedAt>=monthStart);
   const monthStrengthSessions=monthSessions.filter(s=>!s.cardio);
@@ -2998,10 +3002,11 @@ export default function Home(){
           {recentSessions.slice(0,5).map((s,i)=>{
             const w=workouts.find(x=>x.id===s.workoutId);
             const sets=Object.values(s.logs).reduce((n,a)=>n+a.length,0);
-            return <div className="session-history-item" key={s.id??s.finishedAt+i}>
+            return <button className="session-history-item v24-history-button" key={s.id??s.finishedAt+i} onClick={()=>setSelectedHistoryKey(s.id??s.clientSessionId)}>
               <div><strong>{w?.title??s.workoutId}</strong><span>{dateKey(s.finishedAt)}</span></div>
               <div className="session-stats"><b>{s.cardio?s.cardio.durationMinutes+"m":sets}</b><small>{s.cardio?"cardio":"séries"}</small></div>
-            </div>;
+              <i>›</i>
+            </button>;
           })}
         </div>
 
@@ -3264,6 +3269,50 @@ export default function Home(){
         </div>
       </div>
     </section>}
+
+    {!session&&selectedHistorySession&&<div className="v19-sheet-backdrop" onClick={()=>setSelectedHistoryKey(null)}>
+      <div className="v19-sheet v24-history-sheet" onClick={e=>e.stopPropagation()}>
+        <div className="v19-sheet-handle"/>
+        <div className="v19-sheet-head">
+          <div>
+            <span>{new Date(selectedHistorySession.finishedAt).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</span>
+            <h3>{workouts.find(w=>w.id===selectedHistorySession.workoutId)?.title??selectedHistorySession.workoutId}</h3>
+          </div>
+          <button onClick={()=>setSelectedHistoryKey(null)}>×</button>
+        </div>
+
+        <div className="v24-history-summary">
+          <div><span>Durée</span><strong>{selectedHistorySession.startedAt?Math.max(1,Math.round((selectedHistorySession.finishedAt-selectedHistorySession.startedAt)/60000))+" min":"—"}</strong></div>
+          <div><span>Séries</span><strong>{Object.values(selectedHistorySession.logs).reduce((n,a)=>n+a.length,0)}</strong></div>
+          <div><span>Volume</span><strong>{(()=>{
+            const volume=Math.round(Object.values(selectedHistorySession.logs).flat().reduce((sum,set)=>sum+(set.weight??0)*set.reps,0));
+            return volume>=1000?(volume/1000).toFixed(1)+"k kg":volume+" kg";
+          })()}</strong></div>
+        </div>
+
+        {selectedHistorySession.cardio?<div className="v24-cardio-history">
+          <div><span>Distance</span><strong>{selectedHistorySession.cardio.distanceKm!=null?selectedHistorySession.cardio.distanceKm.toFixed(2)+" km":"—"}</strong></div>
+          <div><span>Allure moyenne</span><strong>{selectedHistorySession.cardio.avgPaceSecondsPerKm?formatPace(selectedHistorySession.cardio.avgPaceSecondsPerKm):"—"}</strong></div>
+          <div><span>Vitesse moyenne</span><strong>{selectedHistorySession.cardio.avgSpeedKmh?selectedHistorySession.cardio.avgSpeedKmh.toFixed(1)+" km/h":"—"}</strong></div>
+          <div><span>RPE</span><strong>{selectedHistorySession.cardio.rpe??"—"}</strong></div>
+        </div>:<div className="v24-history-exercises">
+          {Object.entries(selectedHistorySession.logs).filter(([,sets])=>sets.length>0).map(([exerciseId,sets])=>{
+            const exercise=allTrackableExercises.find(ex=>ex.id===exerciseId);
+            return <div className="v24-history-exercise" key={exerciseId}>
+              <div className="v24-history-exercise-head"><strong>{exercise?.name??exerciseId}</strong><span>{sets.length} série{sets.length>1?"s":""}</span></div>
+              <div className="v24-history-sets">
+                {sets.map((set,index)=><div key={index}>
+                  <span>{index+1}</span>
+                  <strong>{set.weight!=null?set.weight+" "+(exercise?.unit??"kg"):"PDC"} × {set.reps}</strong>
+                  <small>{set.rir!=null?"RIR "+set.rir:""}{set.failed?" · échec":""}</small>
+                </div>)}
+              </div>
+            </div>;
+          })}
+        </div>}
+        <button className="secondary v24-history-close" onClick={()=>setSelectedHistoryKey(null)}>Fermer</button>
+      </div>
+    </div>}
 
     {!session&&lastWorkoutSummary&&<div className="v22-finish-backdrop">
       <div className="v22-finish-card">
