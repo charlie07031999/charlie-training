@@ -537,6 +537,12 @@ export default function Home(){
       : null,
     [selectedExerciseDetail]
   );
+  const selectedExercisePreferred=selectedExerciseDetail
+    ? resolveExerciseVariant(selectedExerciseDetail,preferredExerciseVariants[selectedExerciseDetail.id])
+    : null;
+  const selectedExerciseVariants=selectedExerciseDetail
+    ? (exerciseVariants[selectedExerciseDetail.id]??[])
+    : [];
   const currentWorkout=session
     ? workouts.find(w=>w.id===session.workoutId)??selectedWorkout
     : selectedWorkout;
