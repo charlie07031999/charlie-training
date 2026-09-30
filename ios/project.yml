@@ -23,7 +23,10 @@ targets:
         CFBundleDisplayName: Charlie Training
         NSHealthShareUsageDescription: Charlie utilise tes données Santé pour adapter ton sommeil, ta récupération, tes entraînements et ton suivi quotidien.
         NSHealthUpdateUsageDescription: Charlie peut enregistrer dans Santé les entraînements, le sommeil et le poids ajoutés dans l’app.
-        NSLocationWhenInUseUsageDescription: Charlie utilise ta position pendant tes courses pour enregistrer la distance, l’allure et le parcours.
+        NSLocationWhenInUseUsageDescription: Charlie utilise ta position pendant tes courses pour enregistrer la distance, l’allure et le parcours, y compris lorsque l’écran est verrouillé.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Charlie peut continuer à enregistrer une course en arrière-plan lorsque l’écran est verrouillé.
+        UIBackgroundModes:
+          - location
         UILaunchScreen: {}
     entitlements:
       path: CharlieTraining.entitlements
