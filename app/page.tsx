@@ -521,6 +521,82 @@ export default function Home(){
   },[session]);
 
   useEffect(()=>{
+    try{
+      const raw=localStorage.getItem(RUN_STORAGE_KEY);
+      if(!raw) return;
+      const saved=JSON.parse(raw);
+      if(!saved?.startedAt) return;
+      setRunStartedAt(saved.startedAt);
+      setRunFinishedAt(saved.finishedAt??null);
+      setRunPausedMs(saved.pausedMs??0);
+      setRunPauseStartedAt(saved.pauseStartedAt??null);
+      setRunPoints(Array.isArray(saved.points)?saved.points:[]);
+      setRunStatus(saved.status==="running"?"paused":saved.status??"paused");
+      if(saved.status==="running") setRunPauseStartedAt(Date.now());
+    }catch{}
+  },[]);
+
+  useEffect(()=>{
+    if(!runStartedAt||runStatus==="idle"||runStatus==="ready"||runStatus==="locating"){
+      if(runStatus==="idle") localStorage.removeItem(RUN_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(RUN_STORAGE_KEY,JSON.stringify({
+      status:runStatus,
+      startedAt:runStartedAt,
+      finishedAt:runFinishedAt,
+      pausedMs:runPausedMs,
+      pauseStartedAt:runPauseStartedAt,
+      points:runPoints.slice(-3000)
+    }));
+  },[runStatus,runStartedAt,runFinishedAt,runPausedMs,runPauseStartedAt,runPoints]);
+
+  useEffect(()=>{
+    if(runStatus!=="running"||!runStartedAt||!navigator.geolocation) return;
+    const watchId=navigator.geolocation.watchPosition(position=>{
+      const accuracy=position.coords.accuracy??999;
+      setRunGpsAccuracy(accuracy);
+      setRunLocationError("");
+      if(accuracy>80) return;
+
+      const elapsedSeconds=Math.max(0,Math.floor((position.timestamp-runStartedAt-runPausedMs)/1000));
+      const point:CardioRoutePoint={
+        lat:position.coords.latitude,
+        lng:position.coords.longitude,
+        altitude:position.coords.altitude,
+        accuracy,
+        speedMps:position.coords.speed,
+        timestamp:position.timestamp,
+        elapsedSeconds
+      };
+
+      setRunPoints(prev=>{
+        const last=prev.at(-1);
+        if(!last) return [point];
+        const dt=Math.max(.001,(point.timestamp-last.timestamp)/1000);
+        const distance=haversineMeters(last,point);
+        const impliedSpeed=distance/dt;
+        if(impliedSpeed>12||distance>250) return prev;
+        if(distance<1.5&&dt<8) return prev;
+        return [...prev,point].slice(-3000);
+      });
+    },error=>{
+      setRunLocationError(error.code===1
+        ?"Accès GPS refusé. Autorise la localisation pour enregistrer le parcours."
+        :"Signal GPS indisponible pour le moment.");
+    },{
+      enableHighAccuracy:true,
+      maximumAge:1000,
+      timeout:12000
+    });
+    runWatchIdRef.current=watchId;
+    return()=>{
+      navigator.geolocation.clearWatch(watchId);
+      if(runWatchIdRef.current===watchId) runWatchIdRef.current=null;
+    };
+  },[runStatus,runStartedAt,runPausedMs]);
+
+  useEffect(()=>{
     if(!prefsLoaded) return;
     const t=setTimeout(()=>{
       setCloudStatus("syncing");
