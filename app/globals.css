@@ -8569,3 +8569,164 @@ button{
   .v27-workout-dock{grid-template-columns:.8fr 1.2fr}
   .v27-workout-dock>button{font-size:10px}
 }
+
+
+/* V28 — exercise discovery */
+.v27-equipment-filter{
+  margin-top:10px;
+}
+.v27-equipment-filter>span{
+  display:block;
+  margin:0 2px 7px;
+  color:#8b96a6;
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.12em;
+}
+.v27-equipment-filter>div{
+  display:flex;
+  gap:6px;
+  overflow-x:auto;
+  padding:0 1px 3px;
+  scrollbar-width:none;
+}
+.v27-equipment-filter>div::-webkit-scrollbar{
+  display:none;
+}
+.v27-equipment-filter button{
+  flex:0 0 auto;
+  min-height:36px;
+  padding:0 11px;
+  border:1px solid #e2e8f0;
+  border-radius:999px;
+  background:#fff;
+  color:#748196;
+  font-size:8px;
+  font-weight:850;
+}
+.v27-equipment-filter button.active{
+  border-color:#bcd2ff;
+  background:#eaf2ff;
+  color:#2469f4;
+}
+.v27-library-variants{
+  margin-top:13px;
+  padding:12px;
+  border:1px solid #e7ecf3;
+  border-radius:18px;
+  background:#f8fafc;
+}
+.v27-library-variants-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:9px;
+}
+.v27-library-variants-head>span{
+  color:#2d6df6;
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.12em;
+}
+.v27-library-variants-head>small{
+  color:#909baa;
+  font-size:7.5px;
+}
+.v27-library-variants>div:last-child{
+  display:grid;
+  gap:6px;
+}
+.v27-library-variants button{
+  display:grid;
+  grid-template-columns:38px 1fr 26px;
+  gap:9px;
+  align-items:center;
+  width:100%;
+  min-height:58px;
+  padding:7px 8px;
+  border:1px solid #e5eaf1;
+  border-radius:14px;
+  background:#fff;
+  color:#1a2431;
+  text-align:left;
+}
+.v27-library-variants button.active{
+  border-color:#bfd4ff;
+  background:#f1f6ff;
+}
+.v27-library-variants button>i{
+  display:grid;
+  place-items:center;
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  background:#edf3ff;
+  color:#286bf4;
+  font-style:normal;
+  font-size:13px;
+  font-weight:950;
+}
+.v27-library-variants button strong,
+.v27-library-variants button span{
+  display:block;
+}
+.v27-library-variants button strong{
+  font-size:9.5px;
+}
+.v27-library-variants button span{
+  margin-top:2px;
+  color:#8792a2;
+  font-size:7.5px;
+}
+.v27-library-variants button>b{
+  display:grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:#f0f3f7;
+  color:#8e99a8;
+  font-size:9px;
+}
+.v27-library-variants button.active>b{
+  background:#2d6df6;
+  color:#fff;
+}
+.theme-dark .v27-equipment-filter button,
+.theme-dark .v27-library-variants,
+.theme-dark .v27-library-variants button{
+  border-color:rgba(255,255,255,.07);
+  background:#151c26;
+  color:#edf2f8;
+}
+.theme-dark .v27-equipment-filter button.active,
+.theme-dark .v27-library-variants button.active{
+  border-color:#294c80;
+  background:#13233b;
+}
+.theme-dark .v27-library-variants button>i{
+  background:#172a47;
+  color:#8aabff;
+}
+.theme-dark .v27-library-variants button>b{
+  background:#202a36;
+}
+.theme-dark .v27-library-variants button.active>b{
+  background:#2d6df6;
+  color:#fff;
+}
+
+/* Library cards become information-dense without feeling crowded */
+.v14-exercise-library{
+  gap:8px;
+}
+.v14-exercise-card{
+  min-height:90px;
+  border-radius:19px;
+}
+.v14-exercise-copy>small{
+  color:#8591a1;
+  font-size:8px;
+  line-height:1.35;
+}
