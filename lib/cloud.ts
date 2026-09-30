@@ -78,6 +78,17 @@ export type CloudBodyMetric = {
   external_id?:string|null;
 };
 
+export type CloudHealthDailyMetric = {
+  id:string;
+  metric_date:string;
+  steps?:number|null;
+  active_energy_kcal?:number|null;
+  avg_heart_rate_bpm?:number|null;
+  resting_heart_rate_bpm?:number|null;
+  source:string;
+  updated_at:string;
+};
+
 export type CloudHealthSyncState = {
   enabled:boolean;
   device_id?:string|null;
@@ -130,7 +141,7 @@ export async function loadCloudState() {
 
   try{ await supabase.rpc("seed_training_journey"); }catch{}
 
-  const [workoutsRes,sleepRes,metricsRes,prefsRes,journeyRes] = await Promise.all([
+  const [workoutsRes,sleepRes,metricsRes,prefsRes,journeyRes,healthDailyRes,healthSyncRes] = await Promise.all([
     supabase
       .from("workout_sessions")
       .select("id,client_session_id,workout_id,started_at,finished_at,logs,cardio,coach_mode,notes,source,external_id,health_metadata")
@@ -159,7 +170,18 @@ export async function loadCloudState() {
       .select("id,event_key,event_date,kind,title,summary,metrics,source")
       .eq("user_id",user.id)
       .order("event_date",{ascending:false})
-      .limit(100)
+      .limit(100),
+    supabase
+      .from("health_daily_metrics")
+      .select("id,metric_date,steps,active_energy_kcal,avg_heart_rate_bpm,resting_heart_rate_bpm,source,updated_at")
+      .eq("user_id",user.id)
+      .order("metric_date",{ascending:false})
+      .limit(60),
+    supabase
+      .from("health_sync_state")
+      .select("enabled,device_id,permissions,last_pull_at,last_push_at,last_error")
+      .eq("user_id",user.id)
+      .maybeSingle()
   ]);
 
   return {
@@ -169,7 +191,17 @@ export async function loadCloudState() {
     metrics:(metricsRes.data ?? []) as CloudBodyMetric[],
     preferences:(prefsRes.data ?? null) as CloudPreferences|null,
     journey:(journeyRes.data ?? []) as CloudJourneyEvent[],
-    errors:[workoutsRes.error,sleepRes.error,metricsRes.error,prefsRes.error,journeyRes.error].filter(Boolean)
+    healthDaily:(healthDailyRes.data ?? []) as CloudHealthDailyMetric[],
+    healthSync:(healthSyncRes.data ?? null) as CloudHealthSyncState|null,
+    errors:[
+      workoutsRes.error,
+      sleepRes.error,
+      metricsRes.error,
+      prefsRes.error,
+      journeyRes.error,
+      healthDailyRes.error,
+      healthSyncRes.error
+    ].filter(Boolean)
   };
 }
 
