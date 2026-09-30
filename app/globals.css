@@ -8730,3 +8730,44 @@ button{
   font-size:8px;
   line-height:1.35;
 }
+
+
+/* V29 — history correction */
+.v29-history-head{
+  display:grid!important;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+}
+.v29-history-head>div strong,
+.v29-history-head>div span{
+  display:block;
+}
+.v29-history-head>button{
+  min-height:34px;
+  padding:0 10px;
+  border:0;
+  border-radius:11px;
+  background:#edf3ff;
+  color:#2d6df6;
+  font-size:8px;
+  font-weight:850;
+}
+.v29-history-variant-backdrop{
+  z-index:760;
+}
+.v29-history-variant-sheet{
+  max-height:82dvh;
+  overflow:auto;
+  padding-bottom:calc(22px + env(safe-area-inset-bottom));
+}
+.v29-history-variant-sheet>p{
+  margin:-2px 0 13px;
+  color:#7f8b9a;
+  font-size:9px;
+  line-height:1.5;
+}
+.theme-dark .v29-history-head>button{
+  background:#172a47;
+  color:#86a8ff;
+}
