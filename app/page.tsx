@@ -1146,9 +1146,10 @@ export default function Home(){
   function effectiveTarget(ex=currentExercise){
     if(!ex) return {sets:0,repMin:0,repMax:0};
     const mode=session?.coachMode??coachMode;
-    if(mode==="tired") return {sets:Math.max(2,ex.sets-1),repMin:ex.repMin,repMax:ex.repMax};
-    if(mode==="short") return {sets:Math.min(2,ex.sets),repMin:ex.repMin,repMax:ex.repMax};
-    return {sets:ex.sets,repMin:ex.repMin,repMax:ex.repMax};
+    const baseSets=experienceLevel==="beginner"?Math.min(2,ex.sets):ex.sets;
+    if(mode==="tired") return {sets:Math.max(1,baseSets-1),repMin:ex.repMin,repMax:ex.repMax};
+    if(mode==="short") return {sets:Math.min(2,baseSets),repMin:ex.repMin,repMax:ex.repMax};
+    return {sets:baseSets,repMin:ex.repMin,repMax:ex.repMax};
   }
 
   function pushLiveSession(
@@ -1890,6 +1891,33 @@ export default function Home(){
     setAccountMessage(res.ok
       ?"Lien de connexion envoyé. Ouvre-le sur l’appareil à connecter."
       : `Impossible : ${res.reason}`);
+  }
+
+  async function completeOnboarding(){
+    const startedAt=new Date().toISOString();
+    setPlanStartedAt(startedAt);
+    setOnboardingCompleted(true);
+    setOnboardingStep(0);
+    setCloudStatus("syncing");
+
+    const res=await savePreferences({
+      display_name:displayName.trim()||"Charlie",
+      fitness_goal:fitnessGoal,
+      experience_level:experienceLevel,
+      training_days:trainingDays,
+      onboarding_completed:true,
+      plan_started_at:startedAt,
+      sleep_target:sleepTarget,
+      wake_target:wakeTarget,
+      sleep_goal_minutes:sleepGoalMinutes
+    });
+    setCloudStatus(res.ok?"ok":"error");
+    if(res.ok) await refreshCloud();
+  }
+
+  function reopenOnboarding(){
+    setOnboardingStep(1);
+    setOnboardingCompleted(false);
   }
 
   const currentSetLogs=currentExercise&&session?session.logs[currentExercise.id]??[]:[];
