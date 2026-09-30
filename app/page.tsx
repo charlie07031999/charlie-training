@@ -1110,7 +1110,7 @@ export default function Home(){
         permissions:status.writeAuthorization
       });
 
-      if(!synced.ok) throw new Error(String(synced.reason));
+      if(!synced.ok||!synced.imported) throw new Error(String(synced.reason));
 
       setHealthMessage(
         `Synchronisé : ${synced.imported.sleep} nuit(s), ${synced.imported.weights} poids, ${synced.imported.workouts} entraînement(s).`
