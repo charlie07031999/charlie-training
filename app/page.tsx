@@ -2223,6 +2223,33 @@ export default function Home(){
   });
   const avgBedDeviation=bedtimeDeviations.length?bedtimeDeviations.reduce((a,b)=>a+b,0)/bedtimeDeviations.length:0;
   const sleepRegularity=sleep7.length?Math.max(0,Math.min(100,Math.round(100-(avgBedDeviation/120)*100))):0;
+  const currentWeekVolume=sixWeeks.at(-1)?.volume??0;
+  const previousWeekVolume=sixWeeks.at(-2)?.volume??0;
+  const weeklyVolumeDelta=previousWeekVolume>0
+    ? Math.round(((currentWeekVolume-previousWeekVolume)/previousWeekVolume)*100)
+    : null;
+  const weeklyCoachHeadline=weekDoneCount>=weekTrainingCount&&weekTrainingCount>0
+    ?"Semaine maîtrisée."
+    : readinessScore<55
+      ?"Priorité à la récupération."
+      : weekDoneCount===0
+        ?"La semaine démarre maintenant."
+        :"Tu es dans le rythme.";
+  const weeklyCoachNotes=[
+    weekTrainingCount>0
+      ? `${weekDoneCount}/${weekTrainingCount} séances prévues réalisées.`
+      :"Aucune séance programmée.",
+    weeklyVolumeDelta==null
+      ?"Encore trop peu de recul pour comparer le volume."
+      : weeklyVolumeDelta>0
+        ? `Volume en hausse de ${weeklyVolumeDelta}% vs semaine précédente.`
+        : weeklyVolumeDelta<0
+          ? `Volume en baisse de ${Math.abs(weeklyVolumeDelta)}% vs semaine précédente.`
+          :"Volume stable vs semaine précédente.",
+    avgSleep7
+      ? `Sommeil moyen : ${durationLabel(avgSleep7)} sur les nuits récentes.`
+      :"Ajoute quelques nuits pour enrichir les recommandations."
+  ];
   const nowDate=new Date(now);
   const homeWeekDays=Array.from({length:7},(_,i)=>{
     const d=new Date(nowDate);
@@ -2969,6 +2996,18 @@ export default function Home(){
           <div><span>VOLUME</span><strong>{monthVolume>=1000?(monthVolume/1000).toFixed(1)+"k":monthVolume}</strong><small>kg soulevés</small></div>
           <div><span>CARDIO</span><strong>{monthCardioSessions.length}</strong><small>sorties</small></div>
           <div><span>SÉRIE</span><strong>{currentStreak}</strong><small>jour{currentStreak>1?"s":""}</small></div>
+        </div>
+
+        <div className="v25-coach-review">
+          <div className="v25-coach-review-head">
+            <div className="v25-coach-review-logo">C</div>
+            <div><span>COACH REVIEW</span><strong>{weeklyCoachHeadline}</strong></div>
+            <b>{readinessScore}/100</b>
+          </div>
+          <div className="v25-coach-review-notes">
+            {weeklyCoachNotes.map((note,index)=><div key={note}><i>{index+1}</i><span>{note}</span></div>)}
+          </div>
+          {todayWorkout&&<button onClick={()=>startWorkout(todayWorkout)}>Continuer avec {todayWorkout.title} <span>→</span></button>}
         </div>
 
         {latestCardio&&<div className="v19-last-run">
