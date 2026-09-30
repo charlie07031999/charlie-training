@@ -3376,16 +3376,27 @@ export default function Home(){
         {exerciseCategories.map(cat=><button key={cat} className={exerciseFilter===cat?"active":""} onClick={()=>setExerciseFilter(cat)}>{cat}</button>)}
       </div>
 
+      <div className="v27-equipment-filter">
+        <span>MATÉRIEL</span>
+        <div>
+          {exerciseEquipmentFilters.map(item=><button key={item} className={exerciseEquipmentFilter===item?"active":""} onClick={()=>setExerciseEquipmentFilter(item)}>{item}</button>)}
+        </div>
+      </div>
+
       <div className="v14-exercise-library">
-        {filteredExerciseLibrary.map(ex=><article key={ex.id} className="v14-exercise-card" onClick={()=>setSelectedExerciseDetailId(ex.id)}>
-          <div className="v14-exercise-visual"><ExerciseGlyph exercise={ex}/></div>
-          <div className="v14-exercise-copy">
-            <strong>{ex.name}</strong>
-            <span>{exerciseCategory(ex)} · {ex.target}</span>
-            <small>{ex.cue}</small>
-          </div>
-          <button aria-label={"Voir "+ex.name} onClick={e=>{e.stopPropagation();setSelectedExerciseDetailId(ex.id);}}>›</button>
-        </article>)}
+        {filteredExerciseLibrary.map(ex=>{
+          const preferred=resolveExerciseVariant(ex,preferredExerciseVariants[ex.id]);
+          const variants=exerciseVariants[ex.id]??[];
+          return <article key={ex.id} className="v14-exercise-card" onClick={()=>setSelectedExerciseDetailId(ex.id)}>
+            <div className="v14-exercise-visual"><ExerciseGlyph exercise={preferred}/></div>
+            <div className="v14-exercise-copy">
+              <strong>{preferred.name}</strong>
+              <span>{exerciseCategory(ex)} · {preferred.target}</span>
+              <small>{preferred.equipment??equipmentLabel(preferred)}{variants.length>1?" · "+variants.length+" variantes":""}</small>
+            </div>
+            <button aria-label={"Voir "+preferred.name} onClick={e=>{e.stopPropagation();setSelectedExerciseDetailId(ex.id);}}>›</button>
+          </article>;
+        })}
       </div>
     </section>}
 
@@ -3417,11 +3428,14 @@ export default function Home(){
           <strong>{selectedWorkout.exercises.length}<small>exos</small></strong>
         </div>
         <div className="v19-program-exercises">
-          {selectedWorkout.exercises.slice(0,5).map((ex,i)=><button key={ex.id} onClick={()=>setSelectedExerciseDetailId(ex.id)}>
-            <div className="v19-program-glyph"><ExerciseGlyph exercise={ex}/></div>
-            <div><span>{String(i+1).padStart(2,"0")}</span><strong>{ex.name}</strong><small>{ex.sets}×{ex.repMin}–{ex.repMax} · {ex.target}</small></div>
-            <b>›</b>
-          </button>)}
+          {selectedWorkout.exercises.slice(0,5).map((ex,i)=>{
+            const preferred=resolveExerciseVariant(ex,preferredExerciseVariants[ex.id]);
+            return <button key={ex.id} onClick={()=>setSelectedExerciseDetailId(ex.id)}>
+              <div className="v19-program-glyph"><ExerciseGlyph exercise={preferred}/></div>
+              <div><span>{String(i+1).padStart(2,"0")}</span><strong>{preferred.name}</strong><small>{ex.sets}×{ex.repMin}–{ex.repMax} · {preferred.equipment??equipmentLabel(preferred)}</small></div>
+              <b>›</b>
+            </button>;
+          })}
           {selectedWorkout.exercises.length>5&&<div className="v19-more-exercises">+ {selectedWorkout.exercises.length-5} autres exercices</div>}
         </div>
         <button className="primary v19-program-start" onClick={()=>startWorkout(selectedWorkout)}>Démarrer {selectedWorkout.title}</button>
