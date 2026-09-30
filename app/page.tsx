@@ -2726,7 +2726,7 @@ export default function Home(){
             <button className="run-back" onClick={()=>confirm("Quitter la course ?")&&abandonWorkout()}>‹</button>
             <div><span>RUNNING</span><strong>Course facile</strong></div>
             <div className={"run-gps-pill "+(runGpsAccuracy!=null&&runGpsAccuracy<=30?"ready":"")}>
-              <i/>{runGpsLabel}
+              <i/>{runGpsLabel}{nativeRunMode&&<small> · NATIF</small>}
             </div>
           </div>
 
@@ -2824,40 +2824,57 @@ export default function Home(){
           </>}
 
           {runStatus==="finished"&&<>
-            <div className="run-summary-head">
-              <span>COURSE TERMINÉE</span>
-              <h2>{formatDistance(runDistanceMeters)}</h2>
-              <p>{formatTimer(runElapsedSeconds)} · {formatPace(runAvgPace)}</p>
+            <div className="v26-run-summary-title">
+              <span>COURSE · PLEIN AIR</span>
+              <h2>{new Date(runFinishedAt??Date.now()).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</h2>
+              <small>{nativeRunMode?"Suivi iPhone natif":"Suivi navigateur"}</small>
             </div>
 
-            <div className="run-live-map summary">
-              <RunRouteMap points={runPoints}/>
+            {!nativeRunMode&&<div className="v26-run-warning">
+              <strong>Le suivi navigateur peut s’interrompre écran verrouillé.</strong>
+              <span>Pour une course fiable en veille, utilise l’app iPhone native Charlie Training.</span>
+            </div>}
+
+            <div className="v26-run-detail-card">
+              <div className="v26-run-detail-head">
+                <div className="v26-run-icon">⌁</div>
+                <div><strong>Course facile</strong><span>{runStartedAt?clock(runStartedAt):"—"} – {runFinishedAt?clock(runFinishedAt):clock(Date.now())}</span></div>
+              </div>
+              <div className="v26-run-metrics">
+                <div className="duration"><span>Durée de l’exercice</span><strong>{formatTimer(runElapsedSeconds)}</strong></div>
+                <div className="distance"><span>Distance</span><strong>{(runDistanceMeters/1000).toFixed(2)} <small>KM</small></strong></div>
+                <div className="pace"><span>Rythme moyen</span><strong>{formatPace(runAvgPace).replace("/km","")} <small>/KM</small></strong></div>
+                <div className="elevation"><span>Dénivelé</span><strong>{runElevationGain} <small>M</small></strong></div>
+                <div className="speed"><span>Vitesse moyenne</span><strong>{runAvgSpeedKmh.toFixed(1)} <small>KM/H</small></strong></div>
+                <div className="heart"><span>Fréq. cardiaque moy.</span><strong>{cardioHr||"—"} <small>BPM</small></strong></div>
+              </div>
             </div>
 
-            <div className="run-summary-grid">
-              <div><span>Temps</span><strong>{formatTimer(runElapsedSeconds)}</strong></div>
-              <div><span>Distance</span><strong>{(runDistanceMeters/1000).toFixed(2)} km</strong></div>
-              <div><span>Allure moy.</span><strong>{formatPace(runAvgPace)}</strong></div>
-              <div><span>Vitesse moy.</span><strong>{runAvgSpeedKmh.toFixed(1)} km/h</strong></div>
-              <div><span>Dénivelé +</span><strong>{runElevationGain} m</strong></div>
-              <div><span>Splits</span><strong>{runSplits.length}</strong></div>
-            </div>
-
-            {runSplits.length>0&&<div className="run-splits">
-              <div className="run-section-head"><strong>Splits kilométriques</strong><span>{runSplits.length} km complets</span></div>
-              {runSplits.map(split=><div key={split.km}>
-                <span>{split.km} km</span>
+            {runSplits.length>0&&<div className="v26-run-splits">
+              <div className="v26-section-title"><strong>Intermédiaires</strong><span>{runSplits.length} km</span></div>
+              <div className="v26-split-head"><span></span><span>Durée</span><span>Rythme</span></div>
+              {runSplits.map(split=><div className="v26-split-row" key={split.km}>
+                <span>{split.km}</span>
                 <strong>{formatTimer(split.splitSeconds)}</strong>
-                <small>{formatPace(split.paceSecondsPerKm)}</small>
+                <b>{formatPace(split.paceSecondsPerKm).replace("/km","")}</b>
               </div>)}
             </div>}
 
-            <div className="run-post-fields">
-              <label><span>FC moyenne <small>optionnel</small></span><input inputMode="numeric" placeholder="145" value={cardioHr} onChange={e=>setCardioHr(e.target.value)}/></label>
-              <label><span>RPE /10</span><input inputMode="numeric" value={cardioRpe} onChange={e=>setCardioRpe(e.target.value)}/></label>
+            <div className="v26-section-title"><strong>Plan</strong><span>{formatDistance(runDistanceMeters)}</span></div>
+            <div className="v26-run-map">
+              <RunRouteMap points={runPoints}/>
             </div>
 
-            <button className="primary run-save" onClick={saveGpsRun}>Enregistrer la course</button>
+            <div className="v26-run-effort">
+              <div><span>Effort perçu</span><strong>{cardioRpe||"4"}<small>/10</small></strong></div>
+              <input type="range" min="1" max="10" step="1" value={cardioRpe} onChange={e=>setCardioRpe(e.target.value)}/>
+            </div>
+
+            <div className="v26-run-post">
+              <label><span>Fréquence cardiaque moyenne</span><div><input inputMode="numeric" placeholder="162" value={cardioHr} onChange={e=>setCardioHr(e.target.value)}/><b>BPM</b></div></label>
+            </div>
+
+            <button className="primary run-save v26-save" onClick={saveGpsRun}>Enregistrer la course</button>
             <button className="ghost danger run-discard" onClick={()=>confirm("Supprimer cette course ?")&&abandonWorkout()}>Supprimer</button>
           </>}
         </div>
