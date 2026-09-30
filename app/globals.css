@@ -5531,3 +5531,122 @@ body[data-app-theme="dark"],
   .run-pre-targets{grid-template-columns:1fr 1fr}
   .run-pre-targets>div:last-child{grid-column:1/-1}
 }
+
+
+/* V18 — screenshot cleanup */
+.app-v7{
+  padding-bottom:calc(132px + env(safe-area-inset-bottom))!important;
+}
+.v14-tabs{
+  height:62px!important;
+  bottom:max(7px,env(safe-area-inset-bottom))!important;
+}
+.v14-tabs button{
+  min-height:52px!important;
+}
+.v14-page-title{
+  padding-top:8px!important;
+}
+.v14-page-title h2{
+  margin-top:4px!important;
+}
+
+/* With no duplicate global title, non-home screens start higher and cleaner */
+.v14-programs-screen,
+.v14-exercises-screen,
+.v8-tracking,
+.v7-profile{
+  padding-top:0!important;
+}
+
+/* Secured account state */
+.v18-secure-email{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:3px 12px;
+  align-items:center;
+  margin-top:14px;
+  padding:13px 14px;
+  border:1px solid rgba(15,42,74,.08);
+  border-radius:15px;
+  background:#f6f8fb;
+}
+.v18-secure-email span{
+  grid-column:1;
+  color:#8b95a4;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.10em;
+}
+.v18-secure-email strong{
+  grid-column:1;
+  color:#17202a;
+  font-size:11px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.v18-secure-email i{
+  grid-column:2;
+  grid-row:1/3;
+  display:grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  background:#e5f8ee;
+  color:#1fa86c;
+  font-style:normal;
+  font-size:13px;
+  font-weight:900;
+}
+.v18-login-link{
+  width:100%;
+  margin-top:8px;
+}
+.theme-dark .v18-secure-email{
+  border-color:rgba(255,255,255,.07);
+  background:#171d27;
+}
+.theme-dark .v18-secure-email strong{
+  color:#eef2f7;
+}
+.theme-dark .v18-secure-email span{
+  color:#788496;
+}
+.theme-dark .v18-secure-email i{
+  background:#143628;
+  color:#59d29a;
+}
+
+/* Running grid: no orphan card */
+.run-live-grid{
+  grid-template-columns:1fr 1fr!important;
+}
+.run-live-grid>div.featured{
+  grid-column:1/-1!important;
+}
+.run-live-grid>div:not(.featured){
+  min-height:92px;
+}
+
+/* Ensure the fixed navigation never hides final content/cards */
+.v14-programs-screen,
+.v14-exercises-screen,
+.v8-tracking,
+.v7-profile,
+.v15-home{
+  padding-bottom:16px;
+}
+
+@media(max-width:420px){
+  .app-v7{
+    padding-bottom:calc(128px + env(safe-area-inset-bottom))!important;
+  }
+  .v14-tabs{
+    height:60px!important;
+  }
+  .v14-tabs button{
+    min-height:50px!important;
+  }
+}
