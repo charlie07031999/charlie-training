@@ -1686,6 +1686,7 @@ export default function Home(){
     const seconds=(recent.at(-1)!.timestamp-recent[0].timestamp)/1000;
     return seconds>0?(distance/seconds)*3.6:0;
   },[runPoints]);
+  const runInstantPace=runInstantSpeedKmh>=2?3600/runInstantSpeedKmh:0;
   const runSplits=useMemo<CardioSplit[]>(()=>{
     const splits:CardioSplit[]=[];
     if(runPoints.length<2) return splits;
