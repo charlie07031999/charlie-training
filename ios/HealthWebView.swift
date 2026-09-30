@@ -10,7 +10,8 @@ struct HealthWebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let controller = WKUserContentController()
-        controller.add(context.coordinator.bridge, name: "charlieHealth")
+        controller.add(context.coordinator.healthBridge, name: "charlieHealth")
+        controller.add(context.coordinator.runBridge, name: "charlieRun")
 
         let configuration = WKWebViewConfiguration()
         configuration.userContentController = controller
@@ -24,7 +25,8 @@ struct HealthWebView: UIViewRepresentable {
         webView.isOpaque = false
         webView.backgroundColor = .clear
 
-        context.coordinator.bridge.webView = webView
+        context.coordinator.healthBridge.webView = webView
+        context.coordinator.runBridge.webView = webView
 
         if let url = URL(string: "https://charlie-training.vercel.app") {
             webView.load(URLRequest(
@@ -41,14 +43,19 @@ struct HealthWebView: UIViewRepresentable {
 
     static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
         uiView.configuration.userContentController.removeScriptMessageHandler(forName: "charlieHealth")
+        uiView.configuration.userContentController.removeScriptMessageHandler(forName: "charlieRun")
     }
 
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate {
-        let bridge: HealthKitBridge
+        let healthBridge: HealthKitBridge
+        let runManager: RunTrackingManager
+        let runBridge: RunTrackingBridge
 
         init(manager: HealthKitManager) {
-            self.bridge = HealthKitBridge(manager: manager)
+            self.healthBridge = HealthKitBridge(manager: manager)
+            self.runManager = RunTrackingManager()
+            self.runBridge = RunTrackingBridge(manager: runManager)
         }
 
         func webView(
