@@ -109,21 +109,29 @@ const SESSION_KEY="charlie-training-live-v4";
 
 const dayLabels=["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
 
-function buildPersonalSchedule(trainingDays:number):PlanDay[]{
+function buildPersonalSchedule(trainingDays:number,goal:FitnessGoal="muscle"):PlanDay[]{
   const days:PlanDay[]=dayLabels.map(label=>({label,name:"Repos",workoutId:null}));
 
   if(trainingDays<=3){
-    days[0]={label:"Lun",name:"Push",workoutId:"push"};
-    days[2]={label:"Mer",name:"Pull",workoutId:"pull"};
-    days[5]={label:"Sam",name:"Legs",workoutId:"legs"};
+    days[0]={label:"Lun",name:"Full A",workoutId:"full-a"};
+    days[2]={label:"Mer",name:"Full B",workoutId:"full-b"};
+    days[5]={label:"Sam",name:"Full C",workoutId:"full-c"};
     return days;
   }
 
   if(trainingDays===4){
-    days[0]={label:"Lun",name:"Push",workoutId:"push"};
-    days[1]={label:"Mar",name:"Pull",workoutId:"pull"};
-    days[3]={label:"Jeu",name:"Legs",workoutId:"legs"};
-    days[5]={label:"Sam",name:"Upper",workoutId:"upper"};
+    if(goal==="fitness"||goal==="recomposition"){
+      days[0]={label:"Lun",name:"Full A",workoutId:"full-a"};
+      days[2]={label:"Mer",name:"Cardio",workoutId:"cardio"};
+      days[4]={label:"Ven",name:"Full B",workoutId:"full-b"};
+      days[6]={label:"Dim",name:"Full C",workoutId:"full-c"};
+      return days;
+    }
+
+    days[0]={label:"Lun",name:"Upper A",workoutId:"upper-a"};
+    days[1]={label:"Mar",name:"Lower A",workoutId:"lower-a"};
+    days[3]={label:"Jeu",name:"Upper B",workoutId:"upper-b"};
+    days[5]={label:"Sam",name:"Lower B",workoutId:"lower-b"};
     return days;
   }
 
@@ -453,7 +461,7 @@ export default function Home(){
   const [accountMessage,setAccountMessage]=useState("");
   const [chartExerciseId,setChartExerciseId]=useState("incline-bench");
 
-  const schedule=useMemo(()=>buildPersonalSchedule(trainingDays),[trainingDays]);
+  const schedule=useMemo(()=>buildPersonalSchedule(trainingDays,fitnessGoal),[trainingDays,fitnessGoal]);
 
   const selectedWorkout=useMemo(
     ()=>workouts.find(w=>w.id===selectedWorkoutId)??workouts[0],
@@ -2357,7 +2365,7 @@ export default function Home(){
             </button>)}
           </div>
           <div className="v21-week-preview">
-            {buildPersonalSchedule(trainingDays).map(day=><div key={day.label} className={day.workoutId?"active":""}><span>{day.label}</span><strong>{day.workoutId?day.name:"—"}</strong></div>)}
+            {buildPersonalSchedule(trainingDays,fitnessGoal).map(day=><div key={day.label} className={day.workoutId?"active":""}><span>{day.label}</span><strong>{day.workoutId?day.name:"—"}</strong></div>)}
           </div>
           <button className="v21-primary" onClick={()=>setOnboardingStep(4)}>Continuer <span>→</span></button>
         </section>}
