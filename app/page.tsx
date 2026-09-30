@@ -344,6 +344,7 @@ export default function Home(){
   const [healthSyncing,setHealthSyncing]=useState(false);
   const [healthMessage,setHealthMessage]=useState("");
   const healthBootstrappedRef=useRef(false);
+  const lastHealthAutoSyncRef=useRef(0);
   const [authUser,setAuthUser]=useState<any>(null);
   const [cloudLoading,setCloudLoading]=useState(true);
   const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error">("idle");
@@ -586,6 +587,23 @@ export default function Home(){
     media.addEventListener?.("change",sync);
     return()=>media.removeEventListener?.("change",sync);
   },[]);
+
+  useEffect(()=>{
+    const handleVisibility=()=>{
+      if(
+        document.visibilityState!=="visible" ||
+        !nativeHealthStatus?.authorizationRequested ||
+        healthSyncing ||
+        Date.now()-lastHealthAutoSyncRef.current<10*60*1000
+      ) return;
+
+      lastHealthAutoSyncRef.current=Date.now();
+      void syncAppleHealthNow(false);
+    };
+
+    document.addEventListener("visibilitychange",handleVisibility);
+    return()=>document.removeEventListener("visibilitychange",handleVisibility);
+  },[nativeHealthStatus?.authorizationRequested,healthSyncing]);
 
   useEffect(()=>{
     if(session) localStorage.setItem(SESSION_KEY,JSON.stringify(session));
