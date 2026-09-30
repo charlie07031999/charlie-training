@@ -2999,7 +2999,7 @@ export default function Home(){
         <div className="v15-session-top">
           <button className="v15-back" onClick={()=>confirm("Quitter la séance ?")&&abandonWorkout()}>‹</button>
           <strong>{currentExercise?.name}</strong>
-          <button className="v15-menu">•••</button>
+          <button className="v15-menu" onClick={()=>setSessionMenuOpen(true)} aria-label="Options de séance">•••</button>
         </div>
 
         <div className="v15-session-tabs">
@@ -3014,6 +3014,16 @@ export default function Home(){
         </div>}
 
         <div className="v15-session-cue">{currentExercise?.cue}</div>
+
+        {currentExercise&&<button className="v27-variant-select" onClick={()=>currentVariantOptions.length&&setExerciseSwapOpen(true)}>
+          <span className="v27-equipment-icon">{currentExercise.equipment?.slice(0,1)??"•"}</span>
+          <div>
+            <small>VARIANTE UTILISÉE</small>
+            <strong>{currentExercise.name}</strong>
+            <span>{currentExercise.equipment??equipmentLabel(currentExercise)} · {currentExercise.unit}</span>
+          </div>
+          {currentVariantOptions.length>1?<b>Changer</b>:<b className="disabled">Fixe</b>}
+        </button>}
 
         <div className="v15-session-metrics">
           <span><small>Temps</small><strong>{formatTimer(elapsed)}</strong></span>
@@ -3042,7 +3052,10 @@ export default function Home(){
           <p>{currentExercise.cue}</p>
         </div>}
 
-        {nextExercisePreview&&<div className="next-exercise-card">
+        {nextExercisePreview&&<button className="next-exercise-card v27-next-button" onClick={()=>{
+          const idx=currentWorkout.exercises.findIndex(ex=>ex.id===nextExercisePreview.id);
+          if(idx>=0) jumpToExercise(idx);
+        }}>
           <span>ENSUITE</span>
           <div>
             <strong>{nextExercisePreview.name}</strong>
@@ -3053,7 +3066,7 @@ export default function Home(){
             </small>
           </div>
           <b>→</b>
-        </div>}
+        </button>}
 
         {currentExercise&&!currentExercise.superset?.length&&
           <div className="progression-banner">{recommendationFor(currentExercise).label}</div>
