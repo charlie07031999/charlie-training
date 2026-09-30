@@ -136,12 +136,19 @@ final class HealthKitManager: ObservableObject {
         async let workoutsTask = recentWorkouts(since: start)
         async let dailyTask = dailyMetrics(since: start)
 
-        return try await HealthSnapshotDTO(
+        let (weights, sleepSessions, workouts, daily) = try await (
+            weightsTask,
+            sleepsTask,
+            workoutsTask,
+            dailyTask
+        )
+
+        return HealthSnapshotDTO(
             generatedAt: iso.string(from: Date()),
-            weights: weightsTask,
-            sleepSessions: sleepsTask,
-            workouts: workoutsTask,
-            daily: dailyTask
+            weights: weights,
+            sleepSessions: sleepSessions,
+            workouts: workouts,
+            daily: daily
         )
     }
 
