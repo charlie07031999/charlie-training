@@ -932,7 +932,7 @@ export default function Home(){
       .slice(0,todayIndex)
       .filter(x=>x.workoutId&&!doneWorkoutIds.has(x.workoutId));
     return missed.at(-1)?.workoutId??null;
-  },[todayIndex,doneWorkoutIds]);
+  },[todayIndex,doneWorkoutIds,schedule]);
 
   useEffect(()=>{
     if(!session&&dueWorkoutId) setSelectedWorkoutId(dueWorkoutId);
@@ -2054,8 +2054,9 @@ export default function Home(){
   }
 
   const todayWorkout=dueWorkoutId?workouts.find(w=>w.id===dueWorkoutId)??null:null;
-  const weekDoneCount=doneWorkoutIds.size;
-  const weekTrainingCount=schedule.filter(x=>x.workoutId).length;
+  const scheduledWorkoutIds=schedule.filter(x=>x.workoutId).map(x=>x.workoutId as string);
+  const weekDoneCount=scheduledWorkoutIds.filter(id=>doneWorkoutIds.has(id)).length;
+  const weekTrainingCount=scheduledWorkoutIds.length;
   const activeHomeDayIndex=selectedHomeDayIndex??todayIndex;
   const activeHomeSchedule=schedule[activeHomeDayIndex];
   const activeHomeWorkout=activeHomeDayIndex===todayIndex
