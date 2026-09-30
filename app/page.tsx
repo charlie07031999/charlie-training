@@ -1101,24 +1101,29 @@ export default function Home(){
       ?`Disponibilité ${readinessScore}/100 · réduis le volume et garde 2–3 RIR.`
       :`Disponibilité ${readinessScore}/100 · ${readinessLabel.toLowerCase()}.`;
 
-  function recentExerciseLogs(exerciseId:string,limit=3){
+  function recentExerciseLogs(exerciseId:string,limit=3,variantId?:string){
     const ids=exerciseAliases[exerciseId]??[exerciseId];
     return [...completedSessions]
       .sort((a,b)=>b.finishedAt-a.finishedAt)
       .map(session=>{
         const match=ids.find(id=>(session.logs?.[id]??[]).length>0);
-        return {session,logs:match?(session.logs?.[match]??[]):[],matchedId:match??exerciseId};
+        const raw=match?(session.logs?.[match]??[]):[];
+        const defaultVariant=(exerciseVariants[match??exerciseId]??exerciseVariants[exerciseId]??[])[0]?.id;
+        const logs=variantId
+          ? raw.filter(set=>set.variantId===variantId||(!set.variantId&&variantId===defaultVariant))
+          : raw;
+        return {session,logs,matchedId:match??exerciseId};
       })
       .filter(x=>x.logs.length>0)
       .slice(0,limit);
   }
 
-  function latestExerciseLogs(exerciseId:string){
-    return recentExerciseLogs(exerciseId,1)[0]??null;
+  function latestExerciseLogs(exerciseId:string,variantId?:string){
+    return recentExerciseLogs(exerciseId,1,variantId)[0]??null;
   }
 
   function recommendationFor(ex:Exercise){
-    const recent=recentExerciseLogs(ex.id,3);
+    const recent=recentExerciseLogs(ex.id,3,ex.variantId);
     const last=recent[0];
     if(!last){
       const newUser=completedSessions.length===0;
@@ -1255,14 +1260,16 @@ export default function Home(){
       return;
     }
 
-    const existing=session?.logs[currentExercise.id]?.at(-1);
+    const existing=(session?.logs[currentExercise.id]??[])
+      .filter(set=>!currentExercise.variantId||set.variantId===currentExercise.variantId||(!set.variantId&&currentExercise.variantId===(exerciseVariants[currentExercise.id]??[])[0]?.id))
+      .at(-1);
     const rec=recommendationFor(currentExercise);
     if(existing?.weight!=null) setWeight(String(existing.weight));
     else setWeight(rec.weight!=null?String(rec.weight):"");
     setReps(String(currentExercise.repMin));
     setRir("2");
     setFailed(false);
-  },[currentExercise?.id]);
+  },[currentExercise?.id,currentExercise?.variantId]);
 
   function effectiveTarget(ex=currentExercise){
     if(!ex) return {sets:0,repMin:0,repMax:0};
@@ -1313,6 +1320,9 @@ export default function Home(){
       reps:log.reps,
       weight:log.weight??null,
       unit:exercise.unit,
+      variant_id:log.variantId??exercise.variantId??null,
+      variant_name:log.variantName??exercise.name,
+      equipment:log.equipment??exercise.equipment??null,
       rir:log.rir??null,
       failed:Boolean(log.failed),
       logged_at:log.loggedAt?new Date(log.loggedAt).toISOString():new Date().toISOString()
@@ -1510,6 +1520,7 @@ export default function Home(){
         completedIds:finalLive.completedIds,
         deferredIds:finalLive.deferredIds,
         logs:finalLive.logs,
+        exerciseVariants:finalLive.exerciseVariants,
         coachMode:finalLive.coachMode,
         lastSet:finalLastSet??null,
         lastAction:"session_finishing"
@@ -1631,7 +1642,10 @@ export default function Home(){
       weight:currentExercise.unit==="PDC"?undefined:(weight?Number(weight.replace(",",".")):undefined),
       rir:Number(rir||0),
       failed,
-      loggedAt:Date.now()
+      loggedAt:Date.now(),
+      variantId:currentExercise.variantId,
+      variantName:currentExercise.name,
+      equipment:currentExercise.equipment
     };
     const key=currentExercise.id;
     const nextLogs={...session.logs,[key]:[...(session.logs[key]??[]),log]};
@@ -2144,7 +2158,7 @@ export default function Home(){
   }
 
   const currentSetLogs=currentExercise&&session?session.logs[currentExercise.id]??[]:[];
-  const currentPrevious=currentExercise?latestExerciseLogs(currentExercise.id):null;
+  const currentPrevious=currentExercise?latestExerciseLogs(currentExercise.id,currentExercise.variantId):null;
   const currentPreviousBest=currentPrevious?.logs.reduce<SetLog|null>((best,set)=>{
     if(!best) return set;
     const bw=best.weight??0;
