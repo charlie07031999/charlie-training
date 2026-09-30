@@ -4,6 +4,9 @@ export type SetLog = {
   rir?:number;
   failed?:boolean;
   loggedAt?:number;
+  variantId?:string;
+  variantName?:string;
+  equipment?:string;
 };
 
 export type CardioRoutePoint = {
@@ -48,6 +51,17 @@ export type SupersetPart = {
   cue:string;
 };
 
+export type ExerciseVariant = {
+  id:string;
+  name:string;
+  equipment:string;
+  unit:"kg"|"kg/bras"|"PDC"|"+kg";
+  suggestedWeight?:number;
+  target?:string;
+  cue?:string;
+  loadStep?:number;
+};
+
 export type Exercise = {
   id:string;
   name:string;
@@ -62,6 +76,9 @@ export type Exercise = {
   priority?:boolean;
   superset?:SupersetPart[];
   alternatives?:string[];
+  variantId?:string;
+  equipment?:string;
+  loadStep?:number;
 };
 
 export type Workout = {
