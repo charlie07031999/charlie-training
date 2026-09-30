@@ -3168,30 +3168,42 @@ export default function Home(){
             </div>;
           })}
 
-          <button className="primary big" onClick={logSupersetRound}>Valider les 2 exercices</button>
-          <button className="secondary" onClick={skipMachine}>Machine prise → plus tard</button>
-          <button className="ghost" onClick={undoLastSet}>Annuler mon dernier superset</button>
-          <button className="ghost danger" onClick={()=>confirm("Terminer sans enregistrer ?")&&abandonWorkout()}>Abandonner la séance</button>
         </div>:<div className="log-card">
-          <div className="field">
-            <label>Charge</label>
-            <div className="input-wrap">
-              <input value={weight} onChange={e=>setWeight(e.target.value)} inputMode="decimal" disabled={currentExercise?.unit==="PDC"}/>
-              <span>{currentExercise?.unit}</span>
+          <div className="field v27-weight-field">
+            <div className="v27-field-head">
+              <label>Charge</label>
+              {currentPreviousBest?.weight!=null&&<button type="button" onClick={()=>setWeight(String(currentPreviousBest.weight))}>Dernière · {currentPreviousBest.weight} {currentExercise?.unit}</button>}
             </div>
-            {currentExercise&&currentExercise.unit!=="PDC"&&<div className="quick-load">
-              <button type="button" onClick={()=>adjustWeightDraft(-incrementFor(currentExercise))}>−{incrementFor(currentExercise)}</button>
-              <button type="button" onClick={()=>adjustWeightDraft(incrementFor(currentExercise))}>+{incrementFor(currentExercise)}</button>
-            </div>}
+            {currentExercise&&currentExercise.unit!=="PDC"?<>
+              <div className="v27-weight-stepper">
+                <button type="button" onClick={()=>adjustWeightDraft(-incrementFor(currentExercise))}>−</button>
+                <div className="v27-weight-value">
+                  <input value={weight} onChange={e=>setWeight(e.target.value)} inputMode="decimal" placeholder="0"/>
+                  <span>{currentExercise.unit}</span>
+                </div>
+                <button type="button" onClick={()=>adjustWeightDraft(incrementFor(currentExercise))}>+</button>
+              </div>
+              <div className="v27-weight-shortcuts">
+                {recommendedWeight!=null&&<button type="button" className="recommended" onClick={()=>setWeight(String(recommendedWeight))}>Cible {recommendedWeight}</button>}
+                {recentVariantWeights.filter(v=>v!==recommendedWeight).slice(0,3).map(v=><button type="button" key={v} onClick={()=>setWeight(String(v))}>{v} {currentExercise.unit}</button>)}
+                <button type="button" onClick={()=>adjustWeightDraft(incrementFor(currentExercise)*2)}>+{incrementFor(currentExercise)*2}</button>
+              </div>
+            </>:<div className="v27-bodyweight">Poids du corps <span>La charge n’est pas nécessaire.</span></div>}
           </div>
           <div className="field"><label>Reps</label><div className="stepper"><button onClick={()=>setReps(String(Math.max(0,Number(reps)-1)))}>−</button><strong>{reps}</strong><button onClick={()=>setReps(String(Number(reps)+1))}>+</button></div></div>
           <div className="field"><label>RIR</label><div className="stepper compact"><button onClick={()=>setRir(String(Math.max(0,Number(rir)-1)))}>−</button><strong>{rir}</strong><button onClick={()=>setRir(String(Math.min(5,Number(rir)+1)))}>+</button></div></div>
           <label className="fail-toggle"><input type="checkbox" checked={failed} onChange={e=>setFailed(e.target.checked)}/><span>Échec</span></label>
-          <button className="primary big" onClick={logSet}>Valider la série</button>
-          <button className="secondary" onClick={skipMachine}>Machine prise → plus tard</button>
-          <button className="ghost" onClick={undoLastSet}>Annuler ma dernière validation</button>
-          <button className="ghost danger" onClick={()=>confirm("Terminer sans enregistrer ?")&&abandonWorkout()}>Abandonner la séance</button>
         </div>}
+
+        <div className="v27-workout-dock">
+          <div>
+            <span>{currentExercise?.superset?.length?"TOUR":"SÉRIE"} {Math.min((session?.setIndex??0)+1,effectiveTarget().sets)}/{effectiveTarget().sets}</span>
+            <strong>{currentExercise?.name}</strong>
+          </div>
+          <button onClick={currentExercise?.superset?.length?logSupersetRound:logSet}>
+            {currentExercise?.superset?.length?"Valider le tour":"Valider la série"} <b>✓</b>
+          </button>
+        </div>
       </>}
     </section>}
 
