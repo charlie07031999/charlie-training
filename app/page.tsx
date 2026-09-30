@@ -338,6 +338,12 @@ export default function Home(){
   const [sleepSessions,setSleepSessions]=useState<SleepSession[]>([]);
   const [bodyMetrics,setBodyMetrics]=useState<BodyMetric[]>([]);
   const [journeyEvents,setJourneyEvents]=useState<CloudJourneyEvent[]>([]);
+  const [healthDaily,setHealthDaily]=useState<CloudHealthDailyMetric[]>([]);
+  const [healthSyncState,setHealthSyncStateLocal]=useState<CloudHealthSyncState|null>(null);
+  const [nativeHealthStatus,setNativeHealthStatus]=useState<NativeHealthStatus|null>(null);
+  const [healthSyncing,setHealthSyncing]=useState(false);
+  const [healthMessage,setHealthMessage]=useState("");
+  const healthBootstrappedRef=useRef(false);
   const [authUser,setAuthUser]=useState<any>(null);
   const [cloudLoading,setCloudLoading]=useState(true);
   const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error">("idle");
@@ -456,6 +462,8 @@ export default function Home(){
     })));
 
     setJourneyEvents(state.journey??[]);
+    setHealthDaily(state.healthDaily??[]);
+    setHealthSyncStateLocal(state.healthSync??null);
 
     if(state.preferences){
       setSleepTarget(state.preferences.sleep_target.slice(0,5));
