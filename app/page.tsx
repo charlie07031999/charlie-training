@@ -2071,6 +2071,13 @@ export default function Home(){
     return matchesSearch&&matchesFilter;
   });
 
+  const latestHealthDay=healthDaily[0]??null;
+  const healthNativeReady=Boolean(nativeHealthStatus?.available);
+  const healthConnected=Boolean(healthSyncState?.enabled);
+  const healthLastSyncLabel=healthSyncState?.last_pull_at
+    ? new Date(healthSyncState.last_pull_at).toLocaleString("fr-FR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})
+    : null;
+
   const authAnonymous=Boolean(authUser?.is_anonymous);
   const cloudLabel=cloudLoading?"Chargement":cloudStatus==="ok"?"Synchronisé":cloudStatus==="syncing"?"Synchro…":"À vérifier";
 
@@ -2862,10 +2869,43 @@ export default function Home(){
         </button>)}
       </div>
 
-      <div className="section-title"><h3>Apple Santé</h3><span>HealthKit</span></div>
-      <div className="integration-card v11-health-card">
-        <div><strong>Synchronisation Santé</strong><span>Lecture/écriture sommeil, poids, fréquence cardiaque, entraînements et énergie dès que l’app iPhone native est installée.</span></div>
-        <b>Native requise</b>
+      <div className="section-title"><h3>Apple Santé</h3><span>{healthConnected?"connecté":"HealthKit"}</span></div>
+      <div className={"v20-health-card "+(healthConnected?"connected ":"")+(healthNativeReady?"native":"web")}>
+        <div className="v20-health-head">
+          <div className="v20-health-icon">♥</div>
+          <div>
+            <strong>{healthConnected?"Apple Santé synchronisé":"Connecter Apple Santé"}</strong>
+            <span>{healthNativeReady
+              ?"Sommeil, poids, pas, fréquence cardiaque, énergie et entraînements."
+              :"HealthKit est prêt côté app. La connexion s’active depuis la version iPhone native."}</span>
+          </div>
+          <b>{healthSyncing?"SYNC…":healthConnected?"ACTIF":healthNativeReady?"PRÊT":"IPHONE"}</b>
+        </div>
+
+        {latestHealthDay&&<div className="v20-health-metrics">
+          <div><span>Pas</span><strong>{latestHealthDay.steps!=null?Math.round(Number(latestHealthDay.steps)).toLocaleString("fr-FR"):"—"}</strong></div>
+          <div><span>Énergie</span><strong>{latestHealthDay.active_energy_kcal!=null?Math.round(Number(latestHealthDay.active_energy_kcal))+" kcal":"—"}</strong></div>
+          <div><span>FC repos</span><strong>{latestHealthDay.resting_heart_rate_bpm!=null?Math.round(Number(latestHealthDay.resting_heart_rate_bpm))+" bpm":"—"}</strong></div>
+          <div><span>FC moy.</span><strong>{latestHealthDay.avg_heart_rate_bpm!=null?Math.round(Number(latestHealthDay.avg_heart_rate_bpm))+" bpm":"—"}</strong></div>
+        </div>}
+
+        <div className="v20-health-types">
+          <span>Sommeil</span><span>Poids</span><span>Pas</span><span>Fréquence cardiaque</span><span>Énergie</span><span>Entraînements</span>
+        </div>
+
+        <div className="v20-health-actions">
+          <button
+            className="primary"
+            disabled={healthSyncing}
+            onClick={()=>syncAppleHealthNow(Boolean(healthNativeReady&&!nativeHealthStatus?.authorizationRequested))}
+          >
+            {healthSyncing?"Synchronisation…":healthNativeReady
+              ?nativeHealthStatus?.authorizationRequested?"Synchroniser maintenant":"Autoriser Apple Santé"
+              :"Connecter Apple Santé"}
+          </button>
+          {healthLastSyncLabel&&<small>Dernière synchronisation · {healthLastSyncLabel}</small>}
+          {healthMessage&&<small className="v20-health-message">{healthMessage}</small>}
+        </div>
       </div>
 
       <div className="section-title"><h3>App & données</h3><span>Supabase</span></div>
