@@ -1937,7 +1937,7 @@ export default function Home(){
           <span>CHARLIE TRAINING</span>
           <strong>Bonjour Charlie 👋</strong>
         </div>
-        <button className="v14-header-action" onClick={()=>setTab("more")} aria-label="Ouvrir les réglages">+</button>
+        <button className="v14-header-action" onClick={()=>setQuickMenuOpen(true)} aria-label="Actions rapides">+</button>
       </header>}
 
       <nav className="tabs v7-tabs v14-tabs">
@@ -2537,14 +2537,14 @@ export default function Home(){
       </div>
 
       <div className="v14-exercise-library">
-        {filteredExerciseLibrary.map(ex=><article key={ex.id} className="v14-exercise-card">
+        {filteredExerciseLibrary.map(ex=><article key={ex.id} className="v14-exercise-card" onClick={()=>setSelectedExerciseDetailId(ex.id)}>
           <div className="v14-exercise-visual"><ExerciseGlyph exercise={ex}/></div>
           <div className="v14-exercise-copy">
             <strong>{ex.name}</strong>
             <span>{exerciseCategory(ex)} · {ex.target}</span>
             <small>{ex.cue}</small>
           </div>
-          <button aria-label={"Voir "+ex.name}>›</button>
+          <button aria-label={"Voir "+ex.name} onClick={e=>{e.stopPropagation();setSelectedExerciseDetailId(ex.id);}}>›</button>
         </article>)}
       </div>
     </section>}
@@ -2559,12 +2559,28 @@ export default function Home(){
         {schedule.map((item,i)=>{
           const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
           const active=i===todayIndex;
-          return <button key={item.label} className={(done?"done ":"")+(active?"active":"")} disabled={!item.workoutId} onClick={()=>item.workoutId&&setSelectedWorkoutId(item.workoutId)}>
+          const selected=item.workoutId===selectedWorkoutId;
+          return <button key={item.label} className={(done?"done ":"")+(active?"active ":"")+(selected?"selected":"")} disabled={!item.workoutId} onClick={()=>item.workoutId&&setSelectedWorkoutId(item.workoutId)}>
             <span>{item.label}</span><strong>{item.name}</strong><small>{done?"Fait":active?"Aujourd’hui":item.workoutId?"À venir":"Repos"}</small>
           </button>;
         })}
       </div>
-      {todayWorkout&&<button className="primary v14-program-cta" onClick={()=>startWorkout(todayWorkout)}>Démarrer {todayWorkout.title}</button>}
+
+      <div className="v19-program-detail">
+        <div className="v19-program-detail-head">
+          <div><span>SÉANCE SÉLECTIONNÉE</span><h3>{selectedWorkout.title}</h3><p>{selectedWorkout.subtitle}</p></div>
+          <strong>{selectedWorkout.exercises.length}<small>exos</small></strong>
+        </div>
+        <div className="v19-program-exercises">
+          {selectedWorkout.exercises.slice(0,5).map((ex,i)=><button key={ex.id} onClick={()=>setSelectedExerciseDetailId(ex.id)}>
+            <div className="v19-program-glyph"><ExerciseGlyph exercise={ex}/></div>
+            <div><span>{String(i+1).padStart(2,"0")}</span><strong>{ex.name}</strong><small>{ex.sets}×{ex.repMin}–{ex.repMax} · {ex.target}</small></div>
+            <b>›</b>
+          </button>)}
+          {selectedWorkout.exercises.length>5&&<div className="v19-more-exercises">+ {selectedWorkout.exercises.length-5} autres exercices</div>}
+        </div>
+        <button className="primary v19-program-start" onClick={()=>startWorkout(selectedWorkout)}>Démarrer {selectedWorkout.title}</button>
+      </div>
       <div className="v14-subsection-title"><span>RÉCUPÉRATION</span><strong>Routine sommeil</strong></div>
       <div className="v8-section-head v8-routine-title">
         <div><span>MA ROUTINE</span><h2>Sommeil</h2></div>
