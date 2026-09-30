@@ -1334,12 +1334,101 @@ export default function Home(){
     if(rest>0) startRestTimer(next);
   }
 
+  function resetRunTracking(){
+    if(runWatchIdRef.current!=null&&navigator.geolocation){
+      navigator.geolocation.clearWatch(runWatchIdRef.current);
+      runWatchIdRef.current=null;
+    }
+    setRunStatus("idle");
+    setRunPoints([]);
+    setRunStartedAt(null);
+    setRunFinishedAt(null);
+    setRunPausedMs(0);
+    setRunPauseStartedAt(null);
+    setRunLocationError("");
+    setRunGpsAccuracy(null);
+    localStorage.removeItem(RUN_STORAGE_KEY);
+  }
+
   function abandonWorkout(){
     if(!session) return;
     const id=session.clientSessionId;
+    if(session.workoutId==="cardio") resetRunTracking();
     setSession(null);
     stopRestTimer();
     void clearLiveWorkout(id).then(result=>setCloudStatus(result.ok?"ok":"error"));
+  }
+
+  function prepareRun(){
+    if(!navigator.geolocation){
+      setRunLocationError("Le GPS n’est pas disponible sur cet appareil.");
+      return;
+    }
+    setRunStatus("locating");
+    setRunLocationError("");
+    navigator.geolocation.getCurrentPosition(position=>{
+      const accuracy=position.coords.accuracy??999;
+      setRunGpsAccuracy(accuracy);
+      const point:CardioRoutePoint={
+        lat:position.coords.latitude,
+        lng:position.coords.longitude,
+        altitude:position.coords.altitude,
+        accuracy,
+        speedMps:position.coords.speed,
+        timestamp:Date.now(),
+        elapsedSeconds:0
+      };
+      setRunPoints([point]);
+      setRunStatus("ready");
+    },error=>{
+      setRunStatus("idle");
+      setRunLocationError(error.code===1
+        ?"Localisation refusée. Autorise Charlie Training dans Réglages > Confidentialité > Localisation."
+        :"Impossible d’obtenir ta position GPS.");
+    },{
+      enableHighAccuracy:true,
+      timeout:15000,
+      maximumAge:0
+    });
+  }
+
+  function startRun(){
+    const started=Date.now();
+    setRunStartedAt(started);
+    setRunFinishedAt(null);
+    setRunPausedMs(0);
+    setRunPauseStartedAt(null);
+    setRunPoints(prev=>prev.length?[{...prev.at(-1)!,timestamp:started,elapsedSeconds:0}]:[]);
+    setRunStatus("running");
+    pulse([50,30,50]);
+  }
+
+  function pauseRun(){
+    if(runStatus!=="running") return;
+    setRunPauseStartedAt(Date.now());
+    setRunStatus("paused");
+    pulse(35);
+  }
+
+  function resumeRun(){
+    if(runStatus!=="paused") return;
+    const t=Date.now();
+    if(runPauseStartedAt) setRunPausedMs(v=>v+(t-runPauseStartedAt));
+    setRunPauseStartedAt(null);
+    setRunStatus("running");
+    pulse(35);
+  }
+
+  function finishRun(){
+    if(!runStartedAt) return;
+    const t=Date.now();
+    let pausedMs=runPausedMs;
+    if(runStatus==="paused"&&runPauseStartedAt) pausedMs+=t-runPauseStartedAt;
+    setRunPausedMs(pausedMs);
+    setRunPauseStartedAt(null);
+    setRunFinishedAt(t);
+    setRunStatus("finished");
+    pulse([70,45,70]);
   }
 
   function saveCardio(){
@@ -1349,7 +1438,8 @@ export default function Home(){
       durationMinutes:duration,
       distanceKm:cardioDistance?Number(cardioDistance.replace(",",".")):undefined,
       avgHr:cardioHr?Number(cardioHr):undefined,
-      rpe:cardioRpe?Number(cardioRpe):undefined
+      rpe:cardioRpe?Number(cardioRpe):undefined,
+      source:"manual"
     };
     finishWorkout({},cardio);
   }
