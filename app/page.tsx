@@ -292,6 +292,8 @@ export default function Home(){
   const [workoutReminderTime,setWorkoutReminderTime]=useState("08:00");
   const [creatineReminderTime,setCreatineReminderTime]=useState("12:00");
   const [appearanceMode,setAppearanceMode]=useState<"auto"|"light"|"dark">("auto");
+  const [systemDark,setSystemDark]=useState(false);
+  const [selectedHomeDayIndex,setSelectedHomeDayIndex]=useState<number|null>(null);
   const [prefsLoaded,setPrefsLoaded]=useState(false);
 
   const [metricWeight,setMetricWeight]=useState("");
@@ -431,6 +433,14 @@ export default function Home(){
   useEffect(()=>{
     const t=setInterval(()=>setNow(Date.now()),1000);
     return()=>clearInterval(t);
+  },[]);
+
+  useEffect(()=>{
+    const media=window.matchMedia("(prefers-color-scheme: dark)");
+    const sync=()=>setSystemDark(media.matches);
+    sync();
+    media.addEventListener?.("change",sync);
+    return()=>media.removeEventListener?.("change",sync);
   },[]);
 
   useEffect(()=>{
@@ -1404,6 +1414,13 @@ export default function Home(){
   const todayWorkout=dueWorkoutId?workouts.find(w=>w.id===dueWorkoutId)??null:null;
   const weekDoneCount=doneWorkoutIds.size;
   const weekTrainingCount=schedule.filter(x=>x.workoutId).length;
+  const activeHomeDayIndex=selectedHomeDayIndex??todayIndex;
+  const activeHomeSchedule=schedule[activeHomeDayIndex];
+  const activeHomeWorkout=activeHomeDayIndex===todayIndex
+    ? todayWorkout
+    : activeHomeSchedule.workoutId
+      ? workouts.find(w=>w.id===activeHomeSchedule.workoutId)??null
+      : null;
 
   const plannedWakeAt=openSleep
     ? wakeDateForClock(openSleep.lightsOutAt??openSleep.bedAt,plannedWakeTime).getTime()
@@ -1481,9 +1498,11 @@ export default function Home(){
     const day=(nowDate.getDay()+6)%7;
     d.setDate(nowDate.getDate()-day+i);
     return {
+      index:i,
       short:d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".",""),
       date:d.getDate(),
-      active:d.toDateString()===nowDate.toDateString()
+      today:d.toDateString()===nowDate.toDateString(),
+      selected:i===activeHomeDayIndex
     };
   });
   const currentMinutes=nowDate.getHours()*60+nowDate.getMinutes();
@@ -1527,7 +1546,7 @@ export default function Home(){
   const authAnonymous=Boolean(authUser?.is_anonymous);
   const cloudLabel=cloudLoading?"Chargement":cloudStatus==="ok"?"Synchronisé":cloudStatus==="syncing"?"Synchro…":"À vérifier";
 
-  const resolvedAppearance=appearanceMode==="dark"?"dark":"light";
+  const resolvedAppearance=appearanceMode==="auto"?(systemDark?"dark":"light"):appearanceMode;
   const activeAppearance=resolvedAppearance;
 
   useEffect(()=>{
@@ -1660,19 +1679,25 @@ export default function Home(){
           </div>
         :
           <div className="v15-home">
-            <div className="v15-calendar">
-              {homeWeekDays.map(day=><div key={day.short} className={day.active?"active":""}><span>{day.short}</span><strong>{day.date}</strong></div>)}
+            <div className="v15-calendar" aria-label="Choisir un jour">
+              {homeWeekDays.map(day=><button
+                key={day.short}
+                type="button"
+                className={(day.selected?"selected ":"")+(day.today?"today":"")}
+                onClick={()=>setSelectedHomeDayIndex(day.index)}
+                aria-pressed={day.selected}
+              ><span>{day.short}</span><strong>{day.date}</strong>{day.today&&<i/>}</button>)}
             </div>
 
             <div className="v15-workout-hero">
               <div className="v15-hero-copy">
                 <span>SÉANCE DU JOUR</span>
-                <h2>{todayWorkout?.title??"Récupération"}</h2>
-                <p>{todayWorkout?.subtitle??"Repos et récupération aujourd’hui."}</p>
-                {todayWorkout&&<div className="v15-hero-meta"><span>◷ ~45 min</span><span>⌁ {todayWorkout.exercises.length} exercices</span></div>}
+                <h2>{activeHomeWorkout?.title??activeHomeSchedule.name}</h2>
+                <p>{activeHomeWorkout?.subtitle??(activeHomeSchedule.name==="Repos"?"Repos complet aujourd’hui.":"Récupération et mobilité.")}</p>
+                {activeHomeWorkout&&<div className="v15-hero-meta"><span>◷ ~45 min</span><span>⌁ {activeHomeWorkout.exercises.length} exercices</span></div>}
               </div>
-              {todayWorkout&&<div className="v15-hero-art"><ExerciseArt exercise={todayWorkout.exercises[0]} large/></div>}
-              {todayWorkout&&<button className="v15-hero-arrow" onClick={()=>startWorkout(todayWorkout)}>→</button>}
+              {activeHomeWorkout&&<div className="v15-hero-art"><ExerciseArt exercise={activeHomeWorkout.exercises[0]} large/></div>}
+              {activeHomeWorkout&&<button className="v15-hero-arrow" onClick={()=>startWorkout(activeHomeWorkout)}>→</button>}
             </div>
 
             <div className="v15-health-row">
@@ -1697,7 +1722,7 @@ export default function Home(){
               </div>
             </div>
 
-            {todayWorkout&&<button className="primary v15-main-cta" onClick={()=>startWorkout(todayWorkout)}>Démarrer la séance <span>→</span></button>}
+            {activeHomeWorkout&&<button className="primary v15-main-cta" onClick={()=>startWorkout(activeHomeWorkout)}>Démarrer {activeHomeDayIndex===todayIndex?"la séance":activeHomeWorkout.title} <span>→</span></button>}
 
             <button className="v15-coach-strip" onClick={()=>setTab("more")}>
               <div className="v15-coach-logo">C</div>
