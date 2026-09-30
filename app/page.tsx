@@ -437,6 +437,7 @@ export default function Home(){
   const [trackingView,setTrackingView]=useState<"sleep"|"training">("training");
   const [exerciseSearch,setExerciseSearch]=useState("");
   const [exerciseFilter,setExerciseFilter]=useState("Tous");
+  const [exerciseEquipmentFilter,setExerciseEquipmentFilter]=useState("Tous");
   const [selectedExerciseDetailId,setSelectedExerciseDetailId]=useState<string|null>(null);
   const [quickMenuOpen,setQuickMenuOpen]=useState(false);
   const [lastWorkoutSummary,setLastWorkoutSummary]=useState<WorkoutFinishSummary|null>(null);
@@ -2514,6 +2515,12 @@ export default function Home(){
     });
   },[]);
   const exerciseCategories=["Tous","Pectoraux","Dos","Jambes","Épaules","Bras","Abdos"];
+  const exerciseEquipmentFilters=["Tous","Poulie","Haltères","Machine","Barre","Smith","Poids du corps"];
+  const equipmentOptionsFor=(ex:Exercise)=>{
+    const options=exerciseVariants[ex.id]??[];
+    const values=options.length?options.map(v=>v.equipment):[equipmentLabel(ex)];
+    return Array.from(new Set(values));
+  };
   const exerciseCategory=(ex:Exercise)=>{
     const key=(ex.id+" "+ex.name+" "+ex.target).toLowerCase();
     if(/pec|bench|chest|développé couché|incline/.test(key)) return "Pectoraux";
@@ -2525,9 +2532,11 @@ export default function Home(){
     return "Autres";
   };
   const filteredExerciseLibrary=exerciseLibrary.filter(ex=>{
-    const matchesSearch=(ex.name+" "+ex.target).toLowerCase().includes(exerciseSearch.trim().toLowerCase());
+    const variantText=(exerciseVariants[ex.id]??[]).map(v=>v.name+" "+v.equipment).join(" ");
+    const matchesSearch=(ex.name+" "+ex.target+" "+variantText).toLowerCase().includes(exerciseSearch.trim().toLowerCase());
     const matchesFilter=exerciseFilter==="Tous"||exerciseCategory(ex)===exerciseFilter;
-    return matchesSearch&&matchesFilter;
+    const matchesEquipment=exerciseEquipmentFilter==="Tous"||equipmentOptionsFor(ex).includes(exerciseEquipmentFilter);
+    return matchesSearch&&matchesFilter&&matchesEquipment;
   });
 
   const latestHealthDay=latestHealthDayForCoach;
