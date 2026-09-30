@@ -1649,6 +1649,76 @@ export default function Home(){
     ? Math.min(100,Math.round((session.completedIds.length/currentWorkout.exercises.length)*100))
     : 0;
 
+  const runClockEnd=runStatus==="finished"&&runFinishedAt
+    ? runFinishedAt
+    : runStatus==="paused"&&runPauseStartedAt
+      ? runPauseStartedAt
+      : now;
+  const runElapsedSeconds=runStartedAt
+    ? Math.max(0,Math.floor((runClockEnd-runStartedAt-runPausedMs)/1000))
+    : 0;
+  const runDistanceMeters=useMemo(()=>{
+    let total=0;
+    for(let i=1;i<runPoints.length;i++) total+=haversineMeters(runPoints[i-1],runPoints[i]);
+    return total;
+  },[runPoints]);
+  const runElevationGain=useMemo(()=>{
+    let gain=0;
+    for(let i=1;i<runPoints.length;i++){
+      const a=runPoints[i-1].altitude;
+      const b=runPoints[i].altitude;
+      if(a==null||b==null) continue;
+      const delta=b-a;
+      if(delta>1.5&&delta<30) gain+=delta;
+    }
+    return Math.round(gain);
+  },[runPoints]);
+  const runAvgSpeedKmh=runElapsedSeconds>0?(runDistanceMeters/runElapsedSeconds)*3.6:0;
+  const runAvgPace=runDistanceMeters>=50&&runElapsedSeconds>0?runElapsedSeconds/(runDistanceMeters/1000):0;
+  const runInstantSpeedKmh=useMemo(()=>{
+    const latest=runPoints.at(-1);
+    if(latest?.speedMps!=null&&latest.speedMps>=0) return latest.speedMps*3.6;
+    if(runPoints.length<2) return 0;
+    const recent=runPoints.slice(-4);
+    let distance=0;
+    for(let i=1;i<recent.length;i++) distance+=haversineMeters(recent[i-1],recent[i]);
+    const seconds=(recent.at(-1)!.timestamp-recent[0].timestamp)/1000;
+    return seconds>0?(distance/seconds)*3.6:0;
+  },[runPoints]);
+  const runSplits=useMemo<CardioSplit[]>(()=>{
+    const splits:CardioSplit[]=[];
+    if(runPoints.length<2) return splits;
+    let cumulative=0;
+    let nextKm=1;
+    let previousElapsed=0;
+    for(let i=1;i<runPoints.length;i++){
+      cumulative+=haversineMeters(runPoints[i-1],runPoints[i]);
+      while(cumulative>=nextKm*1000){
+        const elapsedAtKm=runPoints[i].elapsedSeconds??0;
+        const splitSeconds=Math.max(1,elapsedAtKm-previousElapsed);
+        splits.push({
+          km:nextKm,
+          elapsedSeconds:elapsedAtKm,
+          splitSeconds,
+          paceSecondsPerKm:splitSeconds
+        });
+        previousElapsed=elapsedAtKm;
+        nextKm++;
+      }
+    }
+    return splits;
+  },[runPoints]);
+  const runTargetSeconds=Math.max(60,Number(cardioDuration||45)*60);
+  const runRemainingSeconds=Math.max(0,runTargetSeconds-runElapsedSeconds);
+  const runProgress=Math.min(100,(runElapsedSeconds/runTargetSeconds)*100);
+  const runGpsLabel=runGpsAccuracy==null
+    ?"GPS en attente"
+    : runGpsAccuracy<=12
+      ?"GPS excellent"
+      : runGpsAccuracy<=30
+        ?"GPS prêt"
+        :"GPS moyen";
+
   const todayWorkout=dueWorkoutId?workouts.find(w=>w.id===dueWorkoutId)??null:null;
   const weekDoneCount=doneWorkoutIds.size;
   const weekTrainingCount=schedule.filter(x=>x.workoutId).length;
