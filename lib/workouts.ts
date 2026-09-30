@@ -80,6 +80,65 @@ export const exerciseVariants: Record<string, ExerciseVariant[]> = {
     {id:"squat-smith",name:"Smith Squat",equipment:"Smith",unit:"kg",suggestedWeight:51.3,loadStep:5,cue:"Genoux dans l’axe. Amplitude stable."},
     {id:"hack-squat",name:"Hack Squat",equipment:"Machine",unit:"kg",suggestedWeight:50,loadStep:5,cue:"Dos collé au dossier, genoux dans l’axe et profondeur contrôlée."},
     {id:"goblet-squat",name:"Goblet Squat",equipment:"Haltère",unit:"kg",suggestedWeight:24,loadStep:2,cue:"Charge près du buste, genoux ouverts et tronc gainé."}
+  ],
+  "pullups":[
+    {id:"pullups-weighted",name:"Tractions lestées",equipment:"Poids du corps",unit:"+kg",suggestedWeight:10,loadStep:2.5,cue:"Gainage serré. Tire les coudes vers le bas."},
+    {id:"pullups-bodyweight",name:"Tractions au poids du corps",equipment:"Poids du corps",unit:"PDC",loadStep:0,cue:"Amplitude propre, menton au-dessus de la barre sans casser le gainage."},
+    {id:"pullups-assisted",name:"Tractions assistées",equipment:"Machine",unit:"kg",suggestedWeight:30,loadStep:5,cue:"Choisis une assistance qui permet des reps propres et contrôlées."}
+  ],
+  "pullups-upper":[
+    {id:"pullups-bodyweight",name:"Tractions",equipment:"Poids du corps",unit:"PDC",loadStep:0,cue:"Amplitude propre, aucune rep arrachée."},
+    {id:"pullups-assisted",name:"Tractions assistées",equipment:"Machine",unit:"kg",suggestedWeight:25,loadStep:5,cue:"Assistance juste suffisante pour garder une technique propre."},
+    {id:"lat-neutral",name:"Lat Pulldown prise neutre",equipment:"Poulie",unit:"kg",suggestedWeight:55,loadStep:2.5,cue:"Poitrine haute et coudes vers les côtes."}
+  ],
+  "straight-arm":[
+    {id:"straight-arm-cable",name:"Straight-arm Pulldown",equipment:"Poulie",unit:"kg",suggestedWeight:29.3,loadStep:2.5,cue:"Bras quasi tendus, ramène vers les cuisses."},
+    {id:"pullover-rope",name:"Pullover corde",equipment:"Poulie",unit:"kg",suggestedWeight:25,loadStep:2.5,cue:"Garde le torse stable et termine avec les mains vers les cuisses."},
+    {id:"pullover-machine",name:"Pullover machine",equipment:"Machine",unit:"kg",suggestedWeight:35,loadStep:2.5,cue:"Contrôle l’étirement en haut et serre les dorsaux en bas."}
+  ],
+  "face-pull":[
+    {id:"face-pull-rope",name:"Face Pull corde",equipment:"Poulie",unit:"kg",suggestedWeight:27,loadStep:2.5,cue:"Tire vers le visage, épaules basses et rotation externe."},
+    {id:"reverse-cable",name:"Reverse Fly poulie",equipment:"Poulie",unit:"kg/bras",suggestedWeight:7.5,loadStep:1,cue:"Bras légèrement fléchis, ouvre sans hausser les épaules."},
+    {id:"reverse-machine",name:"Reverse Fly machine",equipment:"Machine",unit:"kg",suggestedWeight:30,loadStep:2.5,cue:"Poitrine calée, contrôle la fermeture et l’ouverture."}
+  ],
+  "supine":[
+    {id:"supine-machine",name:"Supine Press",equipment:"Machine",unit:"kg/bras",suggestedWeight:40,loadStep:2,cue:"Omoplates stables et descente contrôlée."},
+    {id:"chest-machine",name:"Chest Press convergente",equipment:"Machine",unit:"kg",suggestedWeight:50,loadStep:2.5,cue:"Poitrine haute, pousse sans décoller les épaules."},
+    {id:"flat-db",name:"Développé haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:22,loadStep:2,cue:"Omoplates serrées et amplitude stable."}
+  ],
+  "leg-press":[
+    {id:"leg-press-machine",name:"Leg Press",equipment:"Machine",unit:"kg",suggestedWeight:93,loadStep:7,cue:"Bassin collé au dossier, genoux dans l’axe."},
+    {id:"hack-squat",name:"Hack Squat",equipment:"Machine",unit:"kg",suggestedWeight:50,loadStep:5,cue:"Dos calé et profondeur contrôlée."},
+    {id:"split-squat-db",name:"Fente bulgare",equipment:"Haltères",unit:"kg/bras",suggestedWeight:14,loadStep:2,cue:"Pied avant stable, descends verticalement et pousse dans le sol."}
+  ],
+  "leg-curl":[
+    {id:"leg-curl-seated",name:"Leg Curl assis",equipment:"Machine",unit:"kg",suggestedWeight:39,loadStep:2.5,cue:"Bassin calé, contracte fort et contrôle le retour."},
+    {id:"leg-curl-lying",name:"Leg Curl allongé",equipment:"Machine",unit:"kg",suggestedWeight:35,loadStep:2.5,cue:"Hanches plaquées au banc et retour lent."},
+    {id:"leg-curl-ball",name:"Leg Curl swiss ball",equipment:"Poids du corps",unit:"PDC",loadStep:0,cue:"Hanches hautes, ramène les talons sans casser le bassin."}
+  ],
+  "leg-extension":[
+    {id:"leg-extension-machine",name:"Leg Extension",equipment:"Machine",unit:"kg",suggestedWeight:73,loadStep:2.5,cue:"Pause en haut, pas d’à-coup."},
+    {id:"sissy-squat",name:"Sissy Squat assisté",equipment:"Poids du corps",unit:"PDC",loadStep:0,cue:"Genoux avancent, tronc gainé et amplitude maîtrisée."}
+  ],
+  "calves":[
+    {id:"calves-machine",name:"Mollets machine",equipment:"Machine",unit:"kg",suggestedWeight:60,loadStep:5,cue:"Amplitude complète et pause en haut."},
+    {id:"calves-smith",name:"Mollets Smith",equipment:"Smith",unit:"kg",suggestedWeight:50,loadStep:5,cue:"Talons bas en bas, monte haut sans rebond."},
+    {id:"calves-db",name:"Mollets unilatéraux haltère",equipment:"Haltère",unit:"kg",suggestedWeight:16,loadStep:2,cue:"Amplitude complète et contrôle du tempo."}
+  ],
+  "crunch":[
+    {id:"crunch-machine",name:"Crunch machine",equipment:"Machine",unit:"kg",suggestedWeight:50,loadStep:4,cue:"Enroule le buste et souffle sur la contraction."},
+    {id:"crunch-cable",name:"Crunch poulie",equipment:"Poulie",unit:"kg",suggestedWeight:30,loadStep:2.5,cue:"Fléchis le tronc sans tirer avec les bras."},
+    {id:"crunch-body",name:"Crunch au sol",equipment:"Poids du corps",unit:"PDC",loadStep:0,cue:"Expire fort et rapproche les côtes du bassin."}
+  ],
+  "reverse-fly":[
+    {id:"reverse-machine",name:"Reverse Fly machine",equipment:"Machine",unit:"kg",suggestedWeight:30,loadStep:2.5,cue:"Tempo lent et contrôle complet."},
+    {id:"reverse-cable",name:"Reverse Fly poulie",equipment:"Poulie",unit:"kg/bras",suggestedWeight:7.5,loadStep:1,cue:"Tension continue et épaules basses."},
+    {id:"reverse-db",name:"Oiseau haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:7,loadStep:1,cue:"Buste penché, ouvre les bras sans élan."}
+  ],
+  "abs-upper":[
+    {id:"crunch-machine",name:"Crunch machine",equipment:"Machine",unit:"kg",suggestedWeight:50,loadStep:4,cue:"Enroule le buste et expire fort."},
+    {id:"crunch-cable",name:"Crunch poulie",equipment:"Poulie",unit:"kg",suggestedWeight:30,loadStep:2.5,cue:"Fléchis le tronc, les bras restent fixes."},
+    {id:"core-body",name:"Gainage / relevés",equipment:"Poids du corps",unit:"PDC",loadStep:0,cue:"Garde le bassin neutre et contrôle chaque répétition."}
   ]
 };
 
