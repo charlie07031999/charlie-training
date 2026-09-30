@@ -49,12 +49,15 @@ final class RunTrackingManager: NSObject, CLLocationManagerDelegate {
         super.init()
         locationManager.delegate = self
         locationManager.activityType = .fitness
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 2
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        locationManager.distanceFilter = kCLDistanceFilterNone
         locationManager.pausesLocationUpdatesAutomatically = false
         locationManager.showsBackgroundLocationIndicator = true
         restore()
         if statusValue == "running" || statusValue == "locating" || statusValue == "ready" {
+            if statusValue == "running" {
+                UIApplication.shared.isIdleTimerDisabled = true
+            }
             startLocationUpdatesIfAuthorized()
         }
     }
@@ -89,7 +92,10 @@ final class RunTrackingManager: NSObject, CLLocationManagerDelegate {
         switch locationManager.authorizationStatus {
         case .notDetermined:
             locationManager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse, .authorizedAlways:
+        case .authorizedWhenInUse:
+            locationManager.requestAlwaysAuthorization()
+            startLocationUpdatesIfAuthorized()
+        case .authorizedAlways:
             startLocationUpdatesIfAuthorized()
         case .denied, .restricted:
             statusValue = "idle"
@@ -112,6 +118,10 @@ final class RunTrackingManager: NSObject, CLLocationManagerDelegate {
         elevationGainM = 0
         lastAcceptedLocation = nil
         statusValue = "running"
+        UIApplication.shared.isIdleTimerDisabled = true
+        if locationManager.authorizationStatus == .authorizedWhenInUse {
+            locationManager.requestAlwaysAuthorization()
+        }
         startLocationUpdatesIfAuthorized()
 
         if let previewLocation, valid(previewLocation) {
@@ -153,6 +163,7 @@ final class RunTrackingManager: NSObject, CLLocationManagerDelegate {
         self.pauseStartedAt = nil
         finishedAt = now
         statusValue = "finished"
+        UIApplication.shared.isIdleTimerDisabled = false
         locationManager.stopUpdatingLocation()
         persist(force: true)
         return snapshot()
@@ -160,6 +171,7 @@ final class RunTrackingManager: NSObject, CLLocationManagerDelegate {
 
     func reset() -> NativeRunSnapshotDTO {
         locationManager.stopUpdatingLocation()
+        UIApplication.shared.isIdleTimerDisabled = false
         statusValue = "idle"
         startedAt = nil
         finishedAt = nil
@@ -177,7 +189,14 @@ final class RunTrackingManager: NSObject, CLLocationManagerDelegate {
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         switch manager.authorizationStatus {
-        case .authorizedWhenInUse, .authorizedAlways:
+        case .authorizedWhenInUse:
+            if statusValue == "running" {
+                manager.requestAlwaysAuthorization()
+            }
+            if statusValue == "locating" || statusValue == "ready" || statusValue == "running" {
+                startLocationUpdatesIfAuthorized()
+            }
+        case .authorizedAlways:
             if statusValue == "locating" || statusValue == "ready" || statusValue == "running" {
                 startLocationUpdatesIfAuthorized()
             }
@@ -222,6 +241,9 @@ final class RunTrackingManager: NSObject, CLLocationManagerDelegate {
             return
         }
         locationManager.allowsBackgroundLocationUpdates = true
+        if #available(iOS 15.0, *) {
+            locationManager.showsBackgroundLocationIndicator = true
+        }
         locationManager.startUpdatingLocation()
     }
 
@@ -281,7 +303,7 @@ final class RunTrackingManager: NSObject, CLLocationManagerDelegate {
 
         lastAcceptedLocation = location
         updatesSincePersist += 1
-        persist(force: updatesSincePersist >= 8)
+        persist(force: updatesSincePersist >= 2)
     }
 
     private func elapsedSeconds() -> Int {
