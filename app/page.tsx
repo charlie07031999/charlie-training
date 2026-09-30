@@ -2063,18 +2063,144 @@ export default function Home(){
           </div>
         }
       </>:currentWorkout.id==="cardio"?<>
-        <div className="session-head">
-          <div><div className="eyebrow">CARDIO FACILE</div><h2>Footing</h2><p>Conversation facile. Pas de chasse au chrono.</p></div>
-          <div className="session-progress">{formatTimer(elapsed)}</div>
-        </div>
+        <div className="run-screen">
+          <div className="run-topbar">
+            <button className="run-back" onClick={()=>confirm("Quitter la course ?")&&abandonWorkout()}>‹</button>
+            <div><span>RUNNING</span><strong>Course facile</strong></div>
+            <div className={"run-gps-pill "+(runGpsAccuracy!=null&&runGpsAccuracy<=30?"ready":"")}>
+              <i/>{runGpsLabel}
+            </div>
+          </div>
 
-        <div className="cardio-card">
-          <label>Durée (min)<input inputMode="numeric" value={cardioDuration} onChange={e=>setCardioDuration(e.target.value)}/></label>
-          <label>Distance (km)<input inputMode="decimal" placeholder="3.7" value={cardioDistance} onChange={e=>setCardioDistance(e.target.value)}/></label>
-          <label>FC moyenne<input inputMode="numeric" placeholder="150" value={cardioHr} onChange={e=>setCardioHr(e.target.value)}/></label>
-          <label>RPE /10<input inputMode="numeric" value={cardioRpe} onChange={e=>setCardioRpe(e.target.value)}/></label>
-          <button className="primary big" onClick={saveCardio}>Enregistrer le cardio</button>
-          <button className="ghost danger" onClick={()=>confirm("Annuler cette séance ?")&&abandonWorkout()}>Annuler</button>
+          {(runStatus==="idle"||runStatus==="locating"||runStatus==="ready")&&<>
+            <div className="run-pre-card">
+              <div className="run-pre-copy">
+                <span>OBJECTIF DU JOUR</span>
+                <h2>{cardioDuration} min faciles</h2>
+                <p>Endurance fondamentale. Tu dois pouvoir parler en phrases complètes.</p>
+              </div>
+              <div className="run-pre-targets">
+                <div><span>Intensité</span><strong>RPE 3–4</strong></div>
+                <div><span>Allure</span><strong>Confortable</strong></div>
+                <div><span>But</span><strong>Base aérobie</strong></div>
+              </div>
+            </div>
+
+            <div className="run-map-card">
+              <RunRouteMap points={runPoints}/>
+              <div className="run-map-status">
+                <span>{runStatus==="locating"?"Recherche du signal…":runStatus==="ready"?"Position acquise":"Active le GPS pour enregistrer ton tracé"}</span>
+                {runGpsAccuracy!=null&&<strong>± {Math.round(runGpsAccuracy)} m</strong>}
+              </div>
+            </div>
+
+            {runLocationError&&<div className="run-warning">{runLocationError}</div>}
+
+            <div className="run-pre-actions">
+              {runStatus==="idle"&&<button className="primary run-primary" onClick={prepareRun}>Activer le GPS</button>}
+              {runStatus==="locating"&&<button className="primary run-primary" disabled>Recherche GPS…</button>}
+              {runStatus==="ready"&&<button className="primary run-primary" onClick={startRun}>Démarrer la course</button>}
+              {runStatus==="idle"&&runLocationError&&<button className="secondary" onClick={startRun}>Démarrer sans GPS</button>}
+            </div>
+
+            <details className="run-manual-entry">
+              <summary>Saisir une course manuellement</summary>
+              <div className="cardio-card">
+                <label>Durée (min)<input inputMode="numeric" value={cardioDuration} onChange={e=>setCardioDuration(e.target.value)}/></label>
+                <label>Distance (km)<input inputMode="decimal" placeholder="5.0" value={cardioDistance} onChange={e=>setCardioDistance(e.target.value)}/></label>
+                <label>FC moyenne<input inputMode="numeric" placeholder="145" value={cardioHr} onChange={e=>setCardioHr(e.target.value)}/></label>
+                <label>RPE /10<input inputMode="numeric" value={cardioRpe} onChange={e=>setCardioRpe(e.target.value)}/></label>
+                <button className="secondary" onClick={saveCardio}>Enregistrer manuellement</button>
+              </div>
+            </details>
+          </>}
+
+          {(runStatus==="running"||runStatus==="paused")&&<>
+            <div className="run-live-hero">
+              <div className="run-live-time">
+                <span>{runStatus==="paused"?"EN PAUSE":"COURSE EN COURS"}</span>
+                <strong>{formatTimer(runElapsedSeconds)}</strong>
+                <small>{runRemainingSeconds>0?"Encore "+formatTimer(runRemainingSeconds)+" sur l’objectif":"Objectif temps atteint"}</small>
+              </div>
+              <div className="run-progress-ring" style={{"--run-progress":runProgress+"%"} as React.CSSProperties}>
+                <span>{Math.round(runProgress)}%</span>
+              </div>
+            </div>
+
+            <div className="run-live-grid">
+              <div className="featured"><span>Distance</span><strong>{formatDistance(runDistanceMeters)}</strong></div>
+              <div><span>Allure</span><strong>{formatPace(runInstantPace)}</strong><small>instantanée</small></div>
+              <div><span>Vitesse</span><strong>{runInstantSpeedKmh?runInstantSpeedKmh.toFixed(1):"—"}</strong><small>km/h</small></div>
+              <div><span>Moyenne</span><strong>{formatPace(runAvgPace)}</strong><small>allure moy.</small></div>
+            </div>
+
+            <div className="run-live-map">
+              <RunRouteMap points={runPoints}/>
+              <div className="run-map-overlay">
+                <span>{runGpsLabel}</span>
+                <strong>{runElevationGain} m D+</strong>
+              </div>
+            </div>
+
+            <div className="run-coach-card">
+              <div className="run-coach-icon">C</div>
+              <div>
+                <span>COACH CHARLIE</span>
+                <strong>{runInstantPace&&runAvgPace&&runInstantPace<runAvgPace*.82?"Ralentis légèrement.":"Reste facile."}</strong>
+                <small>Objectif récupération : garde une respiration confortable.</small>
+              </div>
+            </div>
+
+            {runSplits.length>0&&<div className="run-splits-live">
+              <div className="run-section-head"><strong>Splits</strong><span>par km</span></div>
+              {runSplits.slice(-3).map(split=><div key={split.km}><span>KM {split.km}</span><strong>{formatPace(split.paceSecondsPerKm)}</strong></div>)}
+            </div>}
+
+            <div className="run-controls">
+              {runStatus==="running"
+                ?<button className="run-pause" onClick={pauseRun}>Pause</button>
+                :<button className="run-resume" onClick={resumeRun}>Reprendre</button>}
+              <button className="run-finish" onClick={()=>confirm("Terminer la course ?")&&finishRun()}>Terminer</button>
+            </div>
+          </>}
+
+          {runStatus==="finished"&&<>
+            <div className="run-summary-head">
+              <span>COURSE TERMINÉE</span>
+              <h2>{formatDistance(runDistanceMeters)}</h2>
+              <p>{formatTimer(runElapsedSeconds)} · {formatPace(runAvgPace)}</p>
+            </div>
+
+            <div className="run-live-map summary">
+              <RunRouteMap points={runPoints}/>
+            </div>
+
+            <div className="run-summary-grid">
+              <div><span>Temps</span><strong>{formatTimer(runElapsedSeconds)}</strong></div>
+              <div><span>Distance</span><strong>{(runDistanceMeters/1000).toFixed(2)} km</strong></div>
+              <div><span>Allure moy.</span><strong>{formatPace(runAvgPace)}</strong></div>
+              <div><span>Vitesse moy.</span><strong>{runAvgSpeedKmh.toFixed(1)} km/h</strong></div>
+              <div><span>Dénivelé +</span><strong>{runElevationGain} m</strong></div>
+              <div><span>Splits</span><strong>{runSplits.length}</strong></div>
+            </div>
+
+            {runSplits.length>0&&<div className="run-splits">
+              <div className="run-section-head"><strong>Splits kilométriques</strong><span>{runSplits.length} km complets</span></div>
+              {runSplits.map(split=><div key={split.km}>
+                <span>{split.km} km</span>
+                <strong>{formatTimer(split.splitSeconds)}</strong>
+                <small>{formatPace(split.paceSecondsPerKm)}</small>
+              </div>)}
+            </div>}
+
+            <div className="run-post-fields">
+              <label><span>FC moyenne <small>optionnel</small></span><input inputMode="numeric" placeholder="145" value={cardioHr} onChange={e=>setCardioHr(e.target.value)}/></label>
+              <label><span>RPE /10</span><input inputMode="numeric" value={cardioRpe} onChange={e=>setCardioRpe(e.target.value)}/></label>
+            </div>
+
+            <button className="primary run-save" onClick={saveGpsRun}>Enregistrer la course</button>
+            <button className="ghost danger run-discard" onClick={()=>confirm("Supprimer cette course ?")&&abandonWorkout()}>Supprimer</button>
+          </>}
         </div>
       </>:<>
         <div className="v15-session-top">
