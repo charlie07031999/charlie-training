@@ -1,4 +1,87 @@
-import type { Workout, ExerciseHistory } from "./types";
+import type { Workout, ExerciseHistory, ExerciseVariant } from "./types";
+
+
+export const exerciseVariants: Record<string, ExerciseVariant[]> = {
+  "ez-curl":[
+    {id:"ez-curl-cable",name:"Curl EZ poulie",equipment:"Poulie",unit:"kg",suggestedWeight:20.3,loadStep:2.5,cue:"Coudes fixes. Garde les épaules immobiles et contrôle le retour."},
+    {id:"ez-curl-bar",name:"Curl barre EZ",equipment:"Barre EZ",unit:"kg",suggestedWeight:20,loadStep:2.5,cue:"Buste fixe. Monte sans lancer les coudes vers l’avant."},
+    {id:"dumbbell-curl",name:"Curl biceps haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:10,loadStep:1,cue:"Supination progressive, coude fixe et amplitude complète."},
+    {id:"machine-curl",name:"Curl biceps machine",equipment:"Machine",unit:"kg",suggestedWeight:20,loadStep:2.5,cue:"Garde les bras calés et contrôle complètement la phase négative."}
+  ],
+  "incline-curl":[
+    {id:"incline-curl-db",name:"Curl incliné haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:12,loadStep:1,cue:"Étirement complet, bras derrière le buste et descente lente."},
+    {id:"cable-curl",name:"Curl biceps poulie",equipment:"Poulie",unit:"kg",suggestedWeight:20,loadStep:2.5,cue:"Tension continue, coudes fixes et zéro balancier."},
+    {id:"hammer-curl",name:"Curl marteau",equipment:"Haltères",unit:"kg/bras",suggestedWeight:12,loadStep:1,cue:"Poignets neutres, coudes près du corps, contrôle la descente."}
+  ],
+  "row":[
+    {id:"row-cable",name:"Rowing poulie",equipment:"Poulie",unit:"kg",suggestedWeight:66,loadStep:2.5,cue:"Tire vers le nombril. Torse stable, retour contrôlé."},
+    {id:"row-chest",name:"Rowing poitrine appuyée",equipment:"Machine",unit:"kg",suggestedWeight:45,loadStep:2.5,cue:"Poitrine collée au support, tire les coudes en arrière."},
+    {id:"row-dumbbell",name:"Rowing haltère unilatéral",equipment:"Haltère",unit:"kg/bras",suggestedWeight:24,loadStep:2,cue:"Bassin stable, coude vers la hanche, amplitude complète."}
+  ],
+  "row-upper":[
+    {id:"row-cable",name:"Rowing poulie",equipment:"Poulie",unit:"kg",suggestedWeight:66,loadStep:2.5,cue:"Tire vers le nombril. Torse stable, retour contrôlé."},
+    {id:"row-chest",name:"Rowing poitrine appuyée",equipment:"Machine",unit:"kg",suggestedWeight:45,loadStep:2.5,cue:"Poitrine collée au support, tire les coudes en arrière."},
+    {id:"row-dumbbell",name:"Rowing haltère unilatéral",equipment:"Haltère",unit:"kg/bras",suggestedWeight:24,loadStep:2,cue:"Bassin stable, coude vers la hanche, amplitude complète."}
+  ],
+  "lateral":[
+    {id:"lateral-db",name:"Élévations latérales haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:8,loadStep:1,cue:"Monte avec les coudes, sans balancer le buste."},
+    {id:"lateral-cable",name:"Élévations latérales poulie",equipment:"Poulie",unit:"kg/bras",suggestedWeight:5,loadStep:1,cue:"Tension continue. Garde l’épaule basse et contrôle le retour."},
+    {id:"lateral-machine",name:"Élévations latérales machine",equipment:"Machine",unit:"kg",suggestedWeight:25,loadStep:2.5,cue:"Épaules basses, amplitude confortable, tempo constant."}
+  ],
+  "lateral-upper":[
+    {id:"lateral-db",name:"Élévations latérales haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:8,loadStep:1,cue:"Monte avec les coudes, sans balancer le buste."},
+    {id:"lateral-cable",name:"Élévations latérales poulie",equipment:"Poulie",unit:"kg/bras",suggestedWeight:5,loadStep:1,cue:"Tension continue. Garde l’épaule basse et contrôle le retour."},
+    {id:"lateral-machine",name:"Élévations latérales machine",equipment:"Machine",unit:"kg",suggestedWeight:25,loadStep:2.5,cue:"Épaules basses, amplitude confortable, tempo constant."}
+  ],
+  "triceps-rope":[
+    {id:"triceps-rope-cable",name:"Extension triceps corde",equipment:"Poulie",unit:"kg",suggestedWeight:20.3,loadStep:2.5,cue:"Coudes fixes, ouvre la corde en bas."},
+    {id:"triceps-bar-cable",name:"Extension triceps barre",equipment:"Poulie",unit:"kg",suggestedWeight:22.5,loadStep:2.5,cue:"Coudes serrés. Verrouille sans projeter les épaules."},
+    {id:"triceps-db",name:"Extension triceps haltère",equipment:"Haltère",unit:"kg",suggestedWeight:16,loadStep:2,cue:"Bras stables, amplitude confortable et retour lent."}
+  ],
+  "pec-fly":[
+    {id:"pec-fly-machine",name:"Pec Fly machine",equipment:"Machine",unit:"kg",suggestedWeight:79,loadStep:4,cue:"Amplitude contrôlée, épaules basses, pas de claquement."},
+    {id:"pec-fly-cable",name:"Écartés poulie",equipment:"Poulie",unit:"kg/bras",suggestedWeight:10,loadStep:1,cue:"Légère flexion du coude et tension continue."},
+    {id:"pec-fly-db",name:"Écartés haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:10,loadStep:1,cue:"Amplitude maîtrisée, ne descends pas au-delà de ton confort."}
+  ],
+  "shoulder-press":[
+    {id:"shoulder-db",name:"Shoulder Press haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:18,loadStep:2,cue:"Buste stable. Pas de sur-cambrure."},
+    {id:"shoulder-machine",name:"Shoulder Press machine",equipment:"Machine",unit:"kg",suggestedWeight:35,loadStep:2.5,cue:"Dos calé, pousse dans l’axe et contrôle la descente."},
+    {id:"shoulder-smith",name:"Développé épaules guidé",equipment:"Smith",unit:"kg",suggestedWeight:30,loadStep:5,cue:"Trajectoire verticale, buste stable, amplitude confortable."}
+  ],
+  "shoulder-upper":[
+    {id:"shoulder-db",name:"Shoulder Press haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:18,loadStep:2,cue:"Buste stable. Pas de sur-cambrure."},
+    {id:"shoulder-machine",name:"Shoulder Press machine",equipment:"Machine",unit:"kg",suggestedWeight:35,loadStep:2.5,cue:"Dos calé, pousse dans l’axe et contrôle la descente."}
+  ],
+  "lat-pulldown":[
+    {id:"lat-pulldown-wide",name:"Lat Pulldown",equipment:"Poulie",unit:"kg",suggestedWeight:59,loadStep:2.5,cue:"Poitrine sortie, tire les coudes vers les côtes."},
+    {id:"lat-pulldown-one",name:"Tirage vertical unilatéral",equipment:"Poulie",unit:"kg/bras",suggestedWeight:25,loadStep:2.5,cue:"Épaule basse, tire le coude vers la hanche."},
+    {id:"pullups-assisted",name:"Tractions assistées",equipment:"Machine",unit:"kg",suggestedWeight:30,loadStep:5,cue:"Garde le tronc gainé et contrôle la descente."}
+  ],
+  "lat-upper":[
+    {id:"lat-pulldown-wide",name:"Lat Pulldown",equipment:"Poulie",unit:"kg",suggestedWeight:59,loadStep:2.5,cue:"Poitrine sortie, tire les coudes vers les côtes."},
+    {id:"lat-pulldown-one",name:"Tirage vertical unilatéral",equipment:"Poulie",unit:"kg/bras",suggestedWeight:25,loadStep:2.5,cue:"Épaule basse, tire le coude vers la hanche."}
+  ],
+  "incline-bench":[
+    {id:"incline-bar",name:"Développé incliné barre",equipment:"Barre",unit:"kg",suggestedWeight:55,loadStep:5,cue:"Banc ~30°. Descente contrôlée, 1–2 reps en réserve."},
+    {id:"incline-db",name:"Développé incliné haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:22,loadStep:2,cue:"Omoplates serrées. Descente contrôlée et amplitude stable."},
+    {id:"incline-machine",name:"Chest Press inclinée",equipment:"Machine",unit:"kg",suggestedWeight:45,loadStep:2.5,cue:"Poitrine haute, trajectoire stable et contrôle du retour."}
+  ],
+  "incline-upper":[
+    {id:"incline-bar",name:"Développé incliné barre",equipment:"Barre",unit:"kg",suggestedWeight:50,loadStep:5,cue:"Banc ~30°. Descente contrôlée, 1–2 reps en réserve."},
+    {id:"incline-db",name:"Développé incliné haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:20,loadStep:2,cue:"Omoplates serrées. Descente contrôlée et amplitude stable."},
+    {id:"incline-machine",name:"Chest Press inclinée",equipment:"Machine",unit:"kg",suggestedWeight:42.5,loadStep:2.5,cue:"Poitrine haute, trajectoire stable et contrôle du retour."}
+  ],
+  "rdl":[
+    {id:"rdl-smith",name:"RDL Smith",equipment:"Smith",unit:"kg",suggestedWeight:61.3,loadStep:5,cue:"Hanches en arrière, dos neutre, barre proche des jambes."},
+    {id:"rdl-db",name:"RDL haltères",equipment:"Haltères",unit:"kg/bras",suggestedWeight:24,loadStep:2,cue:"Hanches en arrière, haltères près des jambes, étirement des ischios."},
+    {id:"rdl-bar",name:"Soulevé de terre roumain",equipment:"Barre",unit:"kg",suggestedWeight:60,loadStep:5,cue:"Dos neutre, tension des ischios, verrouille avec les fessiers."}
+  ],
+  "smith-squat":[
+    {id:"squat-smith",name:"Smith Squat",equipment:"Smith",unit:"kg",suggestedWeight:51.3,loadStep:5,cue:"Genoux dans l’axe. Amplitude stable."},
+    {id:"hack-squat",name:"Hack Squat",equipment:"Machine",unit:"kg",suggestedWeight:50,loadStep:5,cue:"Dos collé au dossier, genoux dans l’axe et profondeur contrôlée."},
+    {id:"goblet-squat",name:"Goblet Squat",equipment:"Haltère",unit:"kg",suggestedWeight:24,loadStep:2,cue:"Charge près du buste, genoux ouverts et tronc gainé."}
+  ]
+};
 
 export const workouts: Workout[] = [
   {
