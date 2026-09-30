@@ -320,11 +320,41 @@ const exerciseLoadSteps:Record<string,number>={
 };
 
 function incrementFor(ex:Exercise){
+  if(ex.loadStep!=null) return ex.loadStep;
   if(exerciseLoadSteps[ex.id]!=null) return exerciseLoadSteps[ex.id];
   if(ex.unit==="kg/bras") return 2;
   if(ex.unit==="+kg") return 2.5;
   if(ex.unit==="kg") return 2.5;
   return 0;
+}
+
+function equipmentLabel(ex:Exercise){
+  if(ex.equipment) return ex.equipment;
+  const name=ex.name.toLowerCase();
+  if(name.includes("poulie")||name.includes("pulldown")||name.includes("face pull")) return "Poulie";
+  if(name.includes("haltère")) return "Haltères";
+  if(name.includes("smith")) return "Smith";
+  if(name.includes("machine")||name.includes("press")||name.includes("fly")) return "Machine";
+  if(name.includes("barre")) return "Barre";
+  if(ex.unit==="PDC"||ex.unit==="+kg") return "Poids du corps";
+  return "Équipement";
+}
+
+function resolveExerciseVariant(base:Exercise,selectedId?:string|null):Exercise{
+  const options=exerciseVariants[base.id]??[];
+  if(!options.length) return {...base,equipment:equipmentLabel(base)};
+  const variant=options.find(v=>v.id===(selectedId??options[0].id))??options[0];
+  return {
+    ...base,
+    name:variant.name,
+    target:variant.target??base.target,
+    unit:variant.unit,
+    suggestedWeight:variant.suggestedWeight,
+    cue:variant.cue??base.cue,
+    variantId:variant.id,
+    equipment:variant.equipment,
+    loadStep:variant.loadStep
+  };
 }
 
 function MiniChart({values,suffix=""}:{values:number[];suffix?:string}){
@@ -508,9 +538,15 @@ export default function Home(){
   const currentWorkout=session
     ? workouts.find(w=>w.id===session.workoutId)??selectedWorkout
     : selectedWorkout;
-  const currentExercise=session&&currentWorkout.id!=="cardio"
+  const currentBaseExercise=session&&currentWorkout.id!=="cardio"
     ? currentWorkout.exercises[session.exerciseIndex]
     : null;
+  const currentExercise=currentBaseExercise
+    ? resolveExerciseVariant(currentBaseExercise,session?.exerciseVariants?.[currentBaseExercise.id])
+    : null;
+  const currentVariantOptions=currentBaseExercise
+    ? (exerciseVariants[currentBaseExercise.id]??[])
+    : [];
 
   async function refreshCloud(){
     setCloudLoading(true);
