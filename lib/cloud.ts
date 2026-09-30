@@ -30,6 +30,7 @@ export type CloudWorkoutSession = {
   source?:string|null;
   external_id?:string|null;
   health_metadata?:Record<string,any>|null;
+  exercise_variants?:Record<string,string>|null;
   started_at?:string|null;
   finished_at:string;
   logs:Record<string, any[]>;
@@ -50,6 +51,7 @@ export type CloudLiveWorkout = {
   completed_ids:string[];
   deferred_ids:string[];
   logs:Record<string, any[]>;
+  exercise_variants?:Record<string,string>|null;
   coach_mode?:string|null;
   last_set?:Record<string, any>|null;
   last_action?:string|null;
@@ -150,7 +152,7 @@ export async function loadCloudState() {
   const [workoutsRes,sleepRes,metricsRes,prefsRes,journeyRes,healthDailyRes,healthSyncRes] = await Promise.all([
     supabase
       .from("workout_sessions")
-      .select("id,client_session_id,workout_id,started_at,finished_at,logs,cardio,coach_mode,notes,source,external_id,health_metadata")
+      .select("id,client_session_id,workout_id,started_at,finished_at,logs,cardio,coach_mode,notes,source,external_id,health_metadata,exercise_variants")
       .eq("user_id",user.id)
       .order("finished_at",{ascending:false})
       .limit(120),
@@ -220,6 +222,7 @@ export async function syncWorkoutSession(item:{
   cardio?:Record<string,unknown>|null;
   coachMode?:string|null;
   notes?:string|null;
+  exerciseVariants?:Record<string,string>;
 }) {
   if (!supabase) return {ok:false,reason:"not_configured" as const};
   const user=await ensureUser();
@@ -241,7 +244,8 @@ export async function syncWorkoutSession(item:{
     logs:item.logs,
     cardio:item.cardio ?? null,
     coach_mode:item.coachMode ?? null,
-    notes:item.notes ?? null
+    notes:item.notes ?? null,
+    exercise_variants:item.exerciseVariants ?? {}
   };
 
   const response=existing?.id
@@ -264,6 +268,7 @@ export async function syncLiveWorkout(input:{
   completedIds:string[];
   deferredIds:string[];
   logs:Record<string,unknown>;
+  exerciseVariants?:Record<string,string>;
   coachMode?:string|null;
   lastSet?:Record<string,unknown>|null;
   lastAction?:string|null;
@@ -284,6 +289,7 @@ export async function syncLiveWorkout(input:{
     completed_ids:input.completedIds,
     deferred_ids:input.deferredIds,
     logs:input.logs,
+    exercise_variants:input.exerciseVariants ?? {},
     coach_mode:input.coachMode ?? null,
     last_set:input.lastSet ?? null,
     last_action:input.lastAction ?? null,
@@ -325,7 +331,7 @@ export async function loadLatestLiveWorkout(){
 
   const {data,error}=await supabase
     .from("live_workout_sessions")
-    .select("id,client_session_id,workout_id,started_at,current_exercise_id,current_exercise_name,current_exercise_index,current_set_index,completed_ids,deferred_ids,logs,coach_mode,last_set,last_action,updated_at")
+    .select("id,client_session_id,workout_id,started_at,current_exercise_id,current_exercise_name,current_exercise_index,current_set_index,completed_ids,deferred_ids,logs,exercise_variants,coach_mode,last_set,last_action,updated_at")
     .eq("user_id",user.id)
     .gte("updated_at",new Date(Date.now()-12*60*60*1000).toISOString())
     .order("updated_at",{ascending:false})
