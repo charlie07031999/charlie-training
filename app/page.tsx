@@ -1600,7 +1600,7 @@ export default function Home(){
   }
 
   async function requestMagicLink(){
-    const email=accountEmail.trim();
+    const email=accountEmail.trim()||authUser?.email||"";
     if(!email) return;
     setAccountMessage("Envoi…");
     const res=await sendMagicLink(email);
@@ -1900,13 +1900,13 @@ export default function Home(){
 
   return <main className={"app-shell app-v7 theme-"+activeAppearance+" "+(session?"gym-mode ":"")+(isEvening?"evening-ui":"day-ui")}>
     {!session&&<>
-      <header className="v14-app-header">
+      {tab==="home"&&<header className="v14-app-header">
         <div>
           <span>CHARLIE TRAINING</span>
-          <strong>{tab==="home"?"Bonjour Charlie 👋":tab==="programs"?"Programmes":tab==="exercises"?"Exercices":tab==="analysis"?"Analyse":"Plus"}</strong>
+          <strong>Bonjour Charlie 👋</strong>
         </div>
-        <button className="v14-header-action" onClick={()=>setTab("more")} aria-label="Ouvrir Plus">+</button>
-      </header>
+        <button className="v14-header-action" onClick={()=>setTab("more")} aria-label="Ouvrir les réglages">+</button>
+      </header>}
 
       <nav className="tabs v7-tabs v14-tabs">
         {([
@@ -2132,6 +2132,7 @@ export default function Home(){
               <div><span>Allure</span><strong>{formatPace(runInstantPace)}</strong><small>instantanée</small></div>
               <div><span>Vitesse</span><strong>{runInstantSpeedKmh?runInstantSpeedKmh.toFixed(1):"—"}</strong><small>km/h</small></div>
               <div><span>Moyenne</span><strong>{formatPace(runAvgPace)}</strong><small>allure moy.</small></div>
+              <div><span>Dénivelé</span><strong>{runElevationGain}</strong><small>m D+</small></div>
             </div>
 
             <div className="run-live-map">
@@ -2490,7 +2491,7 @@ export default function Home(){
     {tab==="exercises"&&<section className="v14-exercises-screen">
       <div className="v14-page-title">
         <span>BIBLIOTHÈQUE</span>
-        <h2>Exercices</h2>
+        <h2>Tous les exercices</h2>
         <p>Trouve rapidement un mouvement et vois les muscles ciblés.</p>
       </div>
 
@@ -2599,12 +2600,17 @@ export default function Home(){
         <strong>{authAnonymous?"Sécuriser tes données":"Compte sécurisé"}</strong>
         <p>{authAnonymous
           ?"Ajoute ton email pour retrouver tes données sur un nouvel iPhone ou ton Mac."
-          :"Connecté avec "+(authUser?.email??"ton compte")+"."}</p>
-        <input type="email" placeholder="ton@email.fr" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/>
-        <div className="account-actions">
-          {authAnonymous&&<button className="primary" onClick={secureAccount}>Sécuriser ce compte</button>}
-          <button className="secondary" onClick={requestMagicLink}>Recevoir un lien de connexion</button>
-        </div>
+          :"Tes données sont synchronisées avec "+(authUser?.email??"ton compte")+"."}</p>
+        {authAnonymous?<>
+          <input type="email" placeholder="ton@email.fr" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/>
+          <div className="account-actions">
+            <button className="primary" onClick={secureAccount}>Sécuriser ce compte</button>
+            <button className="secondary" onClick={requestMagicLink}>J’ai déjà un compte</button>
+          </div>
+        </>:<>
+          <div className="v18-secure-email"><span>EMAIL</span><strong>{authUser?.email??"Compte connecté"}</strong><i>✓</i></div>
+          <button className="secondary v18-login-link" onClick={requestMagicLink}>Connecter un autre appareil</button>
+        </>}
         {accountMessage&&<small>{accountMessage}</small>}
       </div>
 
