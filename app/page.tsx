@@ -1110,10 +1110,11 @@ export default function Home(){
         permissions:status.writeAuthorization
       });
 
-      if(!synced.ok||!synced.imported) throw new Error(String(synced.reason));
+      const imported=synced.imported;
+      if(!synced.ok||!imported) throw new Error(String(synced.reason));
 
       setHealthMessage(
-        `Synchronisé : ${synced.imported.sleep} nuit(s), ${synced.imported.weights} poids, ${synced.imported.workouts} entraînement(s).`
+        `Synchronisé : ${imported.sleep} nuit(s), ${imported.weights} poids, ${imported.workouts} entraînement(s).`
       );
       await refreshCloud();
     }catch(error:any){
