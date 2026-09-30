@@ -3754,6 +3754,33 @@ export default function Home(){
       </div>
     </div>}
 
+    {!session&&historyVariantEdit&&historyVariantSession&&historyVariantExercise&&historyVariantOptions.length>0&&<div className="v19-sheet-backdrop v29-history-variant-backdrop" onClick={()=>setHistoryVariantEdit(null)}>
+      <div className="v19-sheet v29-history-variant-sheet" onClick={e=>e.stopPropagation()}>
+        <div className="v19-sheet-handle"/>
+        <div className="v19-sheet-head">
+          <div><span>CORRIGER LA SÉANCE</span><h3>Quelle variante avais-tu faite ?</h3></div>
+          <button onClick={()=>setHistoryVariantEdit(null)}>×</button>
+        </div>
+        <p>La correction s’applique aux séries de cet exercice et remet l’historique de charge sur le bon matériel.</p>
+        <div className="v27-variant-list">
+          {historyVariantOptions.map(variant=>{
+            const logs=historyVariantSession.logs[historyVariantExercise.id]??[];
+            const active=logs.some(set=>set.variantId===variant.id)
+              ||(!logs.some(set=>set.variantId)&&historyVariantOptions[0]?.id===variant.id);
+            return <button key={variant.id} className={active?"active":""} onClick={()=>correctHistoryVariant(historyVariantExercise.id,variant)}>
+              <div className="v27-variant-symbol">{variant.equipment.slice(0,1)}</div>
+              <div className="v27-variant-copy">
+                <strong>{variant.name}</strong>
+                <span>{variant.equipment} · {variant.unit}</span>
+                <small>{variant.cue??"Même mouvement, matériel différent."}</small>
+              </div>
+              <b>{active?"✓":"›"}</b>
+            </button>;
+          })}
+        </div>
+      </div>
+    </div>}
+
     {!session&&selectedHistorySession&&<div className="v19-sheet-backdrop" onClick={()=>setSelectedHistoryKey(null)}>
       <div className="v19-sheet v24-history-sheet" onClick={e=>e.stopPropagation()}>
         <div className="v19-sheet-handle"/>
@@ -3782,8 +3809,13 @@ export default function Home(){
         </div>:<div className="v24-history-exercises">
           {Object.entries(selectedHistorySession.logs).filter(([,sets])=>sets.length>0).map(([exerciseId,sets])=>{
             const exercise=allTrackableExercises.find(ex=>ex.id===exerciseId);
+            const variants=exerciseVariants[exerciseId]??[];
+            const loggedVariantName=sets.find(set=>set.variantName)?.variantName;
             return <div className="v24-history-exercise" key={exerciseId}>
-              <div className="v24-history-exercise-head"><strong>{exercise?.name??exerciseId}</strong><span>{sets.length} série{sets.length>1?"s":""}</span></div>
+              <div className="v24-history-exercise-head v29-history-head">
+                <div><strong>{loggedVariantName??exercise?.name??exerciseId}</strong><span>{sets.length} série{sets.length>1?"s":""}{sets[0]?.equipment?" · "+sets[0].equipment:""}</span></div>
+                {variants.length>1&&<button onClick={()=>setHistoryVariantEdit({sessionKey:selectedHistorySession.id??selectedHistorySession.clientSessionId,exerciseId})}>Modifier</button>}
+              </div>
               <div className="v24-history-sets">
                 {sets.map((set,index)=><div key={index}>
                   <span>{index+1}</span>
