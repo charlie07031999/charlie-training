@@ -2461,6 +2461,23 @@ export default function Home(){
           {avgEnergy>0&&<p><i>✦</i>Énergie déclarée : {avgEnergy.toFixed(1)}/5 en moyenne.</p>}
         </div>
       </>:<>
+        <div className="v19-kpi-grid">
+          <div><span>30 JOURS</span><strong>{monthSessions.length}</strong><small>séances</small></div>
+          <div><span>VOLUME</span><strong>{monthVolume>=1000?(monthVolume/1000).toFixed(1)+"k":monthVolume}</strong><small>kg soulevés</small></div>
+          <div><span>CARDIO</span><strong>{monthCardioSessions.length}</strong><small>sorties</small></div>
+          <div><span>SÉRIE</span><strong>{currentStreak}</strong><small>jour{currentStreak>1?"s":""}</small></div>
+        </div>
+
+        {latestCardio&&<div className="v19-last-run">
+          <div className="v19-run-icon">⌁</div>
+          <div>
+            <span>DERNIÈRE COURSE</span>
+            <strong>{latestCardio.distanceKm!=null?latestCardio.distanceKm.toFixed(2)+" km":"Cardio"}</strong>
+            <small>{latestCardio.avgPaceSecondsPerKm?formatPace(latestCardio.avgPaceSecondsPerKm):Math.round(latestCardio.durationMinutes)+" min"}{latestCardio.avgSpeedKmh?" · "+latestCardio.avgSpeedKmh.toFixed(1)+" km/h":""}</small>
+          </div>
+          <button onClick={()=>{setSelectedWorkoutId("cardio");setTab("programs");}}>›</button>
+        </div>}
+
         <div className="v8-section-head">
           <div><span>CETTE SEMAINE</span><h2>Training</h2></div>
           <strong>{weekDoneCount}/{weekTrainingCount}</strong>
@@ -2709,6 +2726,71 @@ export default function Home(){
         </div>
       </div>
     </section>}
+
+    {!session&&quickMenuOpen&&<div className="v19-sheet-backdrop" onClick={()=>setQuickMenuOpen(false)}>
+      <div className="v19-sheet v19-quick-sheet" onClick={e=>e.stopPropagation()}>
+        <div className="v19-sheet-handle"/>
+        <div className="v19-sheet-head">
+          <div><span>ACTIONS RAPIDES</span><h3>Qu’est-ce qu’on fait ?</h3></div>
+          <button onClick={()=>setQuickMenuOpen(false)}>×</button>
+        </div>
+        <div className="v19-quick-grid">
+          {todayWorkout&&<button onClick={()=>{setQuickMenuOpen(false);startWorkout(todayWorkout);}}>
+            <i>▶</i><strong>Séance du jour</strong><small>{todayWorkout.title}</small>
+          </button>}
+          <button onClick={()=>{setQuickMenuOpen(false);setSelectedWorkoutId("cardio");startWorkout(workouts.find(w=>w.id==="cardio")!);}}>
+            <i>⌁</i><strong>Course GPS</strong><small>Démarrer un run</small>
+          </button>
+          <button onClick={()=>{setQuickMenuOpen(false);setTab("programs");}}>
+            <i>☷</i><strong>Programme</strong><small>Voir la semaine</small>
+          </button>
+          <button onClick={()=>{setQuickMenuOpen(false);setTab("more");}}>
+            <i>＋</i><strong>Poids & santé</strong><small>Ajouter une mesure</small>
+          </button>
+        </div>
+        <div className="v19-quick-status">
+          <span>Récupération</span>
+          <strong>{latestSleepMinutes?durationLabel(latestSleepMinutes)+" de sommeil":"À compléter"}</strong>
+          <small>{autoCoachText}</small>
+        </div>
+      </div>
+    </div>}
+
+    {!session&&selectedExerciseDetail&&<div className="v19-sheet-backdrop" onClick={()=>setSelectedExerciseDetailId(null)}>
+      <div className="v19-sheet v19-exercise-sheet" onClick={e=>e.stopPropagation()}>
+        <div className="v19-sheet-handle"/>
+        <div className="v19-sheet-head compact">
+          <div><span>{exerciseCategory(selectedExerciseDetail)}</span><h3>{selectedExerciseDetail.name}</h3></div>
+          <button onClick={()=>setSelectedExerciseDetailId(null)}>×</button>
+        </div>
+
+        <div className="v19-exercise-art"><ExerciseArt exercise={selectedExerciseDetail} large/></div>
+
+        <div className="v19-exercise-tags">
+          <span>{selectedExerciseDetail.target}</span>
+          <span>{selectedExerciseDetail.unit}</span>
+          {selectedExerciseDetail.priority&&<span className="priority">Prioritaire</span>}
+        </div>
+
+        <p className="v19-exercise-cue">{selectedExerciseDetail.cue}</p>
+
+        <div className="v19-exercise-specs">
+          <div><span>Séries</span><strong>{selectedExerciseDetail.sets}</strong></div>
+          <div><span>Répétitions</span><strong>{selectedExerciseDetail.repMin}–{selectedExerciseDetail.repMax}</strong></div>
+          <div><span>Repos</span><strong>{Math.round(selectedExerciseDetail.restSeconds/60*10)/10} min</strong></div>
+          <div><span>Charge</span><strong>{selectedExerciseDetail.suggestedWeight!=null?selectedExerciseDetail.suggestedWeight+" "+selectedExerciseDetail.unit:"Au ressenti"}</strong></div>
+        </div>
+
+        {selectedExerciseDetail.alternatives?.length&&<div className="v19-alternatives">
+          <span>ALTERNATIVES</span>
+          <div>{selectedExerciseDetail.alternatives.map(alt=><b key={alt}>{alt}</b>)}</div>
+        </div>}
+
+        {selectedExerciseWorkout&&<button className="primary v19-sheet-cta" onClick={()=>{setSelectedExerciseDetailId(null);setSelectedWorkoutId(selectedExerciseWorkout.id);startWorkout(selectedExerciseWorkout);}}>
+          Démarrer {selectedExerciseWorkout.title}
+        </button>}
+      </div>
+    </div>}
 
     {session&&rest>0&&<div className="gym-rest-dock">
       <div>
