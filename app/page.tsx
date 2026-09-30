@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { history, workouts } from "../lib/workouts";
-import type { CardioLog, Exercise, SetLog, SupersetPart, Workout } from "../lib/types";
+import type { CardioLog, CardioRoutePoint, CardioSplit, Exercise, SetLog, SupersetPart, Workout } from "../lib/types";
 import {
   clearLiveWorkout,
   finishSleepSession,
@@ -133,6 +133,68 @@ function mondayStart(date=new Date()){
 
 function dateKey(ms:number){
   return new Date(ms).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"});
+}
+
+const RUN_STORAGE_KEY="charlie-training-active-run-v1";
+
+function haversineMeters(a:CardioRoutePoint,b:CardioRoutePoint){
+  const R=6371000;
+  const toRad=(v:number)=>v*Math.PI/180;
+  const dLat=toRad(b.lat-a.lat);
+  const dLng=toRad(b.lng-a.lng);
+  const lat1=toRad(a.lat);
+  const lat2=toRad(b.lat);
+  const h=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
+}
+
+function formatPace(secondsPerKm:number){
+  if(!Number.isFinite(secondsPerKm)||secondsPerKm<=0) return "—";
+  const m=Math.floor(secondsPerKm/60);
+  const s=Math.round(secondsPerKm%60).toString().padStart(2,"0");
+  return `${m}:${s}/km`;
+}
+
+function formatDistance(meters:number){
+  return meters<1000?`${Math.round(meters)} m`:`${(meters/1000).toFixed(2)} km`;
+}
+
+function RunRouteMap({points}:{points:CardioRoutePoint[]}){
+  if(points.length<2){
+    return <div className="run-map-empty">
+      <div className="run-map-grid"/>
+      <span>Le tracé apparaîtra ici pendant ta course.</span>
+    </div>;
+  }
+  const lats=points.map(p=>p.lat);
+  const lngs=points.map(p=>p.lng);
+  const minLat=Math.min(...lats), maxLat=Math.max(...lats);
+  const minLng=Math.min(...lngs), maxLng=Math.max(...lngs);
+  const latSpan=Math.max(.00015,maxLat-minLat);
+  const lngSpan=Math.max(.00015,maxLng-minLng);
+  const pad=18;
+  const width=320, height=190;
+  const coords=points.map(p=>{
+    const x=pad+((p.lng-minLng)/lngSpan)*(width-pad*2);
+    const y=height-pad-((p.lat-minLat)/latSpan)*(height-pad*2);
+    return [x,y];
+  });
+  const path=coords.map(([x,y],i)=>`${i===0?"M":"L"} ${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+  const [sx,sy]=coords[0];
+  const [ex,ey]=coords[coords.length-1];
+  return <svg className="run-route-map" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Tracé GPS de la course">
+    <defs>
+      <linearGradient id="runRouteGradient" x1="0" x2="1"><stop stopColor="#2369f6"/><stop offset="1" stopColor="#20bff4"/></linearGradient>
+      <pattern id="runGrid" width="32" height="32" patternUnits="userSpaceOnUse">
+        <path d="M 32 0 L 0 0 0 32" fill="none" stroke="currentColor" strokeOpacity=".08" strokeWidth="1"/>
+      </pattern>
+    </defs>
+    <rect width={width} height={height} rx="20" fill="currentColor" opacity=".035"/>
+    <rect width={width} height={height} rx="20" fill="url(#runGrid)"/>
+    <path d={path} fill="none" stroke="url(#runRouteGradient)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx={sx} cy={sy} r="6" fill="#19b56b" stroke="white" strokeWidth="3"/>
+    <circle cx={ex} cy={ey} r="7" fill="#2369f6" stroke="white" strokeWidth="3"/>
+  </svg>;
 }
 
 function urlBase64ToUint8Array(base64String:string){
