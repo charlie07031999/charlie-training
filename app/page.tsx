@@ -1013,11 +1013,14 @@ export default function Home(){
     const recent=recentExerciseLogs(ex.id,3);
     const last=recent[0];
     if(!last){
+      const newUser=completedSessions.length===0;
       return {
-        weight:ex.suggestedWeight,
-        label:ex.suggestedWeight!=null
-          ? `Base actuelle : ${ex.suggestedWeight} ${ex.unit}`
-          :"Démarre proprement et calibre la charge."
+        weight:newUser?undefined:ex.suggestedWeight,
+        label:newUser
+          ?"Première séance : calibre une charge propre avec 2–3 reps en réserve."
+          :ex.suggestedWeight!=null
+            ? `Base actuelle : ${ex.suggestedWeight} ${ex.unit}`
+            :"Démarre proprement et calibre la charge."
       };
     }
 
