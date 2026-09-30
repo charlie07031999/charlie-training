@@ -2236,6 +2236,109 @@ export default function Home(){
     };
   },[activeAppearance]);
 
+  if(profileLoaded&&!onboardingCompleted&&!session){
+    const totalSteps=5;
+    const progress=Math.round(((onboardingStep+1)/totalSteps)*100);
+    return <main className={"v21-onboarding theme-"+activeAppearance}>
+      <div className="v21-onboarding-shell">
+        <div className="v21-onboarding-top">
+          <div className="v21-brand"><i>C</i><div><strong>Charlie Training</strong><span>Coach personnel</span></div></div>
+          {onboardingStep>0&&<button onClick={()=>setOnboardingStep(v=>Math.max(0,v-1))}>← Retour</button>}
+        </div>
+
+        <div className="v21-progress"><i style={{width:progress+"%"}}/></div>
+
+        {onboardingStep===0&&<section className="v21-step v21-welcome">
+          <div className="v21-orbit">
+            <div className="v21-orbit-core">C</div>
+            <span className="one">Sommeil</span>
+            <span className="two">Training</span>
+            <span className="three">Progression</span>
+          </div>
+          <span className="v21-kicker">TON COACH AU QUOTIDIEN</span>
+          <h1>Un plan qui s’adapte<br/>à ta vraie vie.</h1>
+          <p>Entraînement, récupération, course et progression réunis dans une seule app.</p>
+          <label className="v21-name-field">
+            <span>Ton prénom</span>
+            <input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Charlie"/>
+          </label>
+          <button className="v21-primary" onClick={()=>setOnboardingStep(1)}>Créer mon plan <span>→</span></button>
+        </section>}
+
+        {onboardingStep===1&&<section className="v21-step">
+          <span className="v21-kicker">OBJECTIF</span>
+          <h1>Qu’est-ce que tu veux<br/>améliorer en priorité ?</h1>
+          <p>Le coach adaptera ton plan et ses recommandations autour de cet objectif.</p>
+          <div className="v21-choice-grid">
+            {([
+              ["muscle","Prendre du muscle","Construire du volume et progresser sur les charges.","↗"],
+              ["strength","Gagner en force","Prioriser les mouvements lourds et la progression.","◆"],
+              ["recomposition","Me recomposer","Muscle, activité et récupération bien calibrés.","◎"],
+              ["fitness","Être plus en forme","Force, cardio et régularité au quotidien.","⌁"]
+            ] as const).map(([id,title,copy,icon])=><button key={id} className={fitnessGoal===id?"selected":""} onClick={()=>setFitnessGoal(id)}>
+              <i>{icon}</i><strong>{title}</strong><span>{copy}</span><b>{fitnessGoal===id?"✓":"›"}</b>
+            </button>)}
+          </div>
+          <button className="v21-primary" onClick={()=>setOnboardingStep(2)}>Continuer <span>→</span></button>
+        </section>}
+
+        {onboardingStep===2&&<section className="v21-step">
+          <span className="v21-kicker">EXPÉRIENCE</span>
+          <h1>Ton niveau aujourd’hui.</h1>
+          <p>On ajuste notamment le volume de travail et le niveau de guidage.</p>
+          <div className="v21-level-list">
+            {([
+              ["beginner","Débutant","Moins d’un an de pratique régulière."],
+              ["intermediate","Intermédiaire","1 à 3 ans, technique déjà solide."],
+              ["advanced","Avancé","3 ans ou plus de pratique structurée."]
+            ] as const).map(([id,title,copy])=><button key={id} className={experienceLevel===id?"selected":""} onClick={()=>setExperienceLevel(id)}>
+              <div><strong>{title}</strong><span>{copy}</span></div><i>{experienceLevel===id?"✓":""}</i>
+            </button>)}
+          </div>
+          <button className="v21-primary" onClick={()=>setOnboardingStep(3)}>Continuer <span>→</span></button>
+        </section>}
+
+        {onboardingStep===3&&<section className="v21-step">
+          <span className="v21-kicker">RYTHME</span>
+          <h1>Combien de séances<br/>par semaine ?</h1>
+          <p>Choisis un rythme réaliste. Le meilleur programme est celui que tu peux tenir.</p>
+          <div className="v21-days">
+            {[3,4,5].map(days=><button key={days} className={trainingDays===days?"selected":""} onClick={()=>setTrainingDays(days)}>
+              <strong>{days}</strong><span>jours / semaine</span><small>{days===3?"Essentiel":days===4?"Équilibré":"Complet"}</small>
+            </button>)}
+          </div>
+          <div className="v21-week-preview">
+            {buildPersonalSchedule(trainingDays).map(day=><div key={day.label} className={day.workoutId?"active":""}><span>{day.label}</span><strong>{day.workoutId?day.name:"—"}</strong></div>)}
+          </div>
+          <button className="v21-primary" onClick={()=>setOnboardingStep(4)}>Continuer <span>→</span></button>
+        </section>}
+
+        {onboardingStep===4&&<section className="v21-step">
+          <span className="v21-kicker">RÉCUPÉRATION</span>
+          <h1>Le progrès commence<br/>aussi la nuit.</h1>
+          <p>Charlie utilisera ton sommeil pour ajuster le volume et la récupération.</p>
+          <div className="v21-sleep-setup">
+            <label><span>Au lit</span><input type="time" value={sleepTarget} onChange={e=>setSleepTarget(e.target.value)}/></label>
+            <label><span>Réveil</span><input type="time" value={wakeTarget} onChange={e=>setWakeTarget(e.target.value)}/></label>
+            <label className="wide"><span>Objectif de sommeil</span>
+              <select value={sleepGoalMinutes} onChange={e=>setSleepGoalMinutes(Number(e.target.value))}>
+                <option value={450}>7 h 30</option><option value={480}>8 h 00</option><option value={510}>8 h 30</option><option value={540}>9 h 00</option>
+              </select>
+            </label>
+          </div>
+          <div className="v21-plan-summary">
+            <div><span>OBJECTIF</span><strong>{goalLabel(fitnessGoal)}</strong></div>
+            <div><span>NIVEAU</span><strong>{levelLabel(experienceLevel)}</strong></div>
+            <div><span>RYTHME</span><strong>{trainingDays} séances / semaine</strong></div>
+            <div><span>SOMMEIL</span><strong>{durationLabel(sleepGoalMinutes)} ciblées</strong></div>
+          </div>
+          <button className="v21-primary" onClick={completeOnboarding}>Créer mon programme <span>✓</span></button>
+          <small className="v21-final-note">Tu pourras modifier ces choix à tout moment.</small>
+        </section>}
+      </div>
+    </main>;
+  }
+
   return <main className={"app-shell app-v7 theme-"+activeAppearance+" "+(session?"gym-mode ":"")+(isEvening?"evening-ui":"day-ui")}>
     {!session&&<>
       {tab==="home"&&<header className="v14-app-header">
@@ -2368,6 +2471,16 @@ export default function Home(){
               {activeHomeWorkout&&<div className="v15-hero-art"><ExerciseArt exercise={activeHomeWorkout.exercises[0]} large/></div>}
               {activeHomeWorkout&&<button className="v15-hero-arrow" onClick={()=>startWorkout(activeHomeWorkout)}>→</button>}
             </div>
+
+            <button className={"v21-readiness "+(readinessScore<55?"low":readinessScore>=82?"high":"")} onClick={()=>{setTrackingView("sleep");setTab("analysis");}}>
+              <div className="v21-readiness-ring" style={{"--score":readinessScore+"%"} as React.CSSProperties}><strong>{readinessScore}</strong><span>/100</span></div>
+              <div className="v21-readiness-copy">
+                <span>DISPONIBILITÉ DU JOUR</span>
+                <strong>{readinessLabel}</strong>
+                <small>{autoCoachText}</small>
+              </div>
+              <b>›</b>
+            </button>
 
             <div className="v15-health-row">
               <button onClick={()=>{setTrackingView("sleep");setTab("analysis");}}>
@@ -2878,6 +2991,11 @@ export default function Home(){
         <h2>Ta semaine</h2>
         <p>Ton plan d’entraînement et ta récupération au même endroit.</p>
       </div>
+      <div className="v21-plan-header">
+        <div><span>PLAN PERSONNALISÉ</span><strong>{goalLabel(fitnessGoal)} · {levelLabel(experienceLevel)}</strong><small>{trainingDays} séances par semaine</small></div>
+        <button onClick={reopenOnboarding}>Modifier</button>
+      </div>
+
       <div className="v14-program-week">
         {schedule.map((item,i)=>{
           const done=item.workoutId?doneWorkoutIds.has(item.workoutId):false;
@@ -2983,6 +3101,18 @@ export default function Home(){
           <button className="secondary v18-login-link" onClick={requestMagicLink}>Connecter un autre appareil</button>
         </>}
         {accountMessage&&<small>{accountMessage}</small>}
+      </div>
+
+      <div className="section-title"><h3>Mon programme</h3><span>personnalisé</span></div>
+      <div className="v21-profile-plan">
+        <div className="v21-profile-plan-top">
+          <div><span>OBJECTIF</span><strong>{goalLabel(fitnessGoal)}</strong><small>{levelLabel(experienceLevel)} · {trainingDays} jours / semaine</small></div>
+          <div className="v21-profile-score"><strong>{readinessScore}</strong><span>forme</span></div>
+        </div>
+        <div className="v21-profile-week">
+          {schedule.map(day=><i key={day.label} className={day.workoutId?"active":""}><span>{day.label.charAt(0)}</span></i>)}
+        </div>
+        <button className="secondary" onClick={reopenOnboarding}>Modifier mon plan</button>
       </div>
 
       <div className="section-title"><h3>Données corporelles</h3><span>optionnel</span></div>
