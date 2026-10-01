@@ -446,6 +446,15 @@ export default function Home(){
   const [historyVariantEdit,setHistoryVariantEdit]=useState<{sessionKey:string;exerciseId:string}|null>(null);
   const [exerciseSwapOpen,setExerciseSwapOpen]=useState(false);
   const [sessionMenuOpen,setSessionMenuOpen]=useState(false);
+  const [editingSet,setEditingSet]=useState<{
+    exerciseId:string;
+    index:number;
+    weight:string;
+    reps:string;
+    rir:string;
+    failed:boolean;
+  }|null>(null);
+  const sessionSwipeRef=useRef<{x:number;y:number}|null>(null);
   const [selectedWorkoutId,setSelectedWorkoutId]=useState("legs");
   const [session,setSession]=useState<SessionState|null>(null);
   const [completedSessions,setCompletedSessions]=useState<CompletedSession[]>([]);
@@ -1278,8 +1287,8 @@ export default function Home(){
     const rec=recommendationFor(currentExercise);
     if(existing?.weight!=null) setWeight(String(existing.weight));
     else setWeight(rec.weight!=null?String(rec.weight):"");
-    setReps(String(currentExercise.repMin));
-    setRir("2");
+    setReps(String(existing?.reps??currentExercise.repMin));
+    setRir(String(existing?.rir??2));
     setFailed(false);
   },[currentExercise?.id,currentExercise?.variantId]);
 
@@ -1664,6 +1673,79 @@ export default function Home(){
     const lastSet=lastSetPayload(currentExercise,log,nextLogs[key].length);
     setFailed(false);
     completeExerciseWithLogs(nextLogs,lastSet);
+  }
+
+  function repeatPreviousSet(){
+    if(!currentExercise) return;
+    const last=currentSetLogs.at(-1)??currentPrevious?.logs.at(-1)??null;
+    if(!last) return;
+    if(last.weight!=null) setWeight(String(last.weight));
+    setReps(String(last.reps));
+    setRir(String(last.rir??2));
+    setFailed(false);
+    pulse(8);
+  }
+
+  function openSetEditor(exerciseId:string,index:number){
+    const set=session?.logs[exerciseId]?.[index];
+    if(!set) return;
+    setEditingSet({
+      exerciseId,
+      index,
+      weight:set.weight!=null?String(set.weight):"",
+      reps:String(set.reps),
+      rir:String(set.rir??2),
+      failed:Boolean(set.failed)
+    });
+  }
+
+  function saveSetEditor(){
+    if(!session||!editingSet) return;
+    const arr=[...(session.logs[editingSet.exerciseId]??[])];
+    const previous=arr[editingSet.index];
+    if(!previous) return;
+    const context=exerciseContextByLogId(editingSet.exerciseId);
+    const unit=context?.exercise.unit??"kg";
+    arr[editingSet.index]={
+      ...previous,
+      weight:unit==="PDC"?undefined:(editingSet.weight?Number(editingSet.weight.replace(",",".")):undefined),
+      reps:Math.max(0,Number(editingSet.reps||0)),
+      rir:Math.max(0,Math.min(5,Number(editingSet.rir||0))),
+      failed:editingSet.failed
+    };
+    const nextSession:SessionState={...session,logs:{...session.logs,[editingSet.exerciseId]:arr}};
+    setSession(nextSession);
+    setEditingSet(null);
+    pushLiveSession(
+      nextSession,
+      "set_edited",
+      context?lastSetPayload(context.exercise,arr[editingSet.index],editingSet.index+1):null
+    );
+    pulse(12);
+  }
+
+  function navigateSessionExercise(delta:number){
+    if(!session||currentWorkout.id==="cardio") return;
+    const next=Math.max(0,Math.min(currentWorkout.exercises.length-1,session.exerciseIndex+delta));
+    if(next===session.exerciseIndex) return;
+    jumpToExercise(next);
+    pulse(8);
+  }
+
+  function handleSessionTouchStart(e:React.TouchEvent){
+    const t=e.touches[0];
+    if(t) sessionSwipeRef.current={x:t.clientX,y:t.clientY};
+  }
+
+  function handleSessionTouchEnd(e:React.TouchEvent){
+    const start=sessionSwipeRef.current;
+    const t=e.changedTouches[0];
+    sessionSwipeRef.current=null;
+    if(!start||!t) return;
+    const dx=t.clientX-start.x;
+    const dy=t.clientY-start.y;
+    if(Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.4) return;
+    navigateSessionExercise(dx<0?1:-1);
   }
 
   function adjustSet(exerciseId:string,index:number,delta:number){
