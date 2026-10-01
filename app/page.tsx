@@ -473,6 +473,7 @@ export default function Home(){
   const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error">("idle");
 
   const [rest,setRest]=useState(0);
+  const [restStartedSeconds,setRestStartedSeconds]=useState(0);
   const [restEndAt,setRestEndAt]=useState<number|null>(null);
   const [restNotificationArmed,setRestNotificationArmed]=useState(false);
   const [reps,setReps]=useState("8");
@@ -914,7 +915,9 @@ export default function Home(){
     const saved=Number(localStorage.getItem("charlie-rest-end-at")||0);
     if(saved>Date.now()){
       setRestEndAt(saved);
-      setRest(Math.max(0,Math.ceil((saved-Date.now())/1000)));
+      const remaining=Math.max(0,Math.ceil((saved-Date.now())/1000));
+      setRest(remaining);
+      setRestStartedSeconds(remaining);
       setRestNotificationArmed(true);
     }else{
       localStorage.removeItem("charlie-rest-end-at");
@@ -956,6 +959,7 @@ export default function Home(){
     }
     const dueAt=Date.now()+safe*1000;
     setRest(safe);
+    setRestStartedSeconds(safe);
     setRestEndAt(dueAt);
     setRestNotificationArmed(true);
     scheduleRestNotification(dueAt);
@@ -963,6 +967,7 @@ export default function Home(){
 
   function stopRestTimer(){
     setRest(0);
+    setRestStartedSeconds(0);
     setRestEndAt(null);
     setRestNotificationArmed(false);
     localStorage.removeItem("charlie-rest-end-at");
@@ -2384,9 +2389,39 @@ export default function Home(){
     []
   );
   const elapsed=session?Math.max(0,Math.floor((now-session.startedAt)/1000)):0;
-  const sessionProgress=session&&currentWorkout.id!=="cardio"
-    ? Math.min(100,Math.round((session.completedIds.length/currentWorkout.exercises.length)*100))
+  const currentSetFraction=session&&currentExercise&&effectiveTarget().sets>0
+    ? Math.min(1,session.setIndex/effectiveTarget().sets)
     : 0;
+  const sessionProgress=session&&currentWorkout.id!=="cardio"
+    ? Math.min(100,Math.round(((session.completedIds.length+currentSetFraction)/currentWorkout.exercises.length)*100))
+    : 0;
+  const remainingExerciseCount=session&&currentWorkout.id!=="cardio"
+    ? currentWorkout.exercises.filter(ex=>!session.completedIds.includes(ex.id)).length
+    : 0;
+  const estimatedRemainingMinutes=session&&currentWorkout.id!=="cardio"
+    ? Math.max(1,Math.round(currentWorkout.exercises
+        .filter(ex=>!session.completedIds.includes(ex.id))
+        .reduce((seconds,base)=>{
+          const resolved=resolveExerciseVariant(base,session.exerciseVariants?.[base.id]);
+          const target=effectiveTarget(resolved);
+          const already=base.id===currentBaseExercise?.id?session.setIndex:loggedRoundCount(base,session.logs);
+          const setsLeft=Math.max(0,target.sets-already);
+          return seconds+setsLeft*42+Math.max(0,setsLeft-1)*resolved.restSeconds;
+        },0)/60))
+    : 0;
+  const draftWeight=Number(String(weight||"0").replace(",","."));
+  const draftReps=Math.max(0,Number(reps||0));
+  const livePrHint=currentExercise&&currentPreviousBest
+    ? currentExercise.unit==="PDC"
+      ? draftReps>currentPreviousBest.reps
+        ? `Record potentiel · +${draftReps-currentPreviousBest.reps} rep${draftReps-currentPreviousBest.reps>1?"s":""}`
+        : null
+      : currentPreviousBest.weight!=null&&draftWeight>currentPreviousBest.weight
+        ? `Record de charge potentiel · +${Math.round((draftWeight-currentPreviousBest.weight)*10)/10} ${currentExercise.unit}`
+        : currentPreviousBest.weight!=null&&draftWeight===currentPreviousBest.weight&&draftReps>currentPreviousBest.reps
+          ? `Record de reps potentiel · +${draftReps-currentPreviousBest.reps}`
+          : null
+    : null;
 
   const runClockEnd=runStatus==="finished"&&runFinishedAt
     ? runFinishedAt
