@@ -983,8 +983,10 @@ export default function Home(){
       stopRestTimer();
       return;
     }
+    const remaining=Math.max(0,Math.ceil((dueAt-Date.now())/1000));
     setRestEndAt(dueAt);
-    setRest(Math.max(0,Math.ceil((dueAt-Date.now())/1000)));
+    setRest(remaining);
+    setRestStartedSeconds(prev=>Math.max(prev,remaining));
     scheduleRestNotification(dueAt);
   }
 
@@ -1710,7 +1712,10 @@ export default function Home(){
     const previous=arr[editingSet.index];
     if(!previous) return;
     const context=exerciseContextByLogId(editingSet.exerciseId);
-    const unit=context?.exercise.unit??"kg";
+    const variantUnit=previous.variantId&&context
+      ? exerciseVariants[context.exercise.id]?.find(v=>v.id===previous.variantId)?.unit
+      : null;
+    const unit=variantUnit??context?.exercise.unit??"kg";
     arr[editingSet.index]={
       ...previous,
       weight:unit==="PDC"?undefined:(editingSet.weight?Number(editingSet.weight.replace(",",".")):undefined),
@@ -2344,6 +2349,11 @@ export default function Home(){
   }
 
   const currentSetLogs=currentExercise&&session?session.logs[currentExercise.id]??[]:[];
+  const editingSetContext=editingSet?exerciseContextByLogId(editingSet.exerciseId):null;
+  const editingSetOriginal=editingSet&&session?session.logs[editingSet.exerciseId]?.[editingSet.index]??null:null;
+  const editingSetUnit=editingSetOriginal?.variantId&&editingSetContext
+    ? exerciseVariants[editingSetContext.exercise.id]?.find(v=>v.id===editingSetOriginal.variantId)?.unit??editingSetContext.exercise.unit
+    : editingSetContext?.exercise.unit??"kg";
   const currentPrevious=currentExercise?latestExerciseLogs(currentExercise.id,currentExercise.variantId):null;
   const currentPreviousBest=currentPrevious?.logs.reduce<SetLog|null>((best,set)=>{
     if(!best) return set;
@@ -3793,6 +3803,46 @@ export default function Home(){
         </div>
       </div>
     </section>}
+
+    {session&&editingSet&&editingSetContext&&<div className="v19-sheet-backdrop v31-edit-set-backdrop" onClick={()=>setEditingSet(null)}>
+      <div className="v19-sheet v31-edit-set-sheet" onClick={e=>e.stopPropagation()}>
+        <div className="v19-sheet-handle"/>
+        <div className="v19-sheet-head">
+          <div><span>CORRIGER LA SÉRIE {editingSet.index+1}</span><h3>{editingSetOriginal?.variantName??editingSetContext.exercise.name}</h3></div>
+          <button onClick={()=>setEditingSet(null)}>×</button>
+        </div>
+
+        <div className="v31-edit-grid">
+          {editingSetUnit!=="PDC"&&<label className="wide">
+            <span>Charge</span>
+            <div><input inputMode="decimal" value={editingSet.weight} onChange={e=>setEditingSet(v=>v?{...v,weight:e.target.value}:v)}/><b>{editingSetUnit}</b></div>
+          </label>}
+          <label>
+            <span>Répétitions</span>
+            <div className="stepper">
+              <button onClick={()=>setEditingSet(v=>v?{...v,reps:String(Math.max(0,Number(v.reps)-1))}:v)}>−</button>
+              <strong>{editingSet.reps}</strong>
+              <button onClick={()=>setEditingSet(v=>v?{...v,reps:String(Number(v.reps)+1)}:v)}>+</button>
+            </div>
+          </label>
+          <label>
+            <span>RIR</span>
+            <div className="stepper">
+              <button onClick={()=>setEditingSet(v=>v?{...v,rir:String(Math.max(0,Number(v.rir)-1))}:v)}>−</button>
+              <strong>{editingSet.rir}</strong>
+              <button onClick={()=>setEditingSet(v=>v?{...v,rir:String(Math.min(5,Number(v.rir)+1))}:v)}>+</button>
+            </div>
+          </label>
+        </div>
+
+        <label className="v31-edit-failure">
+          <input type="checkbox" checked={editingSet.failed} onChange={e=>setEditingSet(v=>v?{...v,failed:e.target.checked}:v)}/>
+          <span>Cette série était à l’échec</span>
+        </label>
+
+        <button className="primary v31-edit-save" onClick={saveSetEditor}>Enregistrer la correction</button>
+      </div>
+    </div>}
 
     {session&&exerciseSwapOpen&&currentBaseExercise&&<div className="v19-sheet-backdrop v27-session-sheet-backdrop" onClick={()=>setExerciseSwapOpen(false)}>
       <div className="v19-sheet v27-swap-sheet" onClick={e=>e.stopPropagation()}>
