@@ -2878,7 +2878,11 @@ export default function Home(){
       </nav>
     </>}
 
-    {tab==="home"&&<section className={session?"today-v5 session-v5":"today-v5 home-v5"}>
+    {tab==="home"&&<section
+      className={session?"today-v5 session-v5":"today-v5 home-v5"}
+      onTouchStart={session?handleSessionTouchStart:undefined}
+      onTouchEnd={session?handleSessionTouchEnd:undefined}
+    >
       {!session?<>
         {openSleep?.lightsOutAt?
           <div className="v7-night-minimal">
@@ -3191,6 +3195,15 @@ export default function Home(){
           <button className="v15-menu" onClick={()=>setSessionMenuOpen(true)} aria-label="Options de séance">•••</button>
         </div>
 
+        <div className="v31-session-progress">
+          <div className="v31-progress-copy">
+            <span>{sessionProgress}%</span>
+            <strong>{remainingExerciseCount} exercice{remainingExerciseCount>1?"s":""} restant{remainingExerciseCount>1?"s":""}</strong>
+            <small>≈ {estimatedRemainingMinutes} min</small>
+          </div>
+          <i><b style={{width:sessionProgress+"%"}}/></i>
+        </div>
+
         {currentExercise&&<div className="v30-exercise-summary">
           <div className="v30-exercise-symbol">{(currentExercise.equipment??equipmentLabel(currentExercise)).slice(0,1)}</div>
           <div className="v30-exercise-main">
@@ -3200,6 +3213,12 @@ export default function Home(){
           </div>
           {currentVariantOptions.length>1&&<button onClick={()=>setExerciseSwapOpen(true)}>Changer</button>}
         </div>}
+
+        <div className="v31-exercise-nav">
+          <button onClick={()=>navigateSessionExercise(-1)} disabled={session.exerciseIndex===0}>‹ <span>Précédent</span></button>
+          <small>Glisse à gauche/droite</small>
+          <button onClick={()=>navigateSessionExercise(1)} disabled={session.exerciseIndex===currentWorkout.exercises.length-1}><span>Suivant</span> ›</button>
+        </div>
 
         <div className="v30-session-status">
           <div><span>SÉRIE</span><strong>{session.setIndex+1}/{effectiveTarget().sets}</strong></div>
@@ -3274,14 +3293,13 @@ export default function Home(){
         </>:currentSetLogs.length>0&&<details className="session-details">
           <summary>Séries validées · {currentSetLogs.length}</summary>
           <div className="set-history-card v5-history">
-            {currentSetLogs.map((s,i)=><div className="set-row" key={i}>
+            {currentSetLogs.map((s,i)=><div className="set-row v31-set-row" key={i}>
               <span>S{i+1}</span>
-              <strong>{s.weight!=null?`${s.weight} × `:""}{s.reps}</strong>
+              <strong>{s.weight!=null?`${s.weight} ${currentExercise?.unit} × `:""}{s.reps}</strong>
               <small>RIR {s.rir??"—"}{s.failed?" · échec":""}</small>
               <div>
-                <button onClick={()=>adjustSet(currentExercise!.id,i,-1)}>−1</button>
-                <button onClick={()=>adjustSet(currentExercise!.id,i,1)}>+1</button>
-                <button onClick={()=>deleteSet(currentExercise!.id,i)}>×</button>
+                <button className="edit" onClick={()=>openSetEditor(currentExercise!.id,i)}>Modifier</button>
+                <button className="delete" onClick={()=>deleteSet(currentExercise!.id,i)}>×</button>
               </div>
             </div>)}
           </div>
@@ -3357,10 +3375,12 @@ export default function Home(){
                 <button type="button" onClick={()=>adjustWeightDraft(incrementFor(currentExercise))}>+</button>
               </div>
               <div className="v27-weight-shortcuts">
+                {(currentSetLogs.length>0||currentPrevious)&&<button type="button" className="repeat" onClick={repeatPreviousSet}>↻ Reprendre</button>}
                 {recommendedWeight!=null&&<button type="button" className="recommended" onClick={()=>setWeight(String(recommendedWeight))}>Cible {recommendedWeight}</button>}
-                {recentVariantWeights.filter(v=>v!==recommendedWeight).slice(0,3).map(v=><button type="button" key={v} onClick={()=>setWeight(String(v))}>{v} {currentExercise.unit}</button>)}
+                {recentVariantWeights.filter(v=>v!==recommendedWeight).slice(0,2).map(v=><button type="button" key={v} onClick={()=>setWeight(String(v))}>{v} {currentExercise.unit}</button>)}
                 <button type="button" onClick={()=>adjustWeightDraft(incrementFor(currentExercise)*2)}>+{incrementFor(currentExercise)*2}</button>
               </div>
+              {livePrHint&&<div className="v31-pr-hint"><i>↗</i><span>{livePrHint}</span></div>}
             </>:<div className="v27-bodyweight">Poids du corps <span>La charge n’est pas nécessaire.</span></div>}
           </div>
           <div className="field"><label>Reps</label><div className="stepper"><button onClick={()=>setReps(String(Math.max(0,Number(reps)-1)))}>−</button><strong>{reps}</strong><button onClick={()=>setReps(String(Number(reps)+1))}>+</button></div></div>
@@ -4038,17 +4058,18 @@ export default function Home(){
       </div>
     </div>}
 
-    {session&&rest>0&&<div className="gym-rest-dock">
-      <div>
+    {session&&rest>0&&<div className="gym-rest-dock v31-rest-dock">
+      <div className="v31-rest-copy">
         <span>REPOS</span>
         <strong>{formatTimer(rest)}</strong>
         <small>{currentExercise?.name??currentWorkout.title}</small>
       </div>
-      <div>
+      <div className="v31-rest-actions">
         <button onClick={()=>adjustActiveRest(-15)}>−15</button>
         <button onClick={()=>adjustActiveRest(15)}>+15</button>
         <button className="skip" onClick={stopRestTimer}>Go</button>
       </div>
+      <i className="v31-rest-progress"><b style={{width:(restStartedSeconds?Math.max(0,Math.min(100,(rest/restStartedSeconds)*100)):0)+"%"}}/></i>
     </div>}
 
   </main>;
