@@ -8771,3 +8771,497 @@ button{
   background:#172a47;
   color:#86a8ff;
 }
+
+
+/* V30 — workout focus screen */
+.session-v5{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:0!important;
+}
+.session-v5>.v15-session-top{order:1}
+.session-v5>.v30-exercise-summary{order:2}
+.session-v5>.v30-session-status{order:3}
+.session-v5>.v30-technique-cue{order:4}
+.session-v5>.v30-set-context{order:5}
+.session-v5>.log-card,
+.session-v5>.superset-log-card{order:6}
+.session-v5>.v27-workout-dock{order:7}
+.session-v5>.progression-banner{order:8}
+.session-v5>.session-details{order:9}
+.session-v5>.next-exercise-card{order:10}
+.session-v5>.rest-box{display:none!important}
+.session-v5>.v15-session-tabs,
+.session-v5>.v15-exercise-stage,
+.session-v5>.v15-session-cue,
+.session-v5>.v27-variant-select,
+.session-v5>.v15-session-metrics,
+.session-v5>.target-card{display:none!important}
+
+.gym-mode{
+  padding-top:max(8px,env(safe-area-inset-top))!important;
+  padding-bottom:calc(112px + env(safe-area-inset-bottom))!important;
+}
+.gym-mode .session-v5{
+  max-width:680px;
+  margin:0 auto;
+}
+.gym-mode .v15-session-top{
+  position:sticky!important;
+  top:0!important;
+  z-index:50!important;
+  min-height:58px!important;
+  margin:0 -2px 10px!important;
+  padding:6px 2px!important;
+  border:0!important;
+  background:rgba(9,13,20,.92)!important;
+  backdrop-filter:blur(20px)!important;
+  -webkit-backdrop-filter:blur(20px)!important;
+}
+.gym-mode .v15-session-top>strong{
+  color:#f4f7fb!important;
+  font-size:15px!important;
+  font-weight:850!important;
+}
+.gym-mode .v15-back,
+.gym-mode .v15-menu{
+  width:44px!important;
+  height:44px!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  background:#121923!important;
+  color:#f3f6fa!important;
+  box-shadow:none!important;
+}
+.gym-mode .v15-back{
+  font-size:30px!important;
+}
+.gym-mode .v15-menu{
+  font-size:14px!important;
+}
+
+.v30-exercise-summary{
+  display:grid;
+  grid-template-columns:52px minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  min-height:84px;
+  padding:12px 13px;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:22px;
+  background:linear-gradient(135deg,#111a27,#0f151f);
+  box-shadow:0 10px 28px rgba(0,0,0,.16);
+}
+.v30-exercise-symbol{
+  display:grid;
+  place-items:center;
+  width:52px;
+  height:52px;
+  border-radius:17px;
+  background:linear-gradient(145deg,#17345f,#132744);
+  color:#8eb0ff;
+  font-size:20px;
+  font-weight:950;
+}
+.v30-exercise-main{
+  min-width:0;
+}
+.v30-exercise-main>span,
+.v30-exercise-main>strong,
+.v30-exercise-main>small{
+  display:block;
+}
+.v30-exercise-main>span{
+  color:#6f89ad;
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+.v30-exercise-main>strong{
+  overflow:hidden;
+  margin-top:4px;
+  color:#f4f7fb;
+  font-size:18px;
+  line-height:1.05;
+  letter-spacing:-.035em;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.v30-exercise-main>small{
+  overflow:hidden;
+  margin-top:5px;
+  color:#8995a6;
+  font-size:8px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.v30-exercise-summary>button{
+  min-height:38px;
+  padding:0 11px;
+  border:0;
+  border-radius:13px;
+  background:#19355f;
+  color:#8fb0ff;
+  font-size:8px;
+  font-weight:900;
+}
+
+.v30-session-status{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1px;
+  margin-top:8px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:18px;
+  background:#151b24;
+}
+.v30-session-status>div{
+  min-width:0;
+  padding:10px 8px 11px;
+  border-right:1px solid rgba(255,255,255,.06);
+}
+.v30-session-status>div:last-child{
+  border-right:0;
+}
+.v30-session-status span,
+.v30-session-status strong{
+  display:block;
+  text-align:center;
+}
+.v30-session-status span{
+  color:#697588;
+  font-size:6.5px;
+  font-weight:900;
+  letter-spacing:.09em;
+}
+.v30-session-status strong{
+  margin-top:4px;
+  color:#eef2f7;
+  font-size:13px;
+  letter-spacing:-.02em;
+}
+
+.v30-technique-cue{
+  display:flex;
+  gap:9px;
+  align-items:flex-start;
+  margin:9px 2px 0;
+  padding:0 2px;
+}
+.v30-technique-cue>span{
+  flex:0 0 auto;
+  margin-top:2px;
+  color:#5575a6;
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.09em;
+}
+.v30-technique-cue>p{
+  margin:0;
+  color:#818b99;
+  font-size:9px;
+  line-height:1.4;
+}
+
+.v30-set-context{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+  margin-top:10px;
+}
+.v30-set-context>div{
+  min-width:0;
+  padding:11px 12px;
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:16px;
+  background:#121820;
+}
+.v30-set-context span,
+.v30-set-context strong{
+  display:block;
+}
+.v30-set-context span{
+  color:#6b7685;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.v30-set-context strong{
+  overflow:hidden;
+  margin-top:4px;
+  color:#f2f4f7;
+  font-size:13px;
+  letter-spacing:-.02em;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.gym-mode .log-card,
+.gym-mode .superset-log-card{
+  margin-top:8px!important;
+  padding:12px!important;
+  border:1px solid rgba(255,255,255,.07)!important;
+  border-radius:21px!important;
+  background:#11171f!important;
+  box-shadow:none!important;
+}
+.gym-mode .v27-field-head{
+  margin-bottom:7px!important;
+}
+.gym-mode .v27-field-head>label,
+.gym-mode .field>label{
+  color:#7a8696!important;
+  font-size:8px!important;
+  font-weight:850!important;
+}
+.gym-mode .v27-field-head>button{
+  min-height:28px!important;
+  border:0!important;
+  background:#17253a!important;
+  color:#789ce9!important;
+}
+.gym-mode .v27-weight-stepper{
+  grid-template-columns:56px minmax(0,1fr) 56px!important;
+}
+.gym-mode .v27-weight-stepper>button{
+  min-height:68px!important;
+  border:1px solid rgba(255,255,255,.06)!important;
+  border-radius:17px!important;
+  background:#1a222d!important;
+  color:#dce2ea!important;
+}
+.gym-mode .v27-weight-value{
+  min-height:68px!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  border-radius:17px!important;
+  background:#0d1218!important;
+}
+.gym-mode .v27-weight-value input{
+  color:#f5f7fa!important;
+  font-size:30px!important;
+}
+.gym-mode .v27-weight-value span{
+  color:#6f7b8b!important;
+}
+.gym-mode .v27-weight-shortcuts{
+  margin-top:7px!important;
+}
+.gym-mode .v27-weight-shortcuts>button{
+  min-height:34px!important;
+  border:1px solid rgba(255,255,255,.06)!important;
+  background:#171e27!important;
+  color:#8f9bad!important;
+}
+.gym-mode .v27-weight-shortcuts>button.recommended{
+  border-color:#294d7d!important;
+  background:#162844!important;
+  color:#87aaff!important;
+}
+.gym-mode .stepper{
+  min-height:52px!important;
+  border:1px solid rgba(255,255,255,.06)!important;
+  background:#0d1218!important;
+}
+.gym-mode .stepper button{
+  width:38px!important;
+  height:38px!important;
+  border:0!important;
+  background:#1b222c!important;
+  color:#e3e7ec!important;
+}
+.gym-mode .stepper strong{
+  color:#f4f6f8!important;
+}
+.gym-mode .fail-toggle{
+  min-height:42px!important;
+  border:1px solid rgba(229,95,95,.10)!important;
+  background:rgba(229,95,95,.045)!important;
+  color:#bd7f82!important;
+}
+
+.gym-mode .v27-workout-dock{
+  position:static!important;
+  width:100%!important;
+  margin:8px 0 0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  grid-template-columns:1fr!important;
+}
+.gym-mode .v27-workout-dock>div{
+  display:none!important;
+}
+.gym-mode .v27-workout-dock>button{
+  min-height:58px!important;
+  width:100%!important;
+  border-radius:18px!important;
+  background:linear-gradient(90deg,#2d6df6,#20baf0)!important;
+  color:#fff!important;
+  font-size:12px!important;
+  box-shadow:0 10px 24px rgba(34,110,245,.18)!important;
+}
+.gym-mode .v27-workout-dock>button:active{
+  transform:scale(.99);
+}
+
+.gym-mode .progression-banner{
+  margin-top:9px!important;
+  padding:10px 12px!important;
+  border:1px solid rgba(79,124,198,.14)!important;
+  border-radius:15px!important;
+  background:#111b2a!important;
+  color:#8fa5c7!important;
+  font-size:8.5px!important;
+  line-height:1.4!important;
+}
+.gym-mode .session-details{
+  margin-top:8px!important;
+}
+.gym-mode .session-details>summary{
+  min-height:44px!important;
+  display:flex!important;
+  align-items:center!important;
+  padding:0 12px!important;
+  border:1px solid rgba(255,255,255,.06)!important;
+  border-radius:14px!important;
+  background:#121820!important;
+  color:#8a96a6!important;
+  font-size:8.5px!important;
+}
+.gym-mode .next-exercise-card{
+  margin-top:8px!important;
+  min-height:66px!important;
+  border:1px solid rgba(255,255,255,.06)!important;
+  border-radius:17px!important;
+  background:#121820!important;
+}
+.gym-mode .next-exercise-card>span{
+  color:#5f6d81!important;
+}
+.gym-mode .next-exercise-card strong{
+  color:#eef2f7!important;
+}
+.gym-mode .next-exercise-card small{
+  color:#737f8f!important;
+}
+
+/* Rest should appear once, as a compact overlay only while active. */
+.gym-mode .gym-rest-dock{
+  left:10px!important;
+  right:10px!important;
+  bottom:calc(10px + env(safe-area-inset-bottom))!important;
+  width:min(calc(100% - 20px),680px)!important;
+  min-height:68px!important;
+  padding:9px 10px 9px 13px!important;
+  border:1px solid rgba(255,255,255,.09)!important;
+  border-radius:20px!important;
+  background:rgba(13,17,23,.96)!important;
+  box-shadow:0 14px 40px rgba(0,0,0,.42)!important;
+}
+.gym-mode .gym-rest-dock strong{
+  font-size:28px!important;
+}
+.gym-mode .gym-rest-dock button{
+  min-width:47px!important;
+  min-height:46px!important;
+  border-radius:13px!important;
+}
+.gym-mode .gym-rest-dock button.skip{
+  min-width:54px!important;
+}
+
+/* Light mode keeps the same hierarchy rather than turning the whole screen white. */
+.theme-light.gym-mode{
+  background:#eef2f7!important;
+}
+.theme-light.gym-mode .v15-session-top{
+  background:rgba(238,242,247,.94)!important;
+}
+.theme-light.gym-mode .v15-session-top>strong{
+  color:#141b25!important;
+}
+.theme-light.gym-mode .v15-back,
+.theme-light.gym-mode .v15-menu{
+  border-color:#dce3ec!important;
+  background:#fff!important;
+  color:#1e2937!important;
+}
+.theme-light.gym-mode .v30-exercise-summary{
+  border-color:#dce5f1;
+  background:linear-gradient(135deg,#f8fbff,#f1f6fd);
+  box-shadow:none;
+}
+.theme-light.gym-mode .v30-exercise-main>strong{
+  color:#131b25;
+}
+.theme-light.gym-mode .v30-session-status,
+.theme-light.gym-mode .v30-set-context>div,
+.theme-light.gym-mode .log-card,
+.theme-light.gym-mode .superset-log-card,
+.theme-light.gym-mode .session-details>summary,
+.theme-light.gym-mode .next-exercise-card{
+  border-color:#dde4ed!important;
+  background:#fff!important;
+}
+.theme-light.gym-mode .v30-session-status strong,
+.theme-light.gym-mode .v30-set-context strong,
+.theme-light.gym-mode .stepper strong,
+.theme-light.gym-mode .next-exercise-card strong{
+  color:#17202a!important;
+}
+.theme-light.gym-mode .v27-weight-stepper>button,
+.theme-light.gym-mode .stepper button,
+.theme-light.gym-mode .v27-weight-shortcuts>button{
+  border-color:#e1e6ed!important;
+  background:#f2f5f9!important;
+  color:#2a3442!important;
+}
+.theme-light.gym-mode .v27-weight-value,
+.theme-light.gym-mode .stepper{
+  border-color:#e1e6ed!important;
+  background:#fafbfd!important;
+}
+.theme-light.gym-mode .v27-weight-value input{
+  color:#131b25!important;
+}
+.theme-light.gym-mode .progression-banner{
+  border-color:#d8e4f7!important;
+  background:#f0f5fc!important;
+  color:#56739f!important;
+}
+
+@media(max-width:420px){
+  .v30-exercise-summary{
+    grid-template-columns:46px minmax(0,1fr) auto;
+    gap:10px;
+    min-height:76px;
+    padding:10px 11px;
+  }
+  .v30-exercise-symbol{
+    width:46px;
+    height:46px;
+    border-radius:15px;
+    font-size:18px;
+  }
+  .v30-exercise-main>strong{
+    font-size:16px;
+  }
+  .v30-session-status>div{
+    padding:9px 4px 10px;
+  }
+  .v30-session-status strong{
+    font-size:12px;
+  }
+  .v30-set-context{
+    gap:6px;
+  }
+  .gym-mode .log-card,
+  .gym-mode .superset-log-card{
+    padding:10px!important;
+  }
+}
