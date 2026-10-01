@@ -3074,54 +3074,38 @@ export default function Home(){
           <button className="v15-menu" onClick={()=>setSessionMenuOpen(true)} aria-label="Options de séance">•••</button>
         </div>
 
-        <div className="v15-session-tabs">
-          <button className="active">Série {session.setIndex+1}/{effectiveTarget().sets}</button>
-          <button>Historique</button>
-          <button>Notes</button>
-        </div>
-
-        {currentExercise&&<div className="v15-exercise-stage">
-          <ExerciseArt exercise={currentExercise} large/>
-          <div className="v15-muscle-chips"><span>{currentExercise.target}</span><span>{currentWorkout.title}</span></div>
+        {currentExercise&&<div className="v30-exercise-summary">
+          <div className="v30-exercise-symbol">{(currentExercise.equipment??equipmentLabel(currentExercise)).slice(0,1)}</div>
+          <div className="v30-exercise-main">
+            <span>{currentWorkout.title} · {currentExercise.equipment??equipmentLabel(currentExercise)}</span>
+            <strong>{currentExercise.name}</strong>
+            <small>{currentExercise.target} · {effectiveTarget().sets} séries · {effectiveTarget().repMin}–{effectiveTarget().repMax} reps</small>
+          </div>
+          {currentVariantOptions.length>1&&<button onClick={()=>setExerciseSwapOpen(true)}>Changer</button>}
         </div>}
 
-        <div className="v15-session-cue">{currentExercise?.cue}</div>
-
-        {currentExercise&&<button className="v27-variant-select" onClick={()=>currentVariantOptions.length&&setExerciseSwapOpen(true)}>
-          <span className="v27-equipment-icon">{currentExercise.equipment?.slice(0,1)??"•"}</span>
-          <div>
-            <small>VARIANTE UTILISÉE</small>
-            <strong>{currentExercise.name}</strong>
-            <span>{currentExercise.equipment??equipmentLabel(currentExercise)} · {currentExercise.unit}</span>
-          </div>
-          {currentVariantOptions.length>1?<b>Changer</b>:<b className="disabled">Fixe</b>}
-        </button>}
-
-        <div className="v15-session-metrics">
-          <span><small>Temps</small><strong>{formatTimer(elapsed)}</strong></span>
-          <span><small>Exercice</small><strong>{session.exerciseIndex+1}/{currentWorkout.exercises.length}</strong></span>
-          <span><small>Repos</small><strong>{formatTimer(currentRestTarget)}</strong></span>
+        <div className="v30-session-status">
+          <div><span>SÉRIE</span><strong>{session.setIndex+1}/{effectiveTarget().sets}</strong></div>
+          <div><span>EXERCICE</span><strong>{session.exerciseIndex+1}/{currentWorkout.exercises.length}</strong></div>
+          <div><span>TEMPS</span><strong>{formatTimer(elapsed)}</strong></div>
+          <div><span>REPOS</span><strong>{formatTimer(currentRestTarget)}</strong></div>
         </div>
 
-        {currentExercise&&<div className="target-card v15-target-card">
-          <div className="v15-target-title"><span>OBJECTIF DE LA SÉRIE</span><strong>{effectiveTarget().repMin}–{effectiveTarget().repMax} répétitions</strong></div>
-          <div className="target-grid">
-            <div><span>Série</span><strong>{session.setIndex+1}/{effectiveTarget().sets}</strong></div>
-            <div><span>Objectif</span><strong>{effectiveTarget().repMin}–{effectiveTarget().repMax}</strong></div>
-            <div><span>Repos cible</span><strong>{formatTimer(currentRestTarget)}</strong></div>
+        {currentExercise&&<div className="v30-technique-cue"><span>CONSIGNE</span><p>{currentExercise.cue}</p></div>}
+
+        {currentExercise&&<div className="v30-set-context">
+          <div>
+            <span>OBJECTIF</span>
+            <strong>{effectiveTarget().repMin}–{effectiveTarget().repMax} reps</strong>
           </div>
-          {currentPrevious&&<div className="previous-performance">
+          <div>
             <span>DERNIÈRE FOIS</span>
-            <strong>
-              {currentPreviousBest?.weight!=null
+            <strong>{currentPreviousBest
+              ? currentPreviousBest.weight!=null
                 ? currentPreviousBest.weight+" "+currentExercise.unit+" × "+currentPreviousBest.reps
-                : currentPreviousBest
-                  ? currentPreviousBest.reps+" reps"
-                  : "—"}
-            </strong>
-            <small>{dateKey(currentPrevious.session.finishedAt)} · {currentPrevious.logs.length} série(s) · {currentPreviousReps} reps</small>
-          </div>}
-          <p>{currentExercise.cue}</p>
+                : currentPreviousBest.reps+" reps"
+              : "Première fois"}</strong>
+          </div>
         </div>}
 
         {nextExercisePreview&&<button className="next-exercise-card v27-next-button" onClick={()=>{
