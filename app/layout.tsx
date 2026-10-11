@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./daily-improvements.css";
+import WorkoutUxDaily from "./workout-ux-daily";
 
 export const metadata: Metadata = {
   title: "Charlie Training",
@@ -26,5 +28,5 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="fr"><body>{children}</body></html>;
+  return <html lang="fr"><body><WorkoutUxDaily/>{children}</body></html>;
 }
