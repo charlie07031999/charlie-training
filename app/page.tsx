@@ -3490,7 +3490,7 @@ export default function Home(){
           <label className="fail-toggle"><input type="checkbox" checked={failed} onChange={e=>setFailed(e.target.checked)}/><span>Échec</span></label>
         </div>}
 
-        <div className="v27-workout-dock">
+        <div className={"v27-workout-dock"+(rest>0?" rest-active":"")}>
           <div>
             <span>{currentExercise?.superset?.length?"TOUR":"SÉRIE"} {Math.min((session?.setIndex??0)+1,effectiveTarget().sets)}/{effectiveTarget().sets}</span>
             <strong>{currentExercise?.name}</strong>
@@ -3499,7 +3499,9 @@ export default function Home(){
             className={!currentExercise?.superset?.length&&!canLogCurrentSet?"disabled":""}
             onClick={currentExercise?.superset?.length?logSupersetRound:logSet}
           >
-            {currentExercise?.superset?.length?"Valider le tour":"Valider la série"} <b>✓</b>
+            {currentExercise?.superset?.length
+              ?`Valider le tour ${Math.min((session?.setIndex??0)+1,effectiveTarget().sets)}/${effectiveTarget().sets}`
+              :`Valider la série ${Math.min((session?.setIndex??0)+1,effectiveTarget().sets)}/${effectiveTarget().sets}`} <b>✓</b>
           </button>
         </div>
       </>}
@@ -4279,16 +4281,16 @@ export default function Home(){
       </div>
     </div>}
 
-    {session&&rest>0&&<div className="gym-rest-dock v31-rest-dock">
+    {session&&rest>0&&<div className="gym-rest-dock v31-rest-dock" role="status" aria-live="polite" aria-atomic="true">
       <div className="v31-rest-copy">
         <span>REPOS</span>
         <strong>{formatTimer(rest)}</strong>
-        <small>{currentExercise?.name??currentWorkout.title}{adaptiveRestMessage?" · "+adaptiveRestMessage:""}</small>
+        <small>{currentExercise?.name??currentWorkout.title} · série {Math.min(session.setIndex+1,effectiveTarget().sets)}/{effectiveTarget().sets}{adaptiveRestMessage?" · "+adaptiveRestMessage:""}</small>
       </div>
       <div className="v31-rest-actions">
-        <button onClick={()=>adjustActiveRest(-15)}>−15</button>
-        <button onClick={()=>adjustActiveRest(15)}>+15</button>
-        <button className="skip" onClick={stopRestTimer}>Go</button>
+        <button onClick={()=>adjustActiveRest(-15)} aria-label="Retirer 15 secondes de repos">−15</button>
+        <button onClick={()=>adjustActiveRest(15)} aria-label="Ajouter 15 secondes de repos">+15</button>
+        <button className="skip" onClick={stopRestTimer} aria-label="Terminer le repos">Go</button>
       </div>
       <i className="v31-rest-progress"><b style={{width:(restStartedSeconds?Math.max(0,Math.min(100,(rest/restStartedSeconds)*100)):0)+"%"}}/></i>
     </div>}
