@@ -9923,3 +9923,64 @@ button{
   .v32-preflight-list b{display:none}
   .v31-rest-copy>small{max-width:170px}
 }
+
+.v32-preflight-mode{
+  margin-top:12px;
+  padding:12px;
+  border:1px solid #e5ebf3;
+  border-radius:18px;
+  background:#f8fafc;
+}
+.v32-preflight-mode>div:last-child{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:6px;
+}
+.v32-preflight-mode button{
+  min-height:64px;
+  padding:9px 8px;
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  background:#fff;
+  color:#1b2430;
+  text-align:left;
+}
+.v32-preflight-mode button strong,
+.v32-preflight-mode button span{
+  display:block;
+}
+.v32-preflight-mode button strong{
+  font-size:9px;
+}
+.v32-preflight-mode button span{
+  margin-top:4px;
+  color:#8591a1;
+  font-size:7px;
+  line-height:1.25;
+}
+.v32-preflight-mode button.active{
+  border-color:#bdd3ff;
+  background:#edf4ff;
+  color:#2569f4;
+  box-shadow:inset 0 0 0 1px rgba(45,109,246,.05);
+}
+.v32-preflight-mode button.active span{
+  color:#6688c5;
+}
+.theme-dark .v32-preflight-mode{
+  border-color:rgba(255,255,255,.07);
+  background:#111820;
+}
+.theme-dark .v32-preflight-mode button{
+  border-color:rgba(255,255,255,.07);
+  background:#171f2a;
+  color:#edf2f8;
+}
+.theme-dark .v32-preflight-mode button.active{
+  border-color:#2a4e84;
+  background:#13243d;
+  color:#8aabff;
+}
+.theme-dark .v32-preflight-mode button.active span{
+  color:#8198bf;
+}
