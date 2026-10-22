@@ -4071,6 +4071,15 @@ export default function Home(){
           })}
         </div>}
 
+        {preflightWorkout.id!=="cardio"&&<div className="v32-preflight-mode">
+          <div className="v32-section-head"><span>FORMAT DU JOUR</span><small>modifiable pendant la séance</small></div>
+          <div>
+            <button className={coachMode==="normal"?"active":""} onClick={()=>setCoachMode("normal")}><strong>Normal</strong><span>Plan complet</span></button>
+            <button className={coachMode==="short"?"active":""} onClick={()=>setCoachMode("short")}><strong>Express</strong><span>2 séries / exo</span></button>
+            <button className={coachMode==="tired"?"active":""} onClick={()=>setCoachMode("tired")}><strong>Fatigué</strong><span>Volume réduit</span></button>
+          </div>
+        </div>}
+
         {preflightWorkout.id!=="cardio"&&warmupPlanFor(preflightWorkout).length>0&&<div className="v32-warmup">
           <div className="v32-section-head"><span>ÉCHAUFFEMENT CONSEILLÉ</span><small>non compté dans la séance</small></div>
           {warmupPlanFor(preflightWorkout).map((item,index)=><div key={item.label}>
