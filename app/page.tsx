@@ -3362,12 +3362,16 @@ export default function Home(){
           <i><b style={{width:sessionProgress+"%"}}/></i>
         </div>
 
-        {currentExercise&&<div className="v30-exercise-summary">
-          <div className="v30-exercise-symbol">{(currentExercise.equipment??equipmentLabel(currentExercise)).slice(0,1)}</div>
+        {currentExercise&&<div className="v30-exercise-summary v34-exercise-hero">
+          <div className="v30-exercise-symbol v34-exercise-index"><strong>{session.exerciseIndex+1}</strong><small>/{currentWorkout.exercises.length}</small></div>
           <div className="v30-exercise-main">
-            <span>{currentWorkout.title} · {currentExercise.equipment??equipmentLabel(currentExercise)}</span>
+            <span>{currentWorkout.title}</span>
             <strong>{currentExercise.name}</strong>
-            <small>{currentExercise.target} · {effectiveTarget().sets} séries · {effectiveTarget().repMin}–{effectiveTarget().repMax} reps</small>
+            <div className="v34-exercise-meta">
+              <small>{currentExercise.equipment??equipmentLabel(currentExercise)}</small>
+              <small>{effectiveTarget().repMin}–{effectiveTarget().repMax} reps</small>
+              <small>{formatTimer(currentRestTarget)} repos</small>
+            </div>
           </div>
           {currentVariantOptions.length>1&&<button onClick={()=>setExerciseSwapOpen(true)}>Changer</button>}
         </div>}
@@ -3378,9 +3382,8 @@ export default function Home(){
           <button onClick={()=>navigateSessionExercise(1)} disabled={session.exerciseIndex===currentWorkout.exercises.length-1}><span>Suivant</span> ›</button>
         </div>
 
-        <div className="v30-session-status">
-          <div><span>SÉRIE</span><strong>{session.setIndex+1}/{effectiveTarget().sets}</strong></div>
-          <div><span>EXERCICE</span><strong>{session.exerciseIndex+1}/{currentWorkout.exercises.length}</strong></div>
+        <div className="v30-session-status v34-session-strip">
+          <div><span>SÉRIE</span><strong>{session.setIndex+1}<small>/{effectiveTarget().sets}</small></strong></div>
           <div><span>TEMPS</span><strong>{formatTimer(elapsed)}</strong></div>
           <div><span>REPOS</span><strong>{formatTimer(currentRestTarget)}</strong></div>
         </div>
@@ -3448,20 +3451,20 @@ export default function Home(){
               </div>)}
             </div>
           </details>}
-        </>:currentSetLogs.length>0&&<details className="session-details">
-          <summary>Séries validées · {currentSetLogs.length}</summary>
-          <div className="set-history-card v5-history">
-            {currentSetLogs.map((s,i)=><div className="set-row v31-set-row" key={i}>
-              <span>S{i+1}</span>
-              <strong>{s.weight!=null?`${s.weight} ${currentExercise?.unit} × `:""}{s.reps}</strong>
-              <small>RIR {s.rir??"—"}{s.failed?" · échec":""}</small>
-              <div>
-                <button className="edit" onClick={()=>openSetEditor(currentExercise!.id,i)}>Modifier</button>
-                <button className="delete" onClick={()=>deleteSet(currentExercise!.id,i)}>×</button>
-              </div>
-            </div>)}
+        </>:currentSetLogs.length>0&&<div className="v34-set-ledger">
+          <div className="v34-set-ledger-head">
+            <div><span>SÉRIES VALIDÉES</span><strong>{currentSetLogs.length}/{effectiveTarget().sets}</strong></div>
+            <small>Touche une série pour la corriger</small>
           </div>
-        </details>}
+          <div className="v34-set-ledger-labels"><span>SET</span><span>CHARGE</span><span>REPS</span><span>RIR</span><span></span></div>
+          {currentSetLogs.map((s,i)=><button className="v34-set-ledger-row" key={i} onClick={()=>openSetEditor(currentExercise!.id,i)}>
+            <span>{i+1}</span>
+            <strong>{s.weight!=null?`${s.weight} ${currentExercise?.unit}`:"PDC"}</strong>
+            <strong>{s.reps}</strong>
+            <strong>{s.rir??"—"}</strong>
+            <b>{s.failed?"!":"✓"}</b>
+          </button>)}
+        </div>}
 
         <div className="rest-box">
           <span>Chrono repos</span>
@@ -3517,7 +3520,14 @@ export default function Home(){
             </div>;
           })}
 
-        </div>:<div className="log-card">
+        </div>:<div className="log-card v34-log-card">
+          <div className="v34-log-head">
+            <div>
+              <span>SÉRIE {Math.min(session.setIndex+1,effectiveTarget().sets)}/{effectiveTarget().sets}</span>
+              <strong>Entre ta série</strong>
+            </div>
+            <small>{effectiveTarget().repMin}–{effectiveTarget().repMax} reps cible</small>
+          </div>
           <div className="field v27-weight-field">
             <div className="v27-field-head">
               <label>Charge</label>
