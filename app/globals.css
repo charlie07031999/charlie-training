@@ -9984,3 +9984,106 @@ button{
 .theme-dark .v32-preflight-mode button.active span{
   color:#8198bf;
 }
+
+
+/* V33 — workout interaction pass */
+.gym-mode .gym-rest-dock{
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%)!important;
+  width:min(680px,calc(100vw - 20px))!important;
+  max-width:calc(100vw - 20px)!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+}
+.gym-mode .v31-rest-copy{
+  min-width:0!important;
+}
+.gym-mode .v31-rest-copy>small{
+  display:block;
+  max-width:min(320px,calc(100vw - 210px));
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.gym-mode .v31-rest-actions{
+  flex:0 0 auto!important;
+}
+.gym-mode .v31-rest-actions>button{
+  touch-action:manipulation;
+}
+.gym-mode .v27-workout-dock:not(.rest-active){
+  position:sticky!important;
+  bottom:calc(8px + env(safe-area-inset-bottom))!important;
+  z-index:46!important;
+  margin-top:10px!important;
+  padding:6px!important;
+  border:1px solid rgba(255,255,255,.07)!important;
+  border-radius:22px!important;
+  background:rgba(9,13,20,.90)!important;
+  box-shadow:0 14px 34px rgba(0,0,0,.26)!important;
+  backdrop-filter:blur(18px)!important;
+  -webkit-backdrop-filter:blur(18px)!important;
+}
+.gym-mode .v27-workout-dock.rest-active{
+  position:static!important;
+}
+.gym-mode .v27-workout-dock>button{
+  min-height:62px!important;
+  touch-action:manipulation;
+}
+.gym-mode .v27-workout-dock>button.disabled{
+  pointer-events:none;
+}
+.theme-light.gym-mode .v27-workout-dock:not(.rest-active){
+  border-color:#dce4ee!important;
+  background:rgba(248,250,254,.94)!important;
+  box-shadow:0 12px 30px rgba(31,53,82,.12)!important;
+}
+
+@media(max-width:430px){
+  .gym-mode .gym-rest-dock{
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:6px 7px!important;
+    min-height:64px!important;
+    padding:8px 8px 8px 11px!important;
+  }
+  .gym-mode .gym-rest-dock strong{
+    font-size:26px!important;
+  }
+  .gym-mode .v31-rest-copy>small{
+    max-width:calc(100vw - 205px);
+    font-size:7.5px!important;
+  }
+  .gym-mode .v31-rest-actions{
+    gap:4px!important;
+  }
+  .gym-mode .v31-rest-actions>button{
+    min-width:42px!important;
+    min-height:44px!important;
+    padding:0 9px!important;
+  }
+  .gym-mode .v31-rest-actions>button.skip{
+    min-width:48px!important;
+  }
+}
+
+@media(max-width:350px){
+  .gym-mode .gym-rest-dock{
+    grid-template-columns:1fr!important;
+    grid-template-rows:auto auto 4px!important;
+  }
+  .gym-mode .v31-rest-copy>small{
+    max-width:100%!important;
+  }
+  .gym-mode .v31-rest-actions{
+    grid-row:2;
+    width:100%;
+  }
+  .gym-mode .v31-rest-actions>button{
+    flex:1 1 0!important;
+  }
+  .gym-mode .v31-rest-progress{
+    grid-row:3;
+  }
+}
