@@ -10677,3 +10677,332 @@ button{
     font-size:30px!important;
   }
 }
+
+
+/* V35 — app-wide premium mobile polish */
+.app-v7{
+  width:min(760px,100%)!important;
+  padding-top:max(12px,env(safe-area-inset-top))!important;
+}
+
+/* Cleaner app header, closer to a native fitness product. */
+.v14-app-header{
+  padding:2px 2px 14px!important;
+}
+.v14-app-header>div span{
+  color:#7c899b!important;
+  font-size:9px!important;
+  letter-spacing:.12em!important;
+}
+.v14-app-header>div strong{
+  margin-top:5px!important;
+  font-size:30px!important;
+  line-height:1!important;
+  letter-spacing:-.05em!important;
+}
+.v14-header-action{
+  width:44px!important;
+  height:44px!important;
+  border:1px solid rgba(64,116,201,.10)!important;
+  border-radius:15px!important;
+  background:linear-gradient(145deg,#1f6df5,#28b4ed)!important;
+  font-size:22px!important;
+  box-shadow:0 9px 22px rgba(32,105,232,.16)!important;
+}
+
+/* Bottom navigation: one floating glass dock, larger touch targets, less visual noise. */
+.v14-tabs{
+  left:50%!important;
+  right:auto!important;
+  bottom:max(10px,env(safe-area-inset-bottom))!important;
+  transform:translateX(-50%)!important;
+  width:min(520px,calc(100% - 20px))!important;
+  height:68px!important;
+  padding:6px!important;
+  border-radius:23px!important;
+  backdrop-filter:blur(24px) saturate(145%)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(145%)!important;
+}
+.theme-dark .v14-tabs{
+  border-color:rgba(255,255,255,.075)!important;
+  background:rgba(13,18,26,.92)!important;
+  box-shadow:0 18px 42px rgba(0,0,0,.38)!important;
+}
+.theme-light .v14-tabs{
+  border-color:rgba(28,55,88,.08)!important;
+  background:rgba(255,255,255,.92)!important;
+  box-shadow:0 18px 38px rgba(22,47,78,.14)!important;
+}
+.v14-tabs button{
+  position:relative;
+  min-height:56px!important;
+  gap:3px!important;
+  border-radius:17px!important;
+  font-size:9px!important;
+  font-weight:700!important;
+}
+.v14-tabs .v7-tab-icon{
+  height:23px!important;
+}
+.v14-tabs .v7-tab-icon svg{
+  width:21px!important;
+  height:21px!important;
+}
+.v14-tabs button.active{
+  background:rgba(45,111,238,.08)!important;
+}
+.theme-dark .v14-tabs button.active{
+  background:rgba(55,116,231,.12)!important;
+}
+.v14-tabs button.active:after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:2px;
+  width:18px;
+  height:2px;
+  border-radius:999px;
+  transform:translateX(-50%);
+  background:#2b70f6;
+}
+
+/* Home uses a calmer rhythm: hero -> readiness -> key stats -> progress. */
+.v15-home{
+  gap:12px!important;
+}
+.v15-calendar{
+  gap:5px!important;
+  padding:2px 1px 4px!important;
+}
+.v15-calendar button{
+  min-height:52px!important;
+  border-radius:15px!important;
+}
+.v15-calendar button span{
+  font-size:8px!important;
+}
+.v15-calendar button strong{
+  font-size:14px!important;
+}
+.theme-dark .v15-calendar button{
+  color:#7c8796!important;
+}
+.theme-dark .v15-calendar button.selected{
+  background:#18253a!important;
+  color:#f4f7fb!important;
+}
+
+/* Workout hero gets more editorial depth and a larger start affordance. */
+.v15-workout-hero{
+  min-height:178px!important;
+  padding:20px!important;
+  border-radius:26px!important;
+  background:
+    radial-gradient(circle at 88% 25%,rgba(56,186,242,.34),transparent 8rem),
+    radial-gradient(circle at 105% 110%,rgba(25,103,255,.42),transparent 11rem),
+    linear-gradient(145deg,#081f3c 0%,#103a69 58%,#155f9e 100%)!important;
+  box-shadow:0 16px 40px rgba(12,45,84,.22)!important;
+}
+.v15-workout-hero:before{
+  opacity:.55;
+}
+.v15-hero-copy{
+  max-width:58%!important;
+}
+.v15-hero-copy>span{
+  font-size:9px!important;
+  letter-spacing:.12em!important;
+}
+.v15-hero-copy h2{
+  margin-top:7px!important;
+  font-size:30px!important;
+  line-height:.98!important;
+  letter-spacing:-.05em!important;
+}
+.v15-hero-copy p{
+  margin-top:8px!important;
+  color:rgba(230,240,252,.72)!important;
+  font-size:10px!important;
+  line-height:1.45!important;
+}
+.v15-hero-meta{
+  gap:6px!important;
+  margin-top:11px!important;
+}
+.v15-hero-meta span{
+  padding:5px 7px!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.08)!important;
+  font-size:8px!important;
+}
+.v15-hero-arrow{
+  right:14px!important;
+  bottom:14px!important;
+  width:48px!important;
+  height:48px!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  background:rgba(255,255,255,.12)!important;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+/* Readiness becomes a concise daily status card. */
+.v21-readiness{
+  min-height:96px!important;
+  padding:13px 14px!important;
+  border-radius:23px!important;
+}
+.theme-dark .v21-readiness{
+  border-color:rgba(255,255,255,.07)!important;
+  background:
+    linear-gradient(135deg,rgba(39,103,245,.10),transparent 65%),
+    #101720!important;
+  box-shadow:none!important;
+}
+.v21-readiness-ring{
+  width:66px!important;
+  height:66px!important;
+}
+.theme-dark .v21-readiness-ring{
+  background:
+    radial-gradient(circle at center,#101720 61%,transparent 62%),
+    conic-gradient(#3479f6 var(--score),#202a36 0)!important;
+}
+.v21-readiness-copy>span{
+  font-size:8px!important;
+}
+.v21-readiness-copy>strong{
+  margin-top:4px!important;
+  font-size:15px!important;
+}
+.v21-readiness-copy>small{
+  margin-top:4px!important;
+  font-size:9px!important;
+  line-height:1.4!important;
+}
+
+/* Metric cards share the same surface language. */
+.v15-health-row{
+  gap:9px!important;
+}
+.v15-health-row button,
+.v15-progress-card,
+.v15-coach-strip{
+  border-radius:21px!important;
+}
+.theme-dark .v15-health-row button,
+.theme-dark .v15-progress-card,
+.theme-dark .v15-coach-strip{
+  border-color:rgba(255,255,255,.06)!important;
+  background:#101720!important;
+}
+.v15-health-row button{
+  min-height:88px!important;
+  padding:14px!important;
+}
+.v15-health-row span{
+  font-size:9px!important;
+}
+.v15-health-row strong{
+  margin:4px 0!important;
+  font-size:24px!important;
+  letter-spacing:-.04em!important;
+}
+.v15-health-row small{
+  font-size:9px!important;
+}
+.v15-health-row i{
+  width:34px!important;
+  height:34px!important;
+  border-radius:12px!important;
+}
+
+.v15-progress-card{
+  padding:15px 16px 13px!important;
+}
+.v15-progress-head>strong{
+  font-size:13px!important;
+}
+.v15-progress-head>span{
+  font-size:23px!important;
+}
+.v15-week-bars{
+  margin-top:13px!important;
+}
+.v15-week-bars i{
+  height:8px!important;
+  border-radius:999px!important;
+}
+
+/* Main CTA feels like a primary iOS action rather than a generic web button. */
+.v15-main-cta{
+  min-height:58px!important;
+  border-radius:18px!important;
+  background:linear-gradient(90deg,#2d70f5,#21b8ed)!important;
+  font-size:14px!important;
+  font-weight:850!important;
+  box-shadow:0 12px 26px rgba(35,105,246,.20)!important;
+}
+.v15-main-cta:active{
+  transform:scale(.99);
+}
+
+.v15-coach-strip{
+  min-height:68px!important;
+  padding:11px 13px!important;
+}
+.v15-coach-logo{
+  width:42px!important;
+  height:42px!important;
+  border-radius:14px!important;
+}
+.v15-coach-strip strong{
+  font-size:12px!important;
+}
+.v15-coach-strip small{
+  margin-top:3px!important;
+  font-size:9px!important;
+  line-height:1.35!important;
+}
+
+/* General cards on secondary screens become consistent with the redesigned workout. */
+.theme-dark .v14-program-week button,
+.theme-dark .v14-search,
+.theme-dark .v14-exercise-card,
+.theme-dark .v7-tracking-hero,
+.theme-dark .chart-card,
+.theme-dark .v7-profile-card,
+.theme-dark .account-card,
+.theme-dark .integration-card,
+.theme-dark .coach-card,
+.theme-dark .v8-settings-list,
+.theme-dark .v8-switch{
+  border-color:rgba(255,255,255,.06)!important;
+  background:#101720!important;
+}
+.v14-page-title h2{
+  letter-spacing:-.045em!important;
+}
+.v14-page-title p{
+  line-height:1.45!important;
+}
+
+@media(max-width:420px){
+  .v14-app-header>div strong{
+    font-size:27px!important;
+  }
+  .v15-workout-hero{
+    min-height:170px!important;
+    padding:17px!important;
+  }
+  .v15-hero-copy{
+    max-width:62%!important;
+  }
+  .v15-hero-copy h2{
+    font-size:27px!important;
+  }
+  .v14-tabs{
+    width:calc(100% - 16px)!important;
+    bottom:max(7px,env(safe-area-inset-bottom))!important;
+  }
+}
