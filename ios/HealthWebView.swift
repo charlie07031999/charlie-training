@@ -12,6 +12,7 @@ struct HealthWebView: UIViewRepresentable {
         let controller = WKUserContentController()
         controller.add(context.coordinator.healthBridge, name: "charlieHealth")
         controller.add(context.coordinator.runBridge, name: "charlieRun")
+        controller.add(context.coordinator.notificationBridge, name: "charlieNotifications")
 
         let configuration = WKWebViewConfiguration()
         configuration.userContentController = controller
@@ -27,6 +28,7 @@ struct HealthWebView: UIViewRepresentable {
 
         context.coordinator.healthBridge.webView = webView
         context.coordinator.runBridge.webView = webView
+        context.coordinator.notificationBridge.webView = webView
 
         if let url = URL(string: "https://charlie-training.vercel.app") {
             webView.load(URLRequest(
@@ -44,6 +46,7 @@ struct HealthWebView: UIViewRepresentable {
     static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
         uiView.configuration.userContentController.removeScriptMessageHandler(forName: "charlieHealth")
         uiView.configuration.userContentController.removeScriptMessageHandler(forName: "charlieRun")
+        uiView.configuration.userContentController.removeScriptMessageHandler(forName: "charlieNotifications")
     }
 
     @MainActor
@@ -51,11 +54,13 @@ struct HealthWebView: UIViewRepresentable {
         let healthBridge: HealthKitBridge
         let runManager: RunTrackingManager
         let runBridge: RunTrackingBridge
+        let notificationBridge: LocalNotificationBridge
 
         init(manager: HealthKitManager) {
             self.healthBridge = HealthKitBridge(manager: manager)
             self.runManager = RunTrackingManager()
             self.runBridge = RunTrackingBridge(manager: runManager)
+            self.notificationBridge = LocalNotificationBridge()
         }
 
         func webView(

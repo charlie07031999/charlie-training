@@ -11,14 +11,24 @@ self.addEventListener("push",event=>{
   try{
     if(event.data) data={...data,...event.data.json()};
   }catch{}
-  event.waitUntil(
-    self.registration.showNotification(data.title,{
+  event.waitUntil((async()=>{
+    if(data.type==="rest"){
+      try{
+        const windows=await self.clients.matchAll({type:"window",includeUncontrolled:true});
+        const visible=windows.some(client=>client.visibilityState==="visible");
+        if(visible) return;
+      }catch{}
+    }
+
+    await self.registration.showNotification(data.title,{
       body:data.body,
       icon:"/icon.svg",
       badge:"/icon.svg",
+      tag:data.tag,
+      renotify:false,
       data:data.url?{url:data.url}:{}
-    })
-  );
+    });
+  })());
 });
 
 self.addEventListener("notificationclick",event=>{

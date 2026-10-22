@@ -10087,3 +10087,922 @@ button{
     grid-row:3;
   }
 }
+
+
+/* V34 — workout redesign benchmarked against leading lifting apps */
+.gym-mode{
+  width:min(100%,620px)!important;
+  padding-left:14px!important;
+  padding-right:14px!important;
+  background:
+    radial-gradient(circle at 50% -8%,rgba(47,108,246,.10),transparent 260px),
+    #080c12!important;
+}
+
+/* Put the workout in a deliberate top-to-bottom flow. */
+.session-v5>.v15-session-top{order:1!important}
+.session-v5>.v31-session-progress{order:2!important}
+.session-v5>.v30-exercise-summary{order:3!important}
+.session-v5>.v31-exercise-nav{order:4!important}
+.session-v5>.v30-session-status{order:5!important}
+.session-v5>.v30-technique-cue{order:6!important}
+.session-v5>.v30-set-context{order:7!important}
+.session-v5>.progression-banner{order:8!important}
+.session-v5>.v34-set-ledger,
+.session-v5>.session-details{order:9!important}
+.session-v5>.log-card,
+.session-v5>.superset-log-card{order:10!important}
+.session-v5>.v27-workout-dock{order:11!important}
+.session-v5>.next-exercise-card{order:12!important}
+
+/* Native-feeling header: quieter chrome, content gets the attention. */
+.gym-mode .v15-session-top{
+  min-height:54px!important;
+  margin:0 -4px 8px!important;
+  padding:4px!important;
+  background:rgba(8,12,18,.82)!important;
+  border-bottom:1px solid rgba(255,255,255,.045)!important;
+}
+.gym-mode .v15-session-top>strong{
+  font-size:13px!important;
+  font-weight:760!important;
+  color:#b9c2ce!important;
+}
+.gym-mode .v15-back,
+.gym-mode .v15-menu{
+  width:42px!important;
+  height:42px!important;
+  background:rgba(255,255,255,.045)!important;
+  border-color:rgba(255,255,255,.055)!important;
+}
+
+/* One compact progress line instead of another dashboard card. */
+.gym-mode .v31-session-progress{
+  margin:0 0 10px!important;
+  padding:0 2px 9px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+.gym-mode .v31-progress-copy{
+  grid-template-columns:auto 1fr auto!important;
+  gap:8px!important;
+}
+.gym-mode .v31-progress-copy>span{
+  color:#70a0ff!important;
+  font-size:10px!important;
+}
+.gym-mode .v31-progress-copy>strong{
+  color:#9da8b6!important;
+  font-size:10px!important;
+  font-weight:700!important;
+}
+.gym-mode .v31-progress-copy>small{
+  color:#596474!important;
+  font-size:9px!important;
+}
+.gym-mode .v31-session-progress>i{
+  height:3px!important;
+  background:#171e29!important;
+}
+
+/* Exercise hero: large title, useful metadata, no tiny dashboard clutter. */
+.gym-mode .v34-exercise-hero{
+  grid-template-columns:52px minmax(0,1fr) auto!important;
+  gap:13px!important;
+  min-height:112px!important;
+  padding:15px!important;
+  border:1px solid rgba(102,142,205,.13)!important;
+  border-radius:24px!important;
+  background:
+    linear-gradient(145deg,rgba(50,103,191,.12),transparent 52%),
+    #101720!important;
+  box-shadow:0 14px 34px rgba(0,0,0,.20)!important;
+}
+.gym-mode .v34-exercise-index{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:52px!important;
+  height:58px!important;
+  border-radius:17px!important;
+  background:#17263a!important;
+  color:#8aafff!important;
+}
+.v34-exercise-index>strong{
+  font-size:20px;
+  line-height:1;
+}
+.v34-exercise-index>small{
+  margin-top:3px;
+  color:#637794;
+  font-size:9px;
+  font-weight:800;
+}
+.gym-mode .v30-exercise-main>span{
+  color:#6f88ad!important;
+  font-size:9px!important;
+  letter-spacing:.08em!important;
+}
+.gym-mode .v30-exercise-main>strong{
+  margin-top:5px!important;
+  color:#f5f7fb!important;
+  font-size:23px!important;
+  line-height:1.02!important;
+  letter-spacing:-.045em!important;
+}
+.v34-exercise-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:9px;
+}
+.v34-exercise-meta>small{
+  display:block!important;
+  overflow:visible!important;
+  padding:5px 7px;
+  border:1px solid rgba(255,255,255,.055);
+  border-radius:999px;
+  background:#131d29;
+  color:#8c98a7!important;
+  font-size:9px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+.gym-mode .v30-exercise-summary>button{
+  min-height:38px!important;
+  padding:0 10px!important;
+  border:1px solid rgba(87,136,222,.18)!important;
+  background:#16263b!important;
+  color:#8aaff9!important;
+  font-size:9px!important;
+}
+
+/* Previous / next stays available but no longer competes with logging. */
+.gym-mode .v31-exercise-nav{
+  margin:6px 0 0!important;
+  gap:6px!important;
+}
+.gym-mode .v31-exercise-nav>button{
+  min-height:38px!important;
+  border:1px solid rgba(255,255,255,.045)!important;
+  background:#0d131b!important;
+  color:#778494!important;
+  font-size:10px!important;
+}
+.gym-mode .v31-exercise-nav>small{
+  color:#465260!important;
+  font-size:8px!important;
+}
+
+/* Three stats only: the things you check between sets. */
+.gym-mode .v34-session-strip{
+  grid-template-columns:repeat(3,1fr)!important;
+  margin-top:8px!important;
+  border-color:rgba(255,255,255,.055)!important;
+  border-radius:18px!important;
+  background:#0e141c!important;
+}
+.gym-mode .v34-session-strip>div{
+  padding:11px 8px 12px!important;
+}
+.gym-mode .v34-session-strip span{
+  color:#606d7e!important;
+  font-size:8px!important;
+}
+.gym-mode .v34-session-strip strong{
+  margin-top:5px!important;
+  color:#edf2f8!important;
+  font-size:17px!important;
+}
+.gym-mode .v34-session-strip strong small{
+  color:#687587;
+  font-size:11px;
+}
+
+/* Technique is a hint, not another card. */
+.gym-mode .v30-technique-cue{
+  gap:10px!important;
+  margin:11px 2px 0!important;
+  padding:0 0 0 10px!important;
+  border-left:2px solid #315d9f!important;
+}
+.gym-mode .v30-technique-cue>span{
+  margin-top:1px!important;
+  color:#6686b8!important;
+  font-size:8px!important;
+}
+.gym-mode .v30-technique-cue>p{
+  color:#9aa5b3!important;
+  font-size:11px!important;
+  line-height:1.45!important;
+}
+
+/* Goal and last performance remain visible at a glance. */
+.gym-mode .v30-set-context{
+  gap:7px!important;
+  margin-top:10px!important;
+}
+.gym-mode .v30-set-context>div{
+  padding:11px 12px!important;
+  border-color:rgba(255,255,255,.055)!important;
+  border-radius:16px!important;
+  background:#0f151d!important;
+}
+.gym-mode .v30-set-context span{
+  color:#657183!important;
+  font-size:8px!important;
+}
+.gym-mode .v30-set-context strong{
+  margin-top:5px!important;
+  color:#e4e9f0!important;
+  font-size:13px!important;
+}
+
+/* Recommendation reads like a smart coaching hint. */
+.gym-mode .progression-banner{
+  margin-top:8px!important;
+  padding:10px 12px!important;
+  border-color:rgba(67,121,216,.16)!important;
+  border-radius:14px!important;
+  background:rgba(37,79,145,.12)!important;
+  color:#8fa9cf!important;
+  font-size:10px!important;
+  line-height:1.4!important;
+}
+
+/* Completed sets are visible like a lifting notebook, not hidden in an accordion. */
+.v34-set-ledger{
+  margin-top:9px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:19px;
+  background:#0f151d;
+}
+.v34-set-ledger-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 13px 9px;
+}
+.v34-set-ledger-head>div{
+  display:flex;
+  align-items:baseline;
+  gap:7px;
+}
+.v34-set-ledger-head span{
+  color:#778394;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.v34-set-ledger-head strong{
+  color:#dfe6ef;
+  font-size:12px;
+}
+.v34-set-ledger-head>small{
+  color:#566171;
+  font-size:8px;
+}
+.v34-set-ledger-labels,
+.v34-set-ledger-row{
+  display:grid;
+  grid-template-columns:40px 1fr 58px 52px 28px;
+  gap:6px;
+  align-items:center;
+}
+.v34-set-ledger-labels{
+  padding:7px 12px;
+  border-top:1px solid rgba(255,255,255,.045);
+  border-bottom:1px solid rgba(255,255,255,.045);
+  color:#505c6c;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.v34-set-ledger-row{
+  width:100%;
+  min-height:46px;
+  padding:0 12px;
+  border:0;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  background:transparent;
+  color:#dfe5ed;
+  text-align:left;
+}
+.v34-set-ledger-row:last-child{
+  border-bottom:0;
+}
+.v34-set-ledger-row:active{
+  background:#151e29;
+}
+.v34-set-ledger-row>span{
+  display:grid;
+  place-items:center;
+  width:26px;
+  height:26px;
+  border-radius:9px;
+  background:#17212d;
+  color:#8a98aa;
+  font-size:10px;
+  font-weight:850;
+}
+.v34-set-ledger-row>strong{
+  font-size:12px;
+  font-weight:780;
+}
+.v34-set-ledger-row>b{
+  color:#63cf91;
+  text-align:right;
+}
+
+/* Current set is the visual focus. */
+.gym-mode .v34-log-card{
+  grid-template-columns:1fr 1fr!important;
+  gap:10px!important;
+  margin-top:9px!important;
+  padding:14px!important;
+  border:1px solid rgba(105,143,204,.13)!important;
+  border-radius:23px!important;
+  background:#101720!important;
+  box-shadow:0 14px 34px rgba(0,0,0,.16)!important;
+}
+.v34-log-head{
+  grid-column:1/-1;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  padding:1px 1px 3px;
+}
+.v34-log-head>div span,
+.v34-log-head>div strong{
+  display:block;
+}
+.v34-log-head>div span{
+  color:#6f91c5;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.09em;
+}
+.v34-log-head>div strong{
+  margin-top:4px;
+  color:#f4f7fb;
+  font-size:18px;
+  letter-spacing:-.025em;
+}
+.v34-log-head>small{
+  color:#697687;
+  font-size:9px;
+}
+.gym-mode .v34-log-card>.v27-weight-field{
+  grid-column:1/-1;
+}
+.gym-mode .v34-log-card .v27-field-head>label,
+.gym-mode .v34-log-card>.field>label{
+  color:#8b97a7!important;
+  font-size:10px!important;
+  font-weight:800!important;
+}
+.gym-mode .v34-log-card .v27-field-head>button{
+  min-height:30px!important;
+  padding:0 9px!important;
+  border:1px solid rgba(73,121,195,.14)!important;
+  border-radius:999px!important;
+  font-size:9px!important;
+}
+.gym-mode .v34-log-card .v27-weight-stepper{
+  grid-template-columns:58px minmax(0,1fr) 58px!important;
+  gap:7px!important;
+}
+.gym-mode .v34-log-card .v27-weight-stepper>button{
+  min-height:64px!important;
+  border-radius:18px!important;
+  font-size:25px!important;
+}
+.gym-mode .v34-log-card .v27-weight-value{
+  min-height:64px!important;
+  border-radius:18px!important;
+}
+.gym-mode .v34-log-card .v27-weight-value input{
+  font-size:34px!important;
+  letter-spacing:-.04em!important;
+}
+.gym-mode .v34-log-card .v27-weight-shortcuts{
+  display:flex!important;
+  gap:6px!important;
+  overflow-x:auto!important;
+  margin-top:8px!important;
+  padding-bottom:2px!important;
+  scrollbar-width:none;
+}
+.gym-mode .v34-log-card .v27-weight-shortcuts::-webkit-scrollbar{
+  display:none;
+}
+.gym-mode .v34-log-card .v27-weight-shortcuts>button{
+  flex:0 0 auto!important;
+  min-height:36px!important;
+  padding:0 11px!important;
+  border-radius:999px!important;
+  font-size:9px!important;
+}
+.gym-mode .v34-log-card .stepper{
+  min-height:58px!important;
+  border-radius:17px!important;
+}
+.gym-mode .v34-log-card .stepper button{
+  width:40px!important;
+  height:40px!important;
+  border-radius:13px!important;
+}
+.gym-mode .v34-log-card .stepper strong{
+  font-size:25px!important;
+}
+.gym-mode .v34-log-card>.fail-toggle{
+  grid-column:1/-1!important;
+  min-height:40px!important;
+  padding:0 11px!important;
+  border-radius:13px!important;
+  font-size:10px!important;
+}
+
+/* The main action lives where the thumb expects it. */
+.gym-mode .v27-workout-dock:not(.rest-active){
+  bottom:calc(8px + env(safe-area-inset-bottom))!important;
+  padding:5px!important;
+  border-radius:21px!important;
+  background:rgba(8,12,18,.88)!important;
+}
+.gym-mode .v27-workout-dock>button{
+  min-height:62px!important;
+  border-radius:17px!important;
+  background:linear-gradient(90deg,#3479f6,#25b8eb)!important;
+  font-size:13px!important;
+  font-weight:850!important;
+  letter-spacing:-.01em!important;
+  box-shadow:0 10px 26px rgba(37,110,238,.22)!important;
+}
+
+/* Next exercise is deliberately secondary. */
+.gym-mode .next-exercise-card{
+  margin-top:9px!important;
+  min-height:62px!important;
+  padding:11px 13px!important;
+  border-color:rgba(255,255,255,.05)!important;
+  background:#0e141c!important;
+}
+.gym-mode .next-exercise-card>span{
+  color:#536174!important;
+  font-size:8px!important;
+}
+.gym-mode .next-exercise-card strong{
+  font-size:12px!important;
+}
+.gym-mode .next-exercise-card small{
+  margin-top:2px;
+  font-size:9px!important;
+}
+
+/* Rest overlay borrows the inline timer clarity of Strong without blocking the workout. */
+.gym-mode .gym-rest-dock{
+  border-color:rgba(77,132,218,.20)!important;
+  background:rgba(9,15,23,.97)!important;
+  box-shadow:0 18px 46px rgba(0,0,0,.48)!important;
+}
+.gym-mode .v31-rest-copy>span{
+  color:#6e94cc!important;
+  font-size:8px!important;
+}
+.gym-mode .gym-rest-dock strong{
+  color:#f5f8fb!important;
+  font-size:30px!important;
+}
+.gym-mode .v31-rest-copy>small{
+  color:#758294!important;
+  font-size:9px!important;
+}
+.gym-mode .v31-rest-progress{
+  background:#1c2633!important;
+}
+.gym-mode .v31-rest-progress>b{
+  background:linear-gradient(90deg,#3e7bf4,#24c1db)!important;
+}
+
+/* Light mode uses the same hierarchy rather than a separate visual system. */
+.theme-light.gym-mode{
+  background:#f4f7fb!important;
+}
+.theme-light.gym-mode .v34-exercise-hero,
+.theme-light.gym-mode .v34-log-card,
+.theme-light.gym-mode .v34-set-ledger,
+.theme-light.gym-mode .v30-set-context>div,
+.theme-light.gym-mode .v34-session-strip,
+.theme-light.gym-mode .next-exercise-card{
+  border-color:#dce5ef!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.theme-light.gym-mode .v30-exercise-main>strong,
+.theme-light.gym-mode .v34-log-head>div strong,
+.theme-light.gym-mode .v34-session-strip strong,
+.theme-light.gym-mode .v30-set-context strong,
+.theme-light.gym-mode .v34-set-ledger-row{
+  color:#17202a!important;
+}
+.theme-light.gym-mode .v34-exercise-index{
+  background:#eaf1fc!important;
+  color:#326dd8!important;
+}
+.theme-light.gym-mode .v34-exercise-meta>small{
+  border-color:#e1e7ef;
+  background:#f4f7fb;
+  color:#687688!important;
+}
+.theme-light.gym-mode .v34-set-ledger-labels,
+.theme-light.gym-mode .v34-set-ledger-row{
+  border-color:#edf0f4;
+}
+.theme-light.gym-mode .v34-set-ledger-row>span{
+  background:#f0f3f7;
+  color:#637084;
+}
+
+@media(max-width:390px){
+  .gym-mode{
+    padding-left:11px!important;
+    padding-right:11px!important;
+  }
+  .gym-mode .v34-exercise-hero{
+    grid-template-columns:46px minmax(0,1fr) auto!important;
+    gap:10px!important;
+    min-height:104px!important;
+    padding:12px!important;
+  }
+  .gym-mode .v34-exercise-index{
+    width:46px!important;
+    height:54px!important;
+  }
+  .gym-mode .v30-exercise-main>strong{
+    font-size:20px!important;
+  }
+  .v34-exercise-meta{
+    gap:4px;
+  }
+  .v34-exercise-meta>small{
+    padding:4px 6px;
+    font-size:8px!important;
+  }
+  .v34-set-ledger-labels,
+  .v34-set-ledger-row{
+    grid-template-columns:34px 1fr 48px 42px 24px;
+  }
+  .v34-set-ledger-head>small{
+    display:none;
+  }
+  .gym-mode .v34-log-card{
+    padding:11px!important;
+  }
+  .v34-log-head>div strong{
+    font-size:16px;
+  }
+  .v34-log-head>small{
+    font-size:8px;
+  }
+  .gym-mode .v34-log-card .v27-weight-stepper{
+    grid-template-columns:52px minmax(0,1fr) 52px!important;
+  }
+  .gym-mode .v34-log-card .v27-weight-value input{
+    font-size:30px!important;
+  }
+}
+
+
+/* V35 — app-wide premium mobile polish */
+.app-v7{
+  width:min(760px,100%)!important;
+  padding-top:max(12px,env(safe-area-inset-top))!important;
+}
+
+/* Cleaner app header, closer to a native fitness product. */
+.v14-app-header{
+  padding:2px 2px 14px!important;
+}
+.v14-app-header>div span{
+  color:#7c899b!important;
+  font-size:9px!important;
+  letter-spacing:.12em!important;
+}
+.v14-app-header>div strong{
+  margin-top:5px!important;
+  font-size:30px!important;
+  line-height:1!important;
+  letter-spacing:-.05em!important;
+}
+.v14-header-action{
+  width:44px!important;
+  height:44px!important;
+  border:1px solid rgba(64,116,201,.10)!important;
+  border-radius:15px!important;
+  background:linear-gradient(145deg,#1f6df5,#28b4ed)!important;
+  font-size:22px!important;
+  box-shadow:0 9px 22px rgba(32,105,232,.16)!important;
+}
+
+/* Bottom navigation: one floating glass dock, larger touch targets, less visual noise. */
+.v14-tabs{
+  left:50%!important;
+  right:auto!important;
+  bottom:max(10px,env(safe-area-inset-bottom))!important;
+  transform:translateX(-50%)!important;
+  width:min(520px,calc(100% - 20px))!important;
+  height:68px!important;
+  padding:6px!important;
+  border-radius:23px!important;
+  backdrop-filter:blur(24px) saturate(145%)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(145%)!important;
+}
+.theme-dark .v14-tabs{
+  border-color:rgba(255,255,255,.075)!important;
+  background:rgba(13,18,26,.92)!important;
+  box-shadow:0 18px 42px rgba(0,0,0,.38)!important;
+}
+.theme-light .v14-tabs{
+  border-color:rgba(28,55,88,.08)!important;
+  background:rgba(255,255,255,.92)!important;
+  box-shadow:0 18px 38px rgba(22,47,78,.14)!important;
+}
+.v14-tabs button{
+  position:relative;
+  min-height:56px!important;
+  gap:3px!important;
+  border-radius:17px!important;
+  font-size:9px!important;
+  font-weight:700!important;
+}
+.v14-tabs .v7-tab-icon{
+  height:23px!important;
+}
+.v14-tabs .v7-tab-icon svg{
+  width:21px!important;
+  height:21px!important;
+}
+.v14-tabs button.active{
+  background:rgba(45,111,238,.08)!important;
+}
+.theme-dark .v14-tabs button.active{
+  background:rgba(55,116,231,.12)!important;
+}
+.v14-tabs button.active:after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:2px;
+  width:18px;
+  height:2px;
+  border-radius:999px;
+  transform:translateX(-50%);
+  background:#2b70f6;
+}
+
+/* Home uses a calmer rhythm: hero -> readiness -> key stats -> progress. */
+.v15-home{
+  gap:12px!important;
+}
+.v15-calendar{
+  gap:5px!important;
+  padding:2px 1px 4px!important;
+}
+.v15-calendar button{
+  min-height:52px!important;
+  border-radius:15px!important;
+}
+.v15-calendar button span{
+  font-size:8px!important;
+}
+.v15-calendar button strong{
+  font-size:14px!important;
+}
+.theme-dark .v15-calendar button{
+  color:#7c8796!important;
+}
+.theme-dark .v15-calendar button.selected{
+  background:#18253a!important;
+  color:#f4f7fb!important;
+}
+
+/* Workout hero gets more editorial depth and a larger start affordance. */
+.v15-workout-hero{
+  min-height:178px!important;
+  padding:20px!important;
+  border-radius:26px!important;
+  background:
+    radial-gradient(circle at 88% 25%,rgba(56,186,242,.34),transparent 8rem),
+    radial-gradient(circle at 105% 110%,rgba(25,103,255,.42),transparent 11rem),
+    linear-gradient(145deg,#081f3c 0%,#103a69 58%,#155f9e 100%)!important;
+  box-shadow:0 16px 40px rgba(12,45,84,.22)!important;
+}
+.v15-workout-hero:before{
+  opacity:.55;
+}
+.v15-hero-copy{
+  max-width:58%!important;
+}
+.v15-hero-copy>span{
+  font-size:9px!important;
+  letter-spacing:.12em!important;
+}
+.v15-hero-copy h2{
+  margin-top:7px!important;
+  font-size:30px!important;
+  line-height:.98!important;
+  letter-spacing:-.05em!important;
+}
+.v15-hero-copy p{
+  margin-top:8px!important;
+  color:rgba(230,240,252,.72)!important;
+  font-size:10px!important;
+  line-height:1.45!important;
+}
+.v15-hero-meta{
+  gap:6px!important;
+  margin-top:11px!important;
+}
+.v15-hero-meta span{
+  padding:5px 7px!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.08)!important;
+  font-size:8px!important;
+}
+.v15-hero-arrow{
+  right:14px!important;
+  bottom:14px!important;
+  width:48px!important;
+  height:48px!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  background:rgba(255,255,255,.12)!important;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+/* Readiness becomes a concise daily status card. */
+.v21-readiness{
+  min-height:96px!important;
+  padding:13px 14px!important;
+  border-radius:23px!important;
+}
+.theme-dark .v21-readiness{
+  border-color:rgba(255,255,255,.07)!important;
+  background:
+    linear-gradient(135deg,rgba(39,103,245,.10),transparent 65%),
+    #101720!important;
+  box-shadow:none!important;
+}
+.v21-readiness-ring{
+  width:66px!important;
+  height:66px!important;
+}
+.theme-dark .v21-readiness-ring{
+  background:
+    radial-gradient(circle at center,#101720 61%,transparent 62%),
+    conic-gradient(#3479f6 var(--score),#202a36 0)!important;
+}
+.v21-readiness-copy>span{
+  font-size:8px!important;
+}
+.v21-readiness-copy>strong{
+  margin-top:4px!important;
+  font-size:15px!important;
+}
+.v21-readiness-copy>small{
+  margin-top:4px!important;
+  font-size:9px!important;
+  line-height:1.4!important;
+}
+
+/* Metric cards share the same surface language. */
+.v15-health-row{
+  gap:9px!important;
+}
+.v15-health-row button,
+.v15-progress-card,
+.v15-coach-strip{
+  border-radius:21px!important;
+}
+.theme-dark .v15-health-row button,
+.theme-dark .v15-progress-card,
+.theme-dark .v15-coach-strip{
+  border-color:rgba(255,255,255,.06)!important;
+  background:#101720!important;
+}
+.v15-health-row button{
+  min-height:88px!important;
+  padding:14px!important;
+}
+.v15-health-row span{
+  font-size:9px!important;
+}
+.v15-health-row strong{
+  margin:4px 0!important;
+  font-size:24px!important;
+  letter-spacing:-.04em!important;
+}
+.v15-health-row small{
+  font-size:9px!important;
+}
+.v15-health-row i{
+  width:34px!important;
+  height:34px!important;
+  border-radius:12px!important;
+}
+
+.v15-progress-card{
+  padding:15px 16px 13px!important;
+}
+.v15-progress-head>strong{
+  font-size:13px!important;
+}
+.v15-progress-head>span{
+  font-size:23px!important;
+}
+.v15-week-bars{
+  margin-top:13px!important;
+}
+.v15-week-bars i{
+  height:8px!important;
+  border-radius:999px!important;
+}
+
+/* Main CTA feels like a primary iOS action rather than a generic web button. */
+.v15-main-cta{
+  min-height:58px!important;
+  border-radius:18px!important;
+  background:linear-gradient(90deg,#2d70f5,#21b8ed)!important;
+  font-size:14px!important;
+  font-weight:850!important;
+  box-shadow:0 12px 26px rgba(35,105,246,.20)!important;
+}
+.v15-main-cta:active{
+  transform:scale(.99);
+}
+
+.v15-coach-strip{
+  min-height:68px!important;
+  padding:11px 13px!important;
+}
+.v15-coach-logo{
+  width:42px!important;
+  height:42px!important;
+  border-radius:14px!important;
+}
+.v15-coach-strip strong{
+  font-size:12px!important;
+}
+.v15-coach-strip small{
+  margin-top:3px!important;
+  font-size:9px!important;
+  line-height:1.35!important;
+}
+
+/* General cards on secondary screens become consistent with the redesigned workout. */
+.theme-dark .v14-program-week button,
+.theme-dark .v14-search,
+.theme-dark .v14-exercise-card,
+.theme-dark .v7-tracking-hero,
+.theme-dark .chart-card,
+.theme-dark .v7-profile-card,
+.theme-dark .account-card,
+.theme-dark .integration-card,
+.theme-dark .coach-card,
+.theme-dark .v8-settings-list,
+.theme-dark .v8-switch{
+  border-color:rgba(255,255,255,.06)!important;
+  background:#101720!important;
+}
+.v14-page-title h2{
+  letter-spacing:-.045em!important;
+}
+.v14-page-title p{
+  line-height:1.45!important;
+}
+
+@media(max-width:420px){
+  .v14-app-header>div strong{
+    font-size:27px!important;
+  }
+  .v15-workout-hero{
+    min-height:170px!important;
+    padding:17px!important;
+  }
+  .v15-hero-copy{
+    max-width:62%!important;
+  }
+  .v15-hero-copy h2{
+    font-size:27px!important;
+  }
+  .v14-tabs{
+    width:calc(100% - 16px)!important;
+    bottom:max(7px,env(safe-area-inset-bottom))!important;
+  }
+}
