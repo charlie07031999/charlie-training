@@ -2696,6 +2696,15 @@ export default function Home(){
   const plannedSleepMinutes=openSleep&&openSleep.lightsOutAt&&plannedWakeAt
     ? Math.max(0,Math.round((plannedWakeAt-openSleep.lightsOutAt)/60000))
     : 0;
+  const sleepElapsedMinutes=openSleep?.lightsOutAt
+    ? Math.max(0,Math.round((now-openSleep.lightsOutAt)/60000))
+    : 0;
+  const sleepProgress=plannedSleepMinutes>0
+    ? Math.max(0,Math.min(100,Math.round((sleepElapsedMinutes/plannedSleepMinutes)*100)))
+    : 0;
+  const sleepRemainingMinutes=plannedWakeAt
+    ? Math.max(0,Math.round((plannedWakeAt-now)/60000))
+    : 0;
   const suggestedWakeAt=openSleep?.lightsOutAt
     ? openSleep.lightsOutAt+targetSleepMinutes*60000
     : null;
@@ -3016,7 +3025,7 @@ export default function Home(){
   }
 
   return <main className={"app-shell app-v7 theme-"+activeAppearance+" "+(session?"gym-mode ":"")+(isEvening?"evening-ui":"day-ui")}>
-    {!session&&<>
+    {!session&&!openSleep?.lightsOutAt&&<>
       {tab==="home"&&<header className="v14-app-header">
         <div>
           <span>CHARLIE TRAINING</span>
@@ -3048,12 +3057,54 @@ export default function Home(){
     >
       {!session?<>
         {openSleep?.lightsOutAt?
-          <div className="v7-night-minimal">
-            <div className="v7-moon">☾</div>
-            <span>NUIT EN COURS</span>
-            <h2>Il est temps<br/>de dormir.</h2>
-            <p>Réveil prévu à <strong>{plannedWakeTime}</strong></p>
-            <button className="v7-subtle-action" onClick={wakeNow}>Je suis réveillé</button>
+          <div className="v36-sleep-mode">
+            <div className="v36-sleep-top">
+              <div>
+                <span>CHARLIE TRAINING</span>
+                <strong>Mode sommeil</strong>
+              </div>
+              <div className="v36-sleep-live"><i/> Nuit en cours</div>
+            </div>
+
+            <div className="v36-sleep-orbit" style={{"--sleep-progress":sleepProgress+"%"} as React.CSSProperties}>
+              <div className="v36-sleep-orbit-inner">
+                <div className="v36-sleep-moon">☾</div>
+                <span>DEPUIS</span>
+                <strong>{clock(openSleep.lightsOutAt)}</strong>
+              </div>
+            </div>
+
+            <div className="v36-sleep-copy">
+              <span>REPOS EN COURS</span>
+              <h2>Dors. Le reste<br/>attendra demain.</h2>
+              <p>Réveil prévu à <strong>{plannedWakeTime}</strong>.</p>
+            </div>
+
+            <div className="v36-sleep-stats">
+              <div>
+                <span>ÉCOULÉ</span>
+                <strong>{durationLabel(sleepElapsedMinutes)}</strong>
+              </div>
+              <div>
+                <span>RESTANT</span>
+                <strong>{durationLabel(sleepRemainingMinutes)}</strong>
+              </div>
+              <div>
+                <span>OBJECTIF</span>
+                <strong>{durationLabel(plannedSleepMinutes||targetSleepMinutes)}</strong>
+              </div>
+            </div>
+
+            <div className="v36-sleep-progress">
+              <div><span>Progression de la nuit</span><strong>{sleepProgress}%</strong></div>
+              <i><b style={{width:sleepProgress+"%"}}/></i>
+            </div>
+
+            <button className="v36-wake-action" onClick={wakeNow}>
+              <span>Je suis réveillé</span>
+              <b>→</b>
+            </button>
+            <small className="v36-sleep-footnote">Cette action clôture la nuit et enregistre ton sommeil.</small>
           </div>
         :openSleep?
           <div className="v7-routine-focus">
