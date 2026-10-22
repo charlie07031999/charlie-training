@@ -446,6 +446,10 @@ export default function Home(){
   const [historyVariantEdit,setHistoryVariantEdit]=useState<{sessionKey:string;exerciseId:string}|null>(null);
   const [exerciseSwapOpen,setExerciseSwapOpen]=useState(false);
   const [sessionMenuOpen,setSessionMenuOpen]=useState(false);
+  const [preflightWorkoutId,setPreflightWorkoutId]=useState<string|null>(null);
+  const [plateCalculatorOpen,setPlateCalculatorOpen]=useState(false);
+  const [adaptiveRestMessage,setAdaptiveRestMessage]=useState("");
+  const [setInputError,setSetInputError]=useState("");
   const [editingSet,setEditingSet]=useState<{
     exerciseId:string;
     index:number;
@@ -539,6 +543,9 @@ export default function Home(){
     ()=>workouts.find(w=>w.id===selectedWorkoutId)??workouts[0],
     [selectedWorkoutId]
   );
+  const preflightWorkout=preflightWorkoutId
+    ? workouts.find(w=>w.id===preflightWorkoutId)??null
+    : null;
   const selectedExerciseDetail=useMemo(
     ()=>workouts.flatMap(w=>w.exercises).find(ex=>ex.id===selectedExerciseDetailId)??null,
     [selectedExerciseDetailId]
@@ -1453,6 +1460,32 @@ export default function Home(){
     }
   }
 
+  function requestWorkoutStart(w:Workout){
+    setSelectedWorkoutId(w.id);
+    setPreflightWorkoutId(w.id);
+  }
+
+  function warmupPlanFor(w:Workout){
+    if(w.id==="cardio") return [];
+    const base=w.exercises.find(ex=>ex.unit!=="PDC"&&!ex.superset?.length)??null;
+    if(!base) return [];
+    const ex=resolveExerciseVariant(base,preferredExerciseVariants[base.id]);
+    const target=Number(recommendationFor(ex).weight??ex.suggestedWeight??0);
+    if(!target) return [];
+    const step=Math.max(.5,incrementFor(ex)||2.5);
+    const rounded=(value:number)=>Math.max(step,Math.round(value/step)*step);
+    const candidates=[
+      {label:"Activation",pct:0.4,reps:10},
+      {label:"Montée",pct:0.6,reps:6},
+      {label:"Préparation",pct:0.8,reps:3}
+    ];
+    return candidates.map(item=>({
+      ...item,
+      weight:rounded(target*item.pct),
+      exercise:ex
+    }));
+  }
+
   function startWorkout(w:Workout){
     if(w.id==="cardio") resetRunTracking();
     const mode=coachMode==="normal"?autoCoachMode:coachMode;
@@ -1470,6 +1503,9 @@ export default function Home(){
       exerciseVariants:{...preferredExerciseVariants}
     };
     setCoachMode(mode);
+    setPreflightWorkoutId(null);
+    setSetInputError("");
+    setAdaptiveRestMessage("");
     setSession(nextSession);
     pushLiveSession(nextSession,"session_started");
     setTab("home");
@@ -1584,9 +1620,24 @@ export default function Home(){
     const target=effectiveTarget();
     const nextSet=session.setIndex+1;
     const restTarget=session.restOverrides[currentExercise.id]??currentExercise.restSeconds;
+    const latestWorkingSet=(nextLogs[currentExercise.id]??[]).at(-1);
+    let adjustedRest=restTarget;
+    let restMessage="";
+    if(latestWorkingSet&&!currentExercise.superset?.length){
+      if(latestWorkingSet.failed||(latestWorkingSet.rir!=null&&latestWorkingSet.rir<=0)){
+        adjustedRest=Math.min(360,restTarget+30);
+        restMessage="+30 s · série très proche de l’échec";
+      }else if(latestWorkingSet.rir!=null&&latestWorkingSet.rir>=3){
+        adjustedRest=Math.max(45,restTarget-15);
+        restMessage="−15 s · marge confortable";
+      }else{
+        restMessage="repos cible conservé";
+      }
+    }
+    setAdaptiveRestMessage(restMessage);
 
-    if(restTarget>0){
-      startRestTimer(restTarget);
+    if(adjustedRest>0){
+      startRestTimer(adjustedRest);
     }
 
     if(nextSet>=target.sets){
@@ -1659,6 +1710,19 @@ export default function Home(){
 
   function logSet(){
     if(!session||!currentExercise) return;
+    const numericReps=Math.max(0,Number(reps||0));
+    const numericWeight=Number(String(weight||"0").replace(",","."));
+    if(numericReps<=0){
+      setSetInputError("Ajoute au moins 1 répétition avant de valider.");
+      pulse([40,40,40]);
+      return;
+    }
+    if(currentExercise.unit!=="PDC"&&numericWeight<=0){
+      setSetInputError("Renseigne la charge utilisée avant de valider.");
+      pulse([40,40,40]);
+      return;
+    }
+    setSetInputError("");
     pulse(18);
     if(currentExercise.superset?.length){
       logSupersetRound();
@@ -2421,6 +2485,32 @@ export default function Home(){
     : 0;
   const draftWeight=Number(String(weight||"0").replace(",","."));
   const draftReps=Math.max(0,Number(reps||0));
+  const canLogCurrentSet=Boolean(
+    currentExercise&&
+    Number(reps||0)>0&&
+    (currentExercise.unit==="PDC"||Number(String(weight||"0").replace(",","."))>0)
+  );
+  const plateCalculatorAvailable=Boolean(
+    currentExercise&&
+    currentExercise.equipment==="Barre"&&
+    currentExercise.unit==="kg"
+  );
+  const plateTargetKg=plateCalculatorAvailable?Number(String(weight||"0").replace(",",".")):0;
+  const plateCalculator=useMemo(()=>{
+    if(!plateCalculatorAvailable||plateTargetKg<=0) return {perSide:0,plates:[] as number[],remainder:0};
+    const bar=20;
+    const perSide=Math.max(0,(plateTargetKg-bar)/2);
+    let left=Math.round(perSide*100)/100;
+    const plates:number[]=[];
+    for(const plate of [20,10,5,2.5,1.25]){
+      while(left+0.001>=plate){
+        plates.push(plate);
+        left=Math.round((left-plate)*100)/100;
+      }
+    }
+    return {perSide,plates,remainder:left};
+  },[plateCalculatorAvailable,plateTargetKg]);
+
   const livePrHint=currentExercise&&currentPreviousBest
     ? currentExercise.unit==="PDC"
       ? draftReps>currentPreviousBest.reps
@@ -2996,7 +3086,7 @@ export default function Home(){
                 {activeHomeWorkout&&<div className="v15-hero-meta"><span>◷ ~{estimatedWorkoutMinutes(activeHomeWorkout)} min</span><span>⌁ {activeHomeWorkout.exercises.length} exercices</span></div>}
               </div>
               {activeHomeWorkout&&<div className="v15-hero-art"><ExerciseArt exercise={activeHomeWorkout.exercises[0]} large/></div>}
-              {activeHomeWorkout&&<button className="v15-hero-arrow" onClick={()=>startWorkout(activeHomeWorkout)}>→</button>}
+              {activeHomeWorkout&&<button className="v15-hero-arrow" onClick={()=>requestWorkoutStart(activeHomeWorkout)}>→</button>}
             </div>
 
             <button className={"v21-readiness "+(readinessScore<55?"low":readinessScore>=82?"high":"")} onClick={()=>{setTrackingView("sleep");setTab("analysis");}}>
@@ -3031,7 +3121,7 @@ export default function Home(){
               </div>
             </div>
 
-            {activeHomeWorkout&&<button className="primary v15-main-cta" onClick={()=>startWorkout(activeHomeWorkout)}>Démarrer {activeHomeDayIndex===todayIndex?"la séance":activeHomeWorkout.title} <span>→</span></button>}
+            {activeHomeWorkout&&<button className="primary v15-main-cta" onClick={()=>requestWorkoutStart(activeHomeWorkout)}>Démarrer {activeHomeDayIndex===todayIndex?"la séance":activeHomeWorkout.title} <span>→</span></button>}
 
             <button className="v15-coach-strip" onClick={()=>setTab("more")}>
               <div className="v15-coach-logo">C</div>
@@ -3209,7 +3299,7 @@ export default function Home(){
           <div className="v31-progress-copy">
             <span>{sessionProgress}%</span>
             <strong>{remainingExerciseCount} exercice{remainingExerciseCount>1?"s":""} restant{remainingExerciseCount>1?"s":""}</strong>
-            <small>≈ {estimatedRemainingMinutes} min</small>
+            <small>≈ {estimatedRemainingMinutes} min · fin {clock(now+estimatedRemainingMinutes*60000)}</small>
           </div>
           <i><b style={{width:sessionProgress+"%"}}/></i>
         </div>
@@ -3386,11 +3476,13 @@ export default function Home(){
               </div>
               <div className="v27-weight-shortcuts">
                 {(currentSetLogs.length>0||currentPrevious)&&<button type="button" className="repeat" onClick={repeatPreviousSet}>↻ Reprendre</button>}
+                {plateCalculatorAvailable&&<button type="button" className="plates" onClick={()=>setPlateCalculatorOpen(true)}>◉ Disques</button>}
                 {recommendedWeight!=null&&<button type="button" className="recommended" onClick={()=>setWeight(String(recommendedWeight))}>Cible {recommendedWeight}</button>}
                 {recentVariantWeights.filter(v=>v!==recommendedWeight).slice(0,2).map(v=><button type="button" key={v} onClick={()=>setWeight(String(v))}>{v} {currentExercise.unit}</button>)}
                 <button type="button" onClick={()=>adjustWeightDraft(incrementFor(currentExercise)*2)}>+{incrementFor(currentExercise)*2}</button>
               </div>
               {livePrHint&&<div className="v31-pr-hint"><i>↗</i><span>{livePrHint}</span></div>}
+              {setInputError&&<div className="v32-set-error">{setInputError}</div>}
             </>:<div className="v27-bodyweight">Poids du corps <span>La charge n’est pas nécessaire.</span></div>}
           </div>
           <div className="field"><label>Reps</label><div className="stepper"><button onClick={()=>setReps(String(Math.max(0,Number(reps)-1)))}>−</button><strong>{reps}</strong><button onClick={()=>setReps(String(Number(reps)+1))}>+</button></div></div>
@@ -3403,7 +3495,10 @@ export default function Home(){
             <span>{currentExercise?.superset?.length?"TOUR":"SÉRIE"} {Math.min((session?.setIndex??0)+1,effectiveTarget().sets)}/{effectiveTarget().sets}</span>
             <strong>{currentExercise?.name}</strong>
           </div>
-          <button onClick={currentExercise?.superset?.length?logSupersetRound:logSet}>
+          <button
+            className={!currentExercise?.superset?.length&&!canLogCurrentSet?"disabled":""}
+            onClick={currentExercise?.superset?.length?logSupersetRound:logSet}
+          >
             {currentExercise?.superset?.length?"Valider le tour":"Valider la série"} <b>✓</b>
           </button>
         </div>
@@ -3477,7 +3572,7 @@ export default function Home(){
           <div className="v25-coach-review-notes">
             {weeklyCoachNotes.map((note,index)=><div key={note}><i>{index+1}</i><span>{note}</span></div>)}
           </div>
-          {todayWorkout&&<button onClick={()=>startWorkout(todayWorkout)}>Continuer avec {todayWorkout.title} <span>→</span></button>}
+          {todayWorkout&&<button onClick={()=>requestWorkoutStart(todayWorkout)}>Continuer avec {todayWorkout.title} <span>→</span></button>}
         </div>
 
         {latestCardio&&<div className="v19-last-run">
@@ -3628,7 +3723,7 @@ export default function Home(){
           })}
           {selectedWorkout.exercises.length>5&&<div className="v19-more-exercises">+ {selectedWorkout.exercises.length-5} autres exercices</div>}
         </div>
-        <button className="primary v19-program-start" onClick={()=>startWorkout(selectedWorkout)}>Démarrer {selectedWorkout.title}</button>
+        <button className="primary v19-program-start" onClick={()=>requestWorkoutStart(selectedWorkout)}>Démarrer {selectedWorkout.title}</button>
       </div>
       <div className="v14-subsection-title"><span>RÉCUPÉRATION</span><strong>Routine sommeil</strong></div>
       <div className="v8-section-head v8-routine-title">
@@ -3952,6 +4047,73 @@ export default function Home(){
       </div>
     </div>}
 
+    {!session&&preflightWorkout&&<div className="v19-sheet-backdrop v32-preflight-backdrop" onClick={()=>setPreflightWorkoutId(null)}>
+      <div className="v19-sheet v32-preflight-sheet" onClick={e=>e.stopPropagation()}>
+        <div className="v19-sheet-handle"/>
+        <div className="v19-sheet-head">
+          <div><span>AVANT DE COMMENCER</span><h3>{preflightWorkout.title}</h3></div>
+          <button onClick={()=>setPreflightWorkoutId(null)}>×</button>
+        </div>
+
+        <div className="v32-preflight-hero">
+          <div className="v32-preflight-score"><strong>{readinessScore}</strong><span>forme</span></div>
+          <div><span>{readinessLabel}</span><strong>≈ {estimatedWorkoutMinutes(preflightWorkout)} min</strong><small>{preflightWorkout.exercises.length} exercices · {goalLabel(fitnessGoal)}</small></div>
+        </div>
+
+        {preflightWorkout.id!=="cardio"&&<div className="v32-preflight-list">
+          {preflightWorkout.exercises.map((base,index)=>{
+            const ex=resolveExerciseVariant(base,preferredExerciseVariants[base.id]);
+            return <div key={base.id}>
+              <span>{index+1}</span>
+              <div><strong>{ex.name}</strong><small>{ex.equipment??equipmentLabel(ex)} · {base.sets}×{base.repMin}–{base.repMax}</small></div>
+              <b>{index===0?"Départ":""}</b>
+            </div>;
+          })}
+        </div>}
+
+        {preflightWorkout.id!=="cardio"&&warmupPlanFor(preflightWorkout).length>0&&<div className="v32-warmup">
+          <div className="v32-section-head"><span>ÉCHAUFFEMENT CONSEILLÉ</span><small>non compté dans la séance</small></div>
+          {warmupPlanFor(preflightWorkout).map((item,index)=><div key={item.label}>
+            <i>{index+1}</i>
+            <span>{item.label}</span>
+            <strong>{item.weight} {item.exercise.unit} × {item.reps}</strong>
+          </div>)}
+        </div>}
+
+        <div className="v32-preflight-advice">
+          <i>{readinessScore<55?"!":"✓"}</i>
+          <span>{readinessScore<55?"Aujourd’hui, garde 2–3 RIR et réduis le volume si nécessaire.":"Pars proprement : la première série sert aussi à confirmer la charge du jour."}</span>
+        </div>
+
+        <button className="primary v32-start" onClick={()=>startWorkout(preflightWorkout)}>Démarrer la séance</button>
+      </div>
+    </div>}
+
+    {session&&plateCalculatorOpen&&currentExercise&&<div className="v19-sheet-backdrop v32-plate-backdrop" onClick={()=>setPlateCalculatorOpen(false)}>
+      <div className="v19-sheet v32-plate-sheet" onClick={e=>e.stopPropagation()}>
+        <div className="v19-sheet-handle"/>
+        <div className="v19-sheet-head">
+          <div><span>CALCULATEUR DE DISQUES</span><h3>{plateTargetKg||0} kg au total</h3></div>
+          <button onClick={()=>setPlateCalculatorOpen(false)}>×</button>
+        </div>
+        <div className="v32-bar-visual">
+          <div className="v32-bar-line"/>
+          <div className="v32-plates">
+            {plateCalculator.plates.length
+              ? plateCalculator.plates.map((plate,index)=><i key={index} data-size={plate}>{plate}</i>)
+              : <span>Barre seule</span>}
+          </div>
+        </div>
+        <div className="v32-plate-summary">
+          <div><span>Barre</span><strong>20 kg</strong></div>
+          <div><span>Par côté</span><strong>{plateCalculator.perSide.toFixed(2).replace(".00","")} kg</strong></div>
+        </div>
+        <p>{plateCalculator.plates.length?"De chaque côté : "+plateCalculator.plates.map(p=>p+" kg").join(" + "):"Aucun disque nécessaire."}</p>
+        {plateCalculator.remainder>0.01&&<div className="v32-plate-warning">Il manque {plateCalculator.remainder.toFixed(2)} kg par côté avec les disques standards disponibles.</div>}
+        <button className="secondary v32-close" onClick={()=>setPlateCalculatorOpen(false)}>Fermer</button>
+      </div>
+    </div>}
+
     {!session&&selectedHistorySession&&<div className="v19-sheet-backdrop" onClick={()=>setSelectedHistoryKey(null)}>
       <div className="v19-sheet v24-history-sheet" onClick={e=>e.stopPropagation()}>
         <div className="v19-sheet-handle"/>
@@ -4037,10 +4199,10 @@ export default function Home(){
           <button onClick={()=>setQuickMenuOpen(false)}>×</button>
         </div>
         <div className="v19-quick-grid">
-          {todayWorkout&&<button onClick={()=>{setQuickMenuOpen(false);startWorkout(todayWorkout);}}>
+          {todayWorkout&&<button onClick={()=>{setQuickMenuOpen(false);requestWorkoutStart(todayWorkout);}}>
             <i>▶</i><strong>Séance du jour</strong><small>{todayWorkout.title}</small>
           </button>}
-          <button onClick={()=>{setQuickMenuOpen(false);setSelectedWorkoutId("cardio");startWorkout(workouts.find(w=>w.id==="cardio")!);}}>
+          <button onClick={()=>{setQuickMenuOpen(false);setSelectedWorkoutId("cardio");requestWorkoutStart(workouts.find(w=>w.id==="cardio")!);}}>
             <i>⌁</i><strong>Course GPS</strong><small>Démarrer un run</small>
           </button>
           <button onClick={()=>{setQuickMenuOpen(false);setTab("programs");}}>
@@ -4102,7 +4264,7 @@ export default function Home(){
           <div>{selectedExerciseDetail.alternatives.map(alt=><b key={alt}>{alt}</b>)}</div>
         </div>}
 
-        {selectedExerciseWorkout&&<button className="primary v19-sheet-cta" onClick={()=>{setSelectedExerciseDetailId(null);setSelectedWorkoutId(selectedExerciseWorkout.id);startWorkout(selectedExerciseWorkout);}}>
+        {selectedExerciseWorkout&&<button className="primary v19-sheet-cta" onClick={()=>{setSelectedExerciseDetailId(null);setSelectedWorkoutId(selectedExerciseWorkout.id);requestWorkoutStart(selectedExerciseWorkout);}}>
           Démarrer {selectedExerciseWorkout.title}
         </button>}
       </div>
@@ -4112,7 +4274,7 @@ export default function Home(){
       <div className="v31-rest-copy">
         <span>REPOS</span>
         <strong>{formatTimer(rest)}</strong>
-        <small>{currentExercise?.name??currentWorkout.title}</small>
+        <small>{currentExercise?.name??currentWorkout.title}{adaptiveRestMessage?" · "+adaptiveRestMessage:""}</small>
       </div>
       <div className="v31-rest-actions">
         <button onClick={()=>adjustActiveRest(-15)}>−15</button>
