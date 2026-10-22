@@ -51,6 +51,13 @@ import {
   writeNativeHealthWorkout,
   type NativeHealthStatus
 } from "../lib/health";
+import {
+  cancelNativeRestNotification,
+  getNativeNotificationStatus,
+  nativeNotificationsAvailable,
+  requestNativeNotificationAuthorization,
+  scheduleNativeRestNotification
+} from "../lib/notifications-native";
 
 type CoachMode = "normal"|"tired"|"short"|"crowded";
 type FitnessGoal = "muscle"|"strength"|"fitness"|"recomposition";
@@ -696,7 +703,11 @@ export default function Home(){
       });
     }
 
-    if("serviceWorker" in navigator){
+    if(nativeNotificationsAvailable()){
+      void getNativeNotificationStatus().then(status=>{
+        setPushReady(status.authorization==="granted");
+      }).catch(()=>setPushReady(false));
+    }else if("serviceWorker" in navigator){
       void navigator.serviceWorker.register("/sw.js").then(async reg=>{
         try{
           const existing=await reg.pushManager.getSubscription();
@@ -951,11 +962,34 @@ export default function Home(){
     };
   },[restEndAt]);
 
-  function scheduleRestNotification(dueAt:number){
-    if(!notificationsEnabled || typeof navigator==="undefined" || !("serviceWorker" in navigator)) return;
+  function scheduleWebRestNotification(dueAt:number){
+    if(typeof navigator==="undefined"||!("serviceWorker" in navigator)) return;
     void navigator.serviceWorker.ready.then(reg=>{
       reg.active?.postMessage({type:"SCHEDULE_REST",dueAt});
     }).catch(()=>{});
+  }
+
+  function scheduleRestNotification(dueAt:number){
+    if(!notificationsEnabled) return;
+
+    if(nativeNotificationsAvailable()){
+      void scheduleNativeRestNotification(dueAt).then(()=>{
+        setPushReady(true);
+      }).catch(async()=>{
+        try{
+          const status=await requestNativeNotificationAuthorization();
+          if(status.authorization==="granted"){
+            setPushReady(true);
+            await scheduleNativeRestNotification(dueAt);
+            return;
+          }
+        }catch{}
+        scheduleWebRestNotification(dueAt);
+      });
+      return;
+    }
+
+    scheduleWebRestNotification(dueAt);
   }
 
   function startRestTimer(seconds:number){
@@ -978,6 +1012,9 @@ export default function Home(){
     setRestEndAt(null);
     setRestNotificationArmed(false);
     localStorage.removeItem("charlie-rest-end-at");
+    if(nativeNotificationsAvailable()){
+      void cancelNativeRestNotification().catch(()=>{});
+    }
     if(typeof navigator!=="undefined"&&"serviceWorker" in navigator){
       void navigator.serviceWorker.ready.then(reg=>reg.active?.postMessage({type:"CANCEL_REST"})).catch(()=>{});
     }
@@ -2307,6 +2344,27 @@ export default function Home(){
   }
 
   async function enableNotifications(){
+    if(nativeNotificationsAvailable()){
+      try{
+        const status=await requestNativeNotificationAuthorization();
+        if(status.authorization!=="granted"){
+          setPushReady(false);
+          setAccountMessage("Autorisation iPhone refusée. Active les notifications dans Réglages > Charlie Training.");
+          return;
+        }
+
+        setNotificationsEnabled(true);
+        setPushReady(true);
+        setPrefsLoaded(true);
+        setAccountMessage("Notifications iPhone activées. La fin du repos sera signalée même app fermée ou écran verrouillé.");
+        return;
+      }catch(error:any){
+        setPushReady(false);
+        setAccountMessage(`Activation des notifications iPhone impossible : ${error?.message??"erreur inconnue"}`);
+        return;
+      }
+    }
+
     if(typeof window==="undefined"||!("Notification" in window)||!("serviceWorker" in navigator)){
       setAccountMessage("Notifications non prises en charge sur ce navigateur.");
       return;
@@ -3770,9 +3828,9 @@ export default function Home(){
         <div className="v8-details-body">
           <div className="integration-card connected">
             <div><strong>Notifications</strong><span>Rappels coucher, séance et créatine.</span></div>
-            <b>{pushReady?"Cet appareil":notificationsEnabled?"Actif":"Off"}</b>
+            <b>{pushReady?"Cet appareil":nativeNotificationsAvailable()?"À autoriser":notificationsEnabled?"Actif":"Off"}</b>
           </div>
-          {!notificationsEnabled&&<button className="primary big" onClick={enableNotifications}>Activer les notifications</button>}
+          {(!notificationsEnabled||(nativeNotificationsAvailable()&&!pushReady))&&<button className="primary big" onClick={enableNotifications}>{nativeNotificationsAvailable()?"Autoriser sur cet iPhone":"Activer les notifications"}</button>}
           <div className="recovery-grid">
             <label className="time-card"><span>Rappel séance</span><input type="time" value={workoutReminderTime} onChange={e=>setWorkoutReminderTime(e.target.value)}/></label>
             <label className="time-card"><span>Rappel créatine</span><input type="time" value={creatineReminderTime} onChange={e=>setCreatineReminderTime(e.target.value)}/></label>
@@ -3884,7 +3942,7 @@ export default function Home(){
       </div>
       <div className="integration-card connected">
         <div><strong>Web Push</strong><span>Notifications de routine, entraînement et créatine.</span></div>
-        <b>{pushReady?"Cet appareil":notificationsEnabled?"Actif":"Off"}</b>
+        <b>{pushReady?"Cet appareil":nativeNotificationsAvailable()?"À autoriser":notificationsEnabled?"Actif":"Off"}</b>
       </div>
 
       <div className="section-title"><h3>Nolan</h3><span>adaptation séance</span></div>
