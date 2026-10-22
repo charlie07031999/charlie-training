@@ -568,6 +568,37 @@ export async function sendMagicLink(email:string){
 }
 
 
+export async function scheduleRestPushNotification(dueAt:number){
+  if(!supabase) return {ok:false,reason:"not_configured" as const};
+  const user=await ensureUser();
+  if(!user) return {ok:false,reason:"auth_failed" as const};
+
+  const {error}=await supabase
+    .from("scheduled_rest_notifications")
+    .upsert({
+      user_id:user.id,
+      due_at:new Date(dueAt).toISOString(),
+      status:"pending",
+      updated_at:new Date().toISOString()
+    },{onConflict:"user_id"});
+
+  return error?{ok:false,reason:error.message}:{ok:true};
+}
+
+export async function cancelRestPushNotification(){
+  if(!supabase) return {ok:false,reason:"not_configured" as const};
+  const user=await ensureUser();
+  if(!user) return {ok:false,reason:"auth_failed" as const};
+
+  const {error}=await supabase
+    .from("scheduled_rest_notifications")
+    .delete()
+    .eq("user_id",user.id);
+
+  return error?{ok:false,reason:error.message}:{ok:true};
+}
+
+
 export async function savePushSubscription(input:{
   endpoint:string;
   p256dh:string;
