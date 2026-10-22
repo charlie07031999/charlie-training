@@ -12,6 +12,8 @@ import {
   saveBodyMetric,
   savePreferences,
   savePushSubscription,
+  scheduleRestPushNotification,
+  cancelRestPushNotification,
   secureAnonymousAccount,
   sendMagicLink,
   setLightsOut,
@@ -963,6 +965,7 @@ export default function Home(){
   },[restEndAt]);
 
   function scheduleWebRestNotification(dueAt:number){
+    void scheduleRestPushNotification(dueAt).catch(()=>{});
     if(typeof navigator==="undefined"||!("serviceWorker" in navigator)) return;
     void navigator.serviceWorker.ready.then(reg=>{
       reg.active?.postMessage({type:"SCHEDULE_REST",dueAt});
@@ -1014,6 +1017,8 @@ export default function Home(){
     localStorage.removeItem("charlie-rest-end-at");
     if(nativeNotificationsAvailable()){
       void cancelNativeRestNotification().catch(()=>{});
+    }else{
+      void cancelRestPushNotification().catch(()=>{});
     }
     if(typeof navigator!=="undefined"&&"serviceWorker" in navigator){
       void navigator.serviceWorker.ready.then(reg=>reg.active?.postMessage({type:"CANCEL_REST"})).catch(()=>{});
