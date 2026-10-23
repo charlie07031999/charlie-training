@@ -763,6 +763,43 @@ export default function Home(){
   },[authUser?.id]);
 
   useEffect(()=>{
+    if(!authUser?.id||nativeHealthStatus?.available) return;
+
+    let cancelled=false;
+    let attempts=0;
+    let timer:number|undefined;
+
+    const probe=async()=>{
+      if(cancelled) return;
+      attempts+=1;
+
+      if(nativeHealthAvailable()){
+        try{
+          const status=await getNativeHealthStatus();
+          if(cancelled) return;
+          setNativeHealthStatus(status);
+          if(status.authorizationRequested){
+            void syncAppleHealthNow(false);
+          }else{
+            setHealthMessage("Apple Santé détecté sur cet iPhone. Appuie sur Autoriser Apple Santé.");
+          }
+          return;
+        }catch{}
+      }
+
+      if(attempts<16){
+        timer=window.setTimeout(()=>void probe(),250);
+      }
+    };
+
+    void probe();
+    return()=>{
+      cancelled=true;
+      if(timer) window.clearTimeout(timer);
+    };
+  },[authUser?.id,tab,nativeHealthStatus?.available]);
+
+  useEffect(()=>{
     const media=window.matchMedia("(prefers-color-scheme: dark)");
     const sync=()=>setSystemDark(media.matches);
     sync();
@@ -774,18 +811,28 @@ export default function Home(){
     const handleVisibility=()=>{
       if(
         document.visibilityState!=="visible" ||
-        !nativeHealthStatus?.authorizationRequested ||
         healthSyncing ||
-        Date.now()-lastHealthAutoSyncRef.current<10*60*1000
+        Date.now()-lastHealthAutoSyncRef.current<30*1000
       ) return;
 
+      if(!nativeHealthAvailable()) return;
+
       lastHealthAutoSyncRef.current=Date.now();
-      void syncAppleHealthNow(false);
+      void getNativeHealthStatus().then(status=>{
+        setNativeHealthStatus(status);
+        if(status.authorizationRequested){
+          void syncAppleHealthNow(false);
+        }
+      }).catch(()=>{});
     };
 
     document.addEventListener("visibilitychange",handleVisibility);
-    return()=>document.removeEventListener("visibilitychange",handleVisibility);
-  },[nativeHealthStatus?.authorizationRequested,healthSyncing]);
+    window.addEventListener("focus",handleVisibility);
+    return()=>{
+      document.removeEventListener("visibilitychange",handleVisibility);
+      window.removeEventListener("focus",handleVisibility);
+    };
+  },[healthSyncing]);
 
   useEffect(()=>{
     if(session) localStorage.setItem(SESSION_KEY,JSON.stringify(session));
@@ -1406,9 +1453,21 @@ export default function Home(){
     };
   }
 
+  function openNativeAppleHealth(){
+    if(typeof window==="undefined") return;
+    setHealthMessage("Ouverture de Charlie Training sur iPhone…");
+    const started=Date.now();
+    window.location.href="charlietraining://health";
+    window.setTimeout(()=>{
+      if(document.visibilityState==="visible"&&Date.now()-started>700){
+        setHealthMessage("Apple Santé exige l’app iPhone native Charlie Training. La version web ne peut pas accéder à HealthKit.");
+      }
+    },1200);
+  }
+
   async function syncAppleHealthNow(requestPermission=false){
     if(!nativeHealthAvailable()){
-      setHealthMessage("Apple Santé nécessite l’app iPhone native Charlie Training.");
+      openNativeAppleHealth();
       return;
     }
 
@@ -1422,17 +1481,25 @@ export default function Home(){
 
       setNativeHealthStatus(status);
 
+      if(!status.authorizationRequested){
+        const authorized=await requestNativeHealthAuthorization();
+        setNativeHealthStatus(authorized);
+      }
+
+      const finalStatus=await getNativeHealthStatus();
+      setNativeHealthStatus(finalStatus);
+
       const snapshot=await pullNativeHealthSnapshot(45);
       const synced=await syncAppleHealthSnapshot(snapshot,{
-        deviceId:status.deviceId,
-        permissions:status.writeAuthorization
+        deviceId:finalStatus.deviceId,
+        permissions:finalStatus.writeAuthorization
       });
 
       const imported=synced.imported;
       if(!synced.ok||!imported) throw new Error(String(synced.reason));
 
       setHealthMessage(
-        `Synchronisé : ${imported.sleep} nuit(s), ${imported.weights} poids, ${imported.workouts} entraînement(s).`
+        `Apple Santé connecté · ${imported.sleep} nuit(s), ${imported.weights} poids, ${imported.workouts} entraînement(s), ${imported.daily} jour(s) importé(s).`
       );
       await refreshCloud();
     }catch(error:any){
@@ -1440,7 +1507,9 @@ export default function Home(){
       setHealthMessage(
         message.includes("native_health_unavailable")
           ?"Ouvre Charlie Training depuis l’app iPhone native pour connecter Santé."
-          :"Impossible de synchroniser Apple Santé pour le moment."
+          :message.includes("sharingDenied")
+            ?"Autorisation Santé refusée. Active les accès dans Réglages > Santé > Accès aux données et appareils > Charlie Training."
+            :"Impossible de synchroniser Apple Santé. Vérifie les autorisations Santé sur l’iPhone."
       );
     }finally{
       setHealthSyncing(false);
@@ -3969,10 +4038,10 @@ export default function Home(){
           <div>
             <strong>{healthConnected?"Apple Santé synchronisé":"Connecter Apple Santé"}</strong>
             <span>{healthNativeReady
-              ?"Sommeil, poids, pas, fréquence cardiaque, énergie et entraînements."
-              :"HealthKit est prêt côté app. La connexion s’active depuis la version iPhone native."}</span>
+              ?"HealthKit détecté. Sommeil, poids, pas, fréquence cardiaque, énergie et entraînements peuvent être synchronisés."
+              :"Apple bloque HealthKit dans Safari/PWA. Le bouton ouvre l’app iPhone native pour lancer l’autorisation."}</span>
           </div>
-          <b>{healthSyncing?"SYNC…":healthConnected?"ACTIF":healthNativeReady?"PRÊT":"IPHONE"}</b>
+          <b>{healthSyncing?"SYNC…":healthConnected?"ACTIF":healthNativeReady?"PRÊT":"NATIF"}</b>
         </div>
 
         {latestHealthDay&&<div className="v20-health-metrics">
@@ -3993,8 +4062,8 @@ export default function Home(){
             onClick={()=>syncAppleHealthNow(Boolean(healthNativeReady&&!nativeHealthStatus?.authorizationRequested))}
           >
             {healthSyncing?"Synchronisation…":healthNativeReady
-              ?nativeHealthStatus?.authorizationRequested?"Synchroniser maintenant":"Autoriser Apple Santé"
-              :"Connecter Apple Santé"}
+              ?nativeHealthStatus?.authorizationRequested?"Synchroniser Apple Santé":"Autoriser Apple Santé"
+              :"Ouvrir l’app iPhone"}
           </button>
           {healthLastSyncLabel&&<small>Dernière synchronisation · {healthLastSyncLabel}</small>}
           {healthMessage&&<small className="v20-health-message">{healthMessage}</small>}
