@@ -1454,15 +1454,7 @@ export default function Home(){
   }
 
   function openNativeAppleHealth(){
-    if(typeof window==="undefined") return;
-    setHealthMessage("Ouverture de Charlie Training sur iPhone…");
-    const started=Date.now();
-    window.location.href="charlietraining://health";
-    window.setTimeout(()=>{
-      if(document.visibilityState==="visible"&&Date.now()-started>700){
-        setHealthMessage("Apple Santé exige l’app iPhone native Charlie Training. La version web ne peut pas accéder à HealthKit.");
-      }
-    },1200);
+    setHealthMessage("Tu utilises la version web/PWA. Apple Santé est bloqué ici par iOS : il faut ouvrir la vraie app iPhone Charlie Training pour autoriser HealthKit.");
   }
 
   async function syncAppleHealthNow(requestPermission=false){
@@ -4039,9 +4031,9 @@ export default function Home(){
             <strong>{healthConnected?"Apple Santé synchronisé":"Connecter Apple Santé"}</strong>
             <span>{healthNativeReady
               ?"HealthKit détecté. Sommeil, poids, pas, fréquence cardiaque, énergie et entraînements peuvent être synchronisés."
-              :"Apple bloque HealthKit dans Safari/PWA. Le bouton ouvre l’app iPhone native pour lancer l’autorisation."}</span>
+              :"Tu es sur la version web/PWA. Apple Santé ne peut pas être connecté depuis Safari : seule l’app iPhone native peut accéder à HealthKit."}</span>
           </div>
-          <b>{healthSyncing?"SYNC…":healthConnected?"ACTIF":healthNativeReady?"PRÊT":"NATIF"}</b>
+          <b>{healthSyncing?"SYNC…":healthConnected?"ACTIF":healthNativeReady?"PRÊT":"WEB"}</b>
         </div>
 
         {latestHealthDay&&<div className="v20-health-metrics">
@@ -4063,7 +4055,7 @@ export default function Home(){
           >
             {healthSyncing?"Synchronisation…":healthNativeReady
               ?nativeHealthStatus?.authorizationRequested?"Synchroniser Apple Santé":"Autoriser Apple Santé"
-              :"Ouvrir l’app iPhone"}
+              :"Version iPhone native requise"}
           </button>
           {healthLastSyncLabel&&<small>Dernière synchronisation · {healthLastSyncLabel}</small>}
           {healthMessage&&<small className="v20-health-message">{healthMessage}</small>}
