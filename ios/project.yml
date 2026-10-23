@@ -21,6 +21,10 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: Charlie Training
+        CFBundleURLTypes:
+          - CFBundleURLName: fr.charlie.training
+            CFBundleURLSchemes:
+              - charlietraining
         NSHealthShareUsageDescription: Charlie utilise tes données Santé pour adapter ton sommeil, ta récupération, tes entraînements et ton suivi quotidien.
         NSHealthUpdateUsageDescription: Charlie peut enregistrer dans Santé les entraînements, le sommeil et le poids ajoutés dans l’app.
         NSLocationWhenInUseUsageDescription: Charlie utilise ta position pendant tes courses pour enregistrer la distance, l’allure et le parcours, y compris lorsque l’écran est verrouillé.

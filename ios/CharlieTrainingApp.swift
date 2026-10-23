@@ -8,6 +8,14 @@ struct CharlieTrainingApp: App {
         WindowGroup {
             HealthWebView(manager: health)
                 .ignoresSafeArea()
+                .onOpenURL { url in
+                    guard url.scheme?.lowercased() == "charlietraining",
+                          url.host?.lowercased() == "health" else { return }
+
+                    Task { @MainActor in
+                        _ = try? await health.requestAuthorization()
+                    }
+                }
         }
     }
 }
