@@ -818,6 +818,22 @@ export default function Home(){
   },[]);
 
   useEffect(()=>{
+    const unsubscribe=subscribeToAuthChanges((event,user)=>{
+      setAuthUser(user);
+
+      if(event==="SIGNED_OUT"){
+        setCloudStatus("auth");
+        return;
+      }
+
+      if(user&&["INITIAL_SESSION","SIGNED_IN","USER_UPDATED","TOKEN_REFRESHED"].includes(event)){
+        window.setTimeout(()=>void refreshCloud(),0);
+      }
+    });
+    return unsubscribe;
+  },[]);
+
+  useEffect(()=>{
     const t=setInterval(()=>setNow(Date.now()),1000);
     return()=>clearInterval(t);
   },[]);
@@ -1767,7 +1783,7 @@ export default function Home(){
 
     const next=[...completedSessions,item].sort((a,b)=>a.finishedAt-b.finishedAt);
     setCompletedSessions(next);
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
+    persistSessionCache(next,authUser&&!authUser.is_anonymous?authUser.id:null);
     setSession(null);
     stopRestTimer();
     setCloudStatus("syncing");
@@ -2584,6 +2600,7 @@ export default function Home(){
     if(!email) return;
     setAccountMessage("Envoi…");
     const res=await secureAnonymousAccount(email);
+    if(res.ok) localStorage.setItem(LAST_SECURED_EMAIL_KEY,email);
     setAccountMessage(res.ok
       ?"Vérifie ton email pour sécuriser ce compte."
       : `Impossible pour l’instant : ${res.reason}`);
@@ -2591,13 +2608,22 @@ export default function Home(){
   }
 
   async function requestMagicLink(){
-    const email=accountEmail.trim()||authUser?.email||"";
-    if(!email) return;
+    const email=accountEmail.trim()||authUser?.email||localStorage.getItem(LAST_SECURED_EMAIL_KEY)||"";
+    if(!email){
+      setAccountMessage("Entre l’email de ton compte sécurisé.");
+      return;
+    }
+    localStorage.setItem(LAST_SECURED_EMAIL_KEY,email);
     setAccountMessage("Envoi…");
     const res=await sendMagicLink(email);
     setAccountMessage(res.ok
-      ?"Lien de connexion envoyé. Ouvre-le sur l’appareil à connecter."
+      ?"Lien envoyé. Ouvre-le sur cet appareil : ton historique se rechargera automatiquement."
       : `Impossible : ${res.reason}`);
+  }
+
+  async function manualCloudSync(){
+    setCloudStatus("syncing");
+    await refreshCloud();
   }
 
   async function completeOnboarding(){
@@ -2606,6 +2632,16 @@ export default function Home(){
     setOnboardingCompleted(true);
     setOnboardingStep(0);
     setCloudStatus("syncing");
+
+    if(!authUser){
+      const user=await startAnonymousAccount();
+      if(!user){
+        setCloudStatus("error");
+        setAccountMessage("Impossible de créer la session locale.");
+        return;
+      }
+      setAuthUser(user);
+    }
 
     const res=await savePreferences({
       display_name:displayName.trim()||"Charlie",
@@ -3053,7 +3089,15 @@ export default function Home(){
     : null;
 
   const authAnonymous=Boolean(authUser?.is_anonymous);
-  const cloudLabel=cloudLoading?"Chargement":cloudStatus==="ok"?"Synchronisé":cloudStatus==="syncing"?"Synchro…":"À vérifier";
+  const cloudLabel=cloudLoading
+    ?"Chargement"
+    :cloudStatus==="ok"
+      ?"Synchronisé"
+      :cloudStatus==="syncing"
+        ?"Synchro…"
+        :cloudStatus==="auth"
+          ?"Reconnecter"
+          :"Mode local";
 
   const resolvedAppearance=appearanceMode==="auto"?(systemDark?"dark":"light"):appearanceMode;
   const activeAppearance=resolvedAppearance;
