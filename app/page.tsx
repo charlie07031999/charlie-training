@@ -13,6 +13,8 @@ import {
   savePreferences,
   savePushSubscription,
   scheduleRestPushNotification,
+  startAnonymousAccount,
+  subscribeToAuthChanges,
   cancelRestPushNotification,
   secureAnonymousAccount,
   sendMagicLink,
@@ -128,7 +130,47 @@ type WorkoutFinishSummary = {
 };
 
 const STORAGE_KEY="charlie-training-v4-cache";
+const BACKUP_STORAGE_KEY="charlie-training-v4-backup";
+const CACHE_OWNER_KEY="charlie-training-cache-owner-v1";
+const LAST_SECURED_EMAIL_KEY="charlie-training-last-secured-email-v1";
 const SESSION_KEY="charlie-training-live-v4";
+
+function readCachedSessions():CompletedSession[]{
+  if(typeof window==="undefined") return [];
+  for(const key of [STORAGE_KEY,BACKUP_STORAGE_KEY]){
+    try{
+      const raw=localStorage.getItem(key);
+      if(!raw) continue;
+      const parsed=JSON.parse(raw);
+      if(Array.isArray(parsed)&&parsed.length) return parsed as CompletedSession[];
+    }catch{}
+  }
+  return [];
+}
+
+function mergeCompletedSessions(
+  local:CompletedSession[],
+  remote:CompletedSession[]
+){
+  const byKey=new Map<string,CompletedSession>();
+  for(const item of local){
+    const key=item.clientSessionId||item.id||String(item.finishedAt);
+    byKey.set(key,item);
+  }
+  for(const item of remote){
+    const key=item.clientSessionId||item.id||String(item.finishedAt);
+    byKey.set(key,item);
+  }
+  return [...byKey.values()].sort((a,b)=>a.finishedAt-b.finishedAt);
+}
+
+function persistSessionCache(items:CompletedSession[],ownerId?:string|null){
+  if(typeof window==="undefined") return;
+  const raw=JSON.stringify(items);
+  localStorage.setItem(STORAGE_KEY,raw);
+  if(items.length) localStorage.setItem(BACKUP_STORAGE_KEY,raw);
+  if(ownerId) localStorage.setItem(CACHE_OWNER_KEY,ownerId);
+}
 
 const dayLabels=["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
 
@@ -483,7 +525,9 @@ export default function Home(){
   const lastHealthAutoSyncRef=useRef(0);
   const [authUser,setAuthUser]=useState<any>(null);
   const [cloudLoading,setCloudLoading]=useState(true);
-  const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error">("idle");
+  const [cloudStatus,setCloudStatus]=useState<"idle"|"syncing"|"ok"|"error"|"auth">("idle");
+  const [lastCloudSyncAt,setLastCloudSyncAt]=useState<number|null>(null);
+  const [recoveryOpen,setRecoveryOpen]=useState(false);
 
   const [rest,setRest]=useState(0);
   const [restStartedSeconds,setRestStartedSeconds]=useState(0);
