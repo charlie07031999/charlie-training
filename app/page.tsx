@@ -741,7 +741,12 @@ export default function Home(){
       setFitnessGoal((state.preferences.fitness_goal||"muscle") as FitnessGoal);
       setExperienceLevel((state.preferences.experience_level||"intermediate") as ExperienceLevel);
       setTrainingDays(Math.max(3,Math.min(5,Number(state.preferences.training_days??5))));
-      setOnboardingCompleted(Boolean(state.preferences.onboarding_completed));
+      const hasRecoveryContext=Boolean(rememberedEmail||cached.length);
+      setOnboardingCompleted(
+        state.user.is_anonymous&&hasRecoveryContext
+          ? true
+          : Boolean(state.preferences.onboarding_completed)
+      );
       setPlanStartedAt(state.preferences.plan_started_at??null);
       setPreferredExerciseVariants((state.preferences.preferred_exercise_variants??{}) as Record<string,string>);
     }else if(!state.user.is_anonymous&&!state.preferencesError){
