@@ -3093,7 +3093,7 @@ export default function Home(){
     ? new Date(healthSyncState.last_pull_at).toLocaleString("fr-FR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})
     : null;
 
-  const authAnonymous=Boolean(authUser?.is_anonymous);
+  const authAnonymous=!authUser||Boolean(authUser?.is_anonymous);
   const cloudLabel=cloudLoading
     ?"Chargement"
     :cloudStatus==="ok"
@@ -3389,7 +3389,7 @@ export default function Home(){
           </div>
         :
           <div className="v15-home">
-            {(authAnonymous||cloudStatus==="auth")&&<div className="v37-account-alert">
+            {!cloudLoading&&(authAnonymous||cloudStatus==="auth")&&<div className="v37-account-alert">
               <div className="v37-account-alert-icon">↻</div>
               <div>
                 <span>MODE TEMPORAIRE</span>
@@ -4132,11 +4132,16 @@ export default function Home(){
 
       <div className="section-title"><h3>Compte & synchronisation</h3><span>{authAnonymous?"à sécuriser":"sécurisé"}</span></div>
       <div className="account-card">
-        <strong>{authAnonymous?"Sécuriser tes données":"Compte sécurisé"}</strong>
-        <p>{authAnonymous
-          ?"Ajoute ton email pour retrouver tes données sur un nouvel iPhone ou ton Mac."
-          :"Tes données sont synchronisées avec "+(authUser?.email??"ton compte")+"."}</p>
-        {authAnonymous?<>
+        <strong>{!authUser?"Reconnecter ton compte":authAnonymous?"Sécuriser tes données":"Compte sécurisé"}</strong>
+        <p>{!authUser
+          ?"Aucune session cloud active. Reconnecte ton compte sécurisé sans perdre la copie locale."
+          :authAnonymous
+            ?"Ce mode est temporaire. Sécurise-le ou reconnecte ton compte existant."
+            :"Tes données sont synchronisées avec "+(authUser?.email??"ton compte")+"."}</p>
+        {!authUser?<>
+          <input type="email" placeholder="ton@email.fr" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/>
+          <button className="primary v37-full-account-action" onClick={requestMagicLink}>Reconnecter mon compte</button>
+        </>:authAnonymous?<>
           <input type="email" placeholder="ton@email.fr" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/>
           <div className="account-actions">
             <button className="primary" onClick={secureAccount}>Sécuriser ce compte</button>
