@@ -135,12 +135,29 @@ export type CloudPreferences = {
 async function ensureUser():Promise<User|null> {
   if (!supabase) return null;
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (sessionData.session?.user) return sessionData.session.user;
-
-  const { data, error } = await supabase.auth.signInAnonymously();
+  const { data: sessionData, error } = await supabase.auth.getSession();
   if (error) return null;
+  return sessionData.session?.user ?? null;
+}
+
+export async function startAnonymousAccount():Promise<User|null>{
+  if(!supabase) return null;
+  const existing=await ensureUser();
+  if(existing) return existing;
+
+  const {data,error}=await supabase.auth.signInAnonymously();
+  if(error) return null;
   return data.user ?? null;
+}
+
+export function subscribeToAuthChanges(
+  callback:(event:string,user:User|null)=>void
+){
+  if(!supabase) return ()=>{};
+  const {data}=supabase.auth.onAuthStateChange((event,session)=>{
+    callback(event,session?.user??null);
+  });
+  return ()=>data.subscription.unsubscribe();
 }
 
 export async function loadCloudState() {
@@ -202,6 +219,10 @@ export async function loadCloudState() {
     journey:(journeyRes.data ?? []) as CloudJourneyEvent[],
     healthDaily:(healthDailyRes.data ?? []) as CloudHealthDailyMetric[],
     healthSync:(healthSyncRes.data ?? null) as CloudHealthSyncState|null,
+    workoutsError:Boolean(workoutsRes.error),
+    sleepError:Boolean(sleepRes.error),
+    metricsError:Boolean(metricsRes.error),
+    preferencesError:Boolean(prefsRes.error),
     errors:[
       workoutsRes.error,
       sleepRes.error,
