@@ -844,6 +844,26 @@ export default function Home(){
   },[authUser?.id,session?.clientSessionId]);
 
   useEffect(()=>{
+    if(!authUser?.id) return;
+
+    const syncIfNeeded=()=>{
+      if(document.visibilityState!=="visible") return;
+      if(cloudLoading) return;
+      if(lastCloudSyncAt&&Date.now()-lastCloudSyncAt<60_000) return;
+      void refreshCloud();
+    };
+
+    document.addEventListener("visibilitychange",syncIfNeeded);
+    window.addEventListener("focus",syncIfNeeded);
+    window.addEventListener("online",syncIfNeeded);
+    return()=>{
+      document.removeEventListener("visibilitychange",syncIfNeeded);
+      window.removeEventListener("focus",syncIfNeeded);
+      window.removeEventListener("online",syncIfNeeded);
+    };
+  },[authUser?.id,cloudLoading,lastCloudSyncAt]);
+
+  useEffect(()=>{
     const t=setInterval(()=>setNow(Date.now()),1000);
     return()=>clearInterval(t);
   },[]);
