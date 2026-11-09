@@ -630,9 +630,20 @@ export default function Home(){
 
   async function refreshCloud(){
     setCloudLoading(true);
+    const cached=readCachedSessions();
+    const cachedOwner=localStorage.getItem(CACHE_OWNER_KEY);
+    const rememberedEmail=localStorage.getItem(LAST_SECURED_EMAIL_KEY);
     const state=await loadCloudState();
+
     if(!state){
-      setCloudStatus("error");
+      if(cached.length) setCompletedSessions(cached);
+      if(rememberedEmail) setAccountEmail(rememberedEmail);
+      setAuthUser(null);
+      setCloudStatus("auth");
+      setRecoveryOpen(Boolean(rememberedEmail||cached.length));
+      if(!rememberedEmail&&!cached.length) setOnboardingCompleted(false);
+      setProfileLoaded(true);
+      setPrefsLoaded(true);
       setCloudLoading(false);
       return;
     }
@@ -651,32 +662,72 @@ export default function Home(){
       exerciseVariants:(s.exercise_variants??{}) as Record<string,string>
     })).sort((a,b)=>a.finishedAt-b.finishedAt);
 
-    setCompletedSessions(mapped);
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(mapped));
+    const cacheBelongsToCurrent=!cachedOwner||cachedOwner===state.user.id;
+    const merged=state.workoutsError
+      ? (cacheBelongsToCurrent&&cached.length?cached:mapped)
+      : cacheBelongsToCurrent
+        ? mergeCompletedSessions(cached,mapped)
+        : mapped;
 
-    setSleepSessions(state.sleep.map(s=>({
-      id:s.id,
-      bedAt:new Date(s.bed_at).getTime(),
-      lightsOutAt:s.lights_out_at?new Date(s.lights_out_at).getTime():null,
-      plannedWakeAt:s.planned_wake_at?new Date(s.planned_wake_at).getTime():null,
-      wakeAt:s.wake_at?new Date(s.wake_at).getTime():null,
-      quality:s.quality??null,
-      energy:s.energy??null,
-      notes:s.notes??null
-    })));
+    setCompletedSessions(merged);
 
-    setBodyMetrics(state.metrics.map(m=>({
-      id:m.id,
-      recordedAt:new Date(m.recorded_at).getTime(),
-      weightKg:m.weight_kg==null?null:Number(m.weight_kg),
-      waistCm:m.waist_cm==null?null:Number(m.waist_cm)
-    })));
+    if(!state.user.is_anonymous){
+      persistSessionCache(merged,state.user.id);
+      if(state.user.email){
+        localStorage.setItem(LAST_SECURED_EMAIL_KEY,state.user.email);
+        setAccountEmail(state.user.email);
+      }
+      setRecoveryOpen(false);
+
+      if(!state.workoutsError&&cacheBelongsToCurrent&&cached.length){
+        const remoteIds=new Set(mapped.map(item=>item.clientSessionId));
+        const pending=cached.filter(item=>!remoteIds.has(item.clientSessionId));
+        for(const item of pending.slice(0,20)){
+          void syncWorkoutSession({
+            clientSessionId:item.clientSessionId,
+            workoutId:item.workoutId,
+            startedAt:item.startedAt,
+            finishedAt:item.finishedAt,
+            logs:item.logs,
+            cardio:item.cardio as Record<string,unknown>|null,
+            coachMode:item.coachMode,
+            notes:item.notes,
+            exerciseVariants:item.exerciseVariants??{}
+          });
+        }
+      }
+    }else{
+      if(!cachedOwner&&merged.length) persistSessionCache(merged,null);
+      setRecoveryOpen(Boolean(rememberedEmail));
+    }
+
+    if(!state.sleepError){
+      setSleepSessions(state.sleep.map(s=>({
+        id:s.id,
+        bedAt:new Date(s.bed_at).getTime(),
+        lightsOutAt:s.lights_out_at?new Date(s.lights_out_at).getTime():null,
+        plannedWakeAt:s.planned_wake_at?new Date(s.planned_wake_at).getTime():null,
+        wakeAt:s.wake_at?new Date(s.wake_at).getTime():null,
+        quality:s.quality??null,
+        energy:s.energy??null,
+        notes:s.notes??null
+      })));
+    }
+
+    if(!state.metricsError){
+      setBodyMetrics(state.metrics.map(m=>({
+        id:m.id,
+        recordedAt:new Date(m.recorded_at).getTime(),
+        weightKg:m.weight_kg==null?null:Number(m.weight_kg),
+        waistCm:m.waist_cm==null?null:Number(m.waist_cm)
+      })));
+    }
 
     setJourneyEvents(state.journey??[]);
     setHealthDaily(state.healthDaily??[]);
     setHealthSyncStateLocal(state.healthSync??null);
 
-    if(state.preferences){
+    if(state.preferences&&!state.preferencesError){
       setSleepTarget(state.preferences.sleep_target.slice(0,5));
       setWakeTarget(state.preferences.wake_target.slice(0,5));
       setPrepTarget(state.preferences.prep_target.slice(0,5));
@@ -693,21 +744,23 @@ export default function Home(){
       setOnboardingCompleted(Boolean(state.preferences.onboarding_completed));
       setPlanStartedAt(state.preferences.plan_started_at??null);
       setPreferredExerciseVariants((state.preferences.preferred_exercise_variants??{}) as Record<string,string>);
-    }else{
+    }else if(!state.user.is_anonymous&&!state.preferencesError){
       setOnboardingCompleted(false);
     }
+
     setProfileLoaded(true);
     setPrefsLoaded(true);
+    setLastCloudSyncAt(Date.now());
     setCloudStatus(state.errors.length?"error":"ok");
     setCloudLoading(false);
   }
 
   useEffect(()=>{
     let restoredLocal:SessionState|null=null;
-    try{
-      const cached=JSON.parse(localStorage.getItem(STORAGE_KEY)??"[]");
-      if(Array.isArray(cached)) setCompletedSessions(cached);
-    }catch{}
+    const cached=readCachedSessions();
+    if(cached.length) setCompletedSessions(cached);
+    const rememberedEmail=localStorage.getItem(LAST_SECURED_EMAIL_KEY);
+    if(rememberedEmail) setAccountEmail(rememberedEmail);
     try{
       const raw=localStorage.getItem(SESSION_KEY);
       if(raw){
