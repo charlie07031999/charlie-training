@@ -839,6 +839,11 @@ export default function Home(){
   },[]);
 
   useEffect(()=>{
+    if(!authUser?.id||!session?.clientSessionId) return;
+    void pushLiveSession(session,"auth_reconnected");
+  },[authUser?.id,session?.clientSessionId]);
+
+  useEffect(()=>{
     const t=setInterval(()=>setNow(Date.now()),1000);
     return()=>clearInterval(t);
   },[]);
