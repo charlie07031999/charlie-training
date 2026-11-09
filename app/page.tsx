@@ -3384,6 +3384,16 @@ export default function Home(){
           </div>
         :
           <div className="v15-home">
+            {(authAnonymous||cloudStatus==="auth")&&<div className="v37-account-alert">
+              <div className="v37-account-alert-icon">↻</div>
+              <div>
+                <span>MODE TEMPORAIRE</span>
+                <strong>Reconnecte ton compte pour charger tout ton historique.</strong>
+                <small>Les données déjà enregistrées restent protégées : l’app ne les efface plus si la session cloud disparaît.</small>
+              </div>
+              <button onClick={()=>setRecoveryOpen(true)}>Reconnecter</button>
+            </div>}
+
             <div className="v15-calendar" aria-label="Choisir un jour">
               {homeWeekDays.map(day=><button
                 key={day.short}
@@ -4125,11 +4135,15 @@ export default function Home(){
           <input type="email" placeholder="ton@email.fr" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/>
           <div className="account-actions">
             <button className="primary" onClick={secureAccount}>Sécuriser ce compte</button>
-            <button className="secondary" onClick={requestMagicLink}>J’ai déjà un compte</button>
+            <button className="secondary" onClick={()=>setRecoveryOpen(true)}>J’ai déjà un compte</button>
           </div>
         </>:<>
           <div className="v18-secure-email"><span>EMAIL</span><strong>{authUser?.email??"Compte connecté"}</strong><i>✓</i></div>
-          <button className="secondary v18-login-link" onClick={requestMagicLink}>Connecter un autre appareil</button>
+          <div className="v37-sync-actions">
+            <button className="secondary" onClick={manualCloudSync} disabled={cloudLoading}>{cloudLoading?"Synchronisation…":"Synchroniser maintenant"}</button>
+            <button className="secondary" onClick={requestMagicLink}>Connecter un autre appareil</button>
+          </div>
+          {lastCloudSyncAt&&<small className="v37-last-sync">Dernière synchro · {new Date(lastCloudSyncAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})} · {completedSessions.length} séance{completedSessions.length>1?"s":""}</small>}
         </>}
         {accountMessage&&<small>{accountMessage}</small>}
       </div>
@@ -4525,6 +4539,30 @@ export default function Home(){
 
         <button className="v22-finish-primary" onClick={()=>setLastWorkoutSummary(null)}>Terminer</button>
         <button className="v22-finish-secondary" onClick={()=>{setLastWorkoutSummary(null);setTrackingView("training");setTab("analysis");}}>Voir ma progression</button>
+      </div>
+    </div>}
+
+    {!session&&recoveryOpen&&<div className="v19-sheet-backdrop v37-recovery-backdrop" onClick={()=>setRecoveryOpen(false)}>
+      <div className="v19-sheet v37-recovery-sheet" onClick={e=>e.stopPropagation()}>
+        <div className="v19-sheet-handle"/>
+        <div className="v19-sheet-head">
+          <div><span>RÉCUPÉRATION DU COMPTE</span><h3>Retrouver mon historique</h3></div>
+          <button onClick={()=>setRecoveryOpen(false)}>×</button>
+        </div>
+
+        <div className="v37-recovery-safe">
+          <i>✓</i>
+          <div><strong>Ton historique n’est pas supprimé.</strong><span>La copie locale est conservée et le cloud ne peut plus la remplacer par du vide.</span></div>
+        </div>
+
+        <label className="v37-recovery-email">
+          <span>Email du compte sécurisé</span>
+          <input type="email" placeholder="ton@email.fr" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/>
+        </label>
+
+        <button className="primary v37-recovery-cta" onClick={requestMagicLink}>Envoyer le lien de connexion</button>
+        {accountMessage&&<div className="v37-recovery-message">{accountMessage}</div>}
+        <button className="ghost v37-recovery-later" onClick={()=>setRecoveryOpen(false)}>Continuer en mode temporaire</button>
       </div>
     </div>}
 
