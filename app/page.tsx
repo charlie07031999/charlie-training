@@ -1327,8 +1327,12 @@ export default function Home(){
   const todayIndex=(new Date().getDay()+6)%7;
 
   const dueWorkoutId=useMemo(()=>{
-    if(isHyroxWeek(now)) return null;
     const today=schedule[todayIndex];
+    // Keep the normal Mon–Thu sessions; no catch-up during the HYROX week.
+    if(isHyroxWeek(now)){
+      return todayIndex<=3&&today.workoutId&&!doneWorkoutIds.has(today.workoutId)
+        ? today.workoutId : null;
+    }
     if(today.workoutId&&!doneWorkoutIds.has(today.workoutId)) return today.workoutId;
     const missed=schedule
       .slice(0,todayIndex)
@@ -4074,7 +4078,7 @@ export default function Home(){
     {tab==="programs"&&<section className="v14-programs-screen">
       <HyroxWeek now={now}/>
       <div className="v14-page-title">
-        <span>{isHyroxWeek(now)?"CYCLE HABITUEL · EN PAUSE CETTE SEMAINE":"PROGRAMME ACTUEL"}</span>
+        <span>{isHyroxWeek(now)?"CYCLE HABITUEL · VOLUME ADAPTÉ CETTE SEMAINE":"PROGRAMME ACTUEL"}</span>
         <h2>Ta semaine</h2>
         <p>Ton plan d’entraînement et ta récupération au même endroit.</p>
       </div>
