@@ -1,3 +1,4 @@
+import { parseRecoveryLink } from "./auth-link";
 import { createClient, type User } from "@supabase/supabase-js";
 import type { NativeHealthSnapshot } from "./health";
 
@@ -132,17 +133,20 @@ export type CloudPreferences = {
   preferred_exercise_variants:Record<string,string>;
 };
 
-async function ensureUser():Promise<User|null> {
+async function ensureUser(throwOnError=false):Promise<User|null> {
   if (!supabase) return null;
 
   const { data: sessionData, error } = await supabase.auth.getSession();
-  if (error) return null;
+  if (error) {
+    if(throwOnError) throw error;
+    return null;
+  }
   return sessionData.session?.user ?? null;
 }
 
 export async function startAnonymousAccount():Promise<User|null>{
   if(!supabase) return null;
-  const existing=await ensureUser();
+  const existing=await ensureUser(true);
   if(existing) return existing;
 
   const {data,error}=await supabase.auth.signInAnonymously();
@@ -162,7 +166,7 @@ export function subscribeToAuthChanges(
 
 export async function loadCloudState() {
   if (!supabase) return null;
-  const user = await ensureUser();
+  const user = await ensureUser(true);
   if (!user) return null;
 
   try{ await supabase.rpc("seed_training_journey"); }catch{}
@@ -808,4 +812,11 @@ export async function markHealthPush(input:{deviceId?:string|null;error?:string|
     last_push_at:new Date().toISOString(),
     last_error:input.error ?? null
   });
+}
+
+export async function connectFromEmailLink(link:string){
+  if(!supabase) throw new Error("Cloud indisponible");
+  const payload=parseRecoveryLink(link,url);
+  const {error}=await supabase.auth.verifyOtp(payload);
+  if(error) throw error;
 }

@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ReconnectLink } from "./reconnect-link";
+import { HyroxWeek } from "./hyrox-week";
+import { isHyroxWeek } from "../lib/hyrox-week";
 import { exerciseVariants, history, workouts } from "../lib/workouts";
 import type { CardioLog, CardioRoutePoint, CardioSplit, Exercise, ExerciseVariant, SetLog, SupersetPart, Workout } from "../lib/types";
 import {
@@ -628,12 +631,16 @@ export default function Home(){
     ? (exerciseVariants[currentBaseExercise.id]??[])
     : [];
 
+  const cloudRefreshVersion=useRef(0);
   async function refreshCloud(){
+    const version=++cloudRefreshVersion.current;
     setCloudLoading(true);
+    try {
     const cached=readCachedSessions();
     const cachedOwner=localStorage.getItem(CACHE_OWNER_KEY);
     const rememberedEmail=localStorage.getItem(LAST_SECURED_EMAIL_KEY);
     const state=await loadCloudState();
+    if(version!==cloudRefreshVersion.current) return;
 
     if(!state){
       if(cached.length) setCompletedSessions(cached);
@@ -757,7 +764,15 @@ export default function Home(){
     setPrefsLoaded(true);
     setLastCloudSyncAt(Date.now());
     setCloudStatus(state.errors.length?"error":"ok");
-    setCloudLoading(false);
+    } catch {
+      if(version===cloudRefreshVersion.current){
+        setCloudStatus("error");
+        setAccountMessage("Connexion momentanément indisponible. Ta session et tes données locales sont conservées. Réessaie la synchronisation.");
+        setProfileLoaded(true);
+      }
+    } finally {
+      if(version===cloudRefreshVersion.current) setCloudLoading(false);
+    }
   }
 
   useEffect(()=>{
@@ -827,11 +842,14 @@ export default function Home(){
       setAuthUser(user);
 
       if(event==="SIGNED_OUT"){
+        cloudRefreshVersion.current++;
+        setCloudLoading(false);
         setCloudStatus("auth");
         return;
       }
 
       if(user&&["INITIAL_SESSION","SIGNED_IN","USER_UPDATED","TOKEN_REFRESHED"].includes(event)){
+        cloudRefreshVersion.current++;
         window.setTimeout(()=>void refreshCloud(),0);
       }
     });
@@ -844,12 +862,10 @@ export default function Home(){
   },[authUser?.id,session?.clientSessionId]);
 
   useEffect(()=>{
-    if(!authUser?.id) return;
-
     const syncIfNeeded=()=>{
       if(document.visibilityState!=="visible") return;
       if(cloudLoading) return;
-      if(lastCloudSyncAt&&Date.now()-lastCloudSyncAt<60_000) return;
+      if(authUser?.id&&lastCloudSyncAt&&Date.now()-lastCloudSyncAt<60_000) return;
       void refreshCloud();
     };
 
@@ -1311,13 +1327,14 @@ export default function Home(){
   const todayIndex=(new Date().getDay()+6)%7;
 
   const dueWorkoutId=useMemo(()=>{
+    if(isHyroxWeek(now)) return null;
     const today=schedule[todayIndex];
     if(today.workoutId&&!doneWorkoutIds.has(today.workoutId)) return today.workoutId;
     const missed=schedule
       .slice(0,todayIndex)
       .filter(x=>x.workoutId&&!doneWorkoutIds.has(x.workoutId));
     return missed.at(-1)?.workoutId??null;
-  },[todayIndex,doneWorkoutIds,schedule]);
+  },[todayIndex,doneWorkoutIds,schedule,now]);
 
   useEffect(()=>{
     if(!session&&dueWorkoutId) setSelectedWorkoutId(dueWorkoutId);
@@ -2647,7 +2664,7 @@ export default function Home(){
     setAccountMessage("Envoi…");
     const res=await sendMagicLink(email);
     setAccountMessage(res.ok
-      ?"Lien envoyé. Ouvre-le sur cet appareil : ton historique se rechargera automatiquement."
+      ?"Lien envoyé. Pour rester connecté dans cette app, copie le lien reçu par email puis colle-le ci-dessous sans l’ouvrir dans Safari."
       : `Impossible : ${res.reason}`);
   }
 
@@ -2664,7 +2681,7 @@ export default function Home(){
     setCloudStatus("syncing");
 
     if(!authUser){
-      const user=await startAnonymousAccount();
+      const user=await startAnonymousAccount().catch(()=>null);
       if(!user){
         setCloudStatus("error");
         setAccountMessage("Impossible de créer la session locale.");
@@ -3288,6 +3305,7 @@ export default function Home(){
       onTouchEnd={session?handleSessionTouchEnd:undefined}
     >
       {!session?<>
+        <HyroxWeek now={now}/>
         {openSleep?.lightsOutAt?
           <div className="v36-sleep-mode">
             <div className="v36-sleep-top">
@@ -4054,8 +4072,9 @@ export default function Home(){
     </section>}
 
     {tab==="programs"&&<section className="v14-programs-screen">
+      <HyroxWeek now={now}/>
       <div className="v14-page-title">
-        <span>PROGRAMME ACTUEL</span>
+        <span>{isHyroxWeek(now)?"CYCLE HABITUEL · EN PAUSE CETTE SEMAINE":"PROGRAMME ACTUEL"}</span>
         <h2>Ta semaine</h2>
         <p>Ton plan d’entraînement et ta récupération au même endroit.</p>
       </div>
@@ -4180,6 +4199,7 @@ export default function Home(){
           </div>
           {lastCloudSyncAt&&<small className="v37-last-sync">Dernière synchro · {new Date(lastCloudSyncAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})} · {completedSessions.length} séance{completedSessions.length>1?"s":""}</small>}
         </>}
+        {(!authUser||authAnonymous)&&<ReconnectLink onConnected={refreshCloud}/>}
         {accountMessage&&<small>{accountMessage}</small>}
       </div>
 
@@ -4596,6 +4616,7 @@ export default function Home(){
         </label>
 
         <button className="primary v37-recovery-cta" onClick={requestMagicLink}>Envoyer le lien de connexion</button>
+        <ReconnectLink onConnected={refreshCloud}/>
         {accountMessage&&<div className="v37-recovery-message">{accountMessage}</div>}
         <button className="ghost v37-recovery-later" onClick={()=>setRecoveryOpen(false)}>Continuer en mode temporaire</button>
       </div>
